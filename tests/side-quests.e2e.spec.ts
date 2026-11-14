@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-/** Side-quest dialog (REQ-008, D-031). Ids: #btn-quest-<id>, #input-quest-answer, #btn-quest-check. */
+/** Side-quest dialog (REQ-008, D-101). Ids: #btn-quest-<id>, #input-quest-answer, #btn-quest-check. */
 test.describe('Side-quests', () => {
   test('SRR offers the plume quest; a wrong then a right answer, solved mark stays', async ({ page }) => {
     await page.goto('/');

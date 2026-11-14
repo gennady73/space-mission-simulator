@@ -16,3 +16,4 @@ To add art, drop the file at the path below. No code change is needed. To hide a
 
 Formats: SVG preferred; PNG/WebP accepted (update `asset_path` in constants). Keep each file under 400 KB.
 Rights: only original work, NASA imagery (credit it in About), or licensed art. No real people, no third-party characters or logos.
+**Space Apps rules (submission guide):** any AI-generated image or video must carry a **visible "AI-generated" watermark**; do not use or modify NASA branding (no NASA logo or meatball). The demo video is ≤ 30 s with English subtitles (shot list in `event/SUBMISSION.md`).

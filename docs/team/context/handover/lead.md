@@ -4,9 +4,20 @@ Newest block on top. One block per session. The Architect writes in `architect.m
 
 ---
 
+## 2026-11-14 ~19:20 IST · Lead (Claude, Lead instance) · live site, README, submission
+**Did**
+- GitHub Pages enabled by the Lead (Source: GitHub Actions); deploy succeeded, site live (D-103).
+- Checked a red POWER tile on the live first screen: correct behaviour (Faustini + planned 8 kWh battery = −5%), not a bug.
+- Second decision-ID collision (two D-031s): Lead row renumbered D-101; role ranges from now on (D-102).
+- README rewritten for judges and players; `event/SUBMISSION.md` drafted (summary, description, NASA data, AI use, references, 3-minute demo shot list).
+
+**Next (Lead):** record the demo video; paste the submission; final Drive refresh at the cut line.
+
+---
+
 ## 2026-11-14 ~18:45 IST · Lead (Claude, Lead instance) · side-quests
 **Did**
-- `src/ui/sideQuestModel.ts` (pure: phase filter, forgiving number parser, tolerance check) + `SideQuestModal.ts` (native `<dialog>`, hint, worked answer after 3 misses) + `side-quests.css`. One mounting line in `CockpitHUD.ts` (D-031).
+- `src/ui/sideQuestModel.ts` (pure: phase filter, forgiving number parser, tolerance check) + `SideQuestModal.ts` (native `<dialog>`, hint, worked answer after 3 misses) + `side-quests.css`. One mounting line in `CockpitHUD.ts` (D-101, was D-031).
 - Unit tests `tests/side-quests.spec.ts` (4) and browser test `tests/side-quests.e2e.spec.ts` (1).
 - Refreshed the Drive mirror and the Claude Project copies of BUILD-PLAN and the workspace guide from `main` at `ee31e2c`.
 

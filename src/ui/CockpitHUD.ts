@@ -211,7 +211,7 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
     main.append(renderDebrief(c, view.debrief, a));
   } else {
     main.append(phasePanel(view, a));
-    // Lead: optional side-quests for this phase (REQ-008, D-031).
+    // Lead: optional side-quests for this phase (REQ-008, D-101).
     const quests = renderSideQuests(c, s.currentPhase, s.completedQuests, c.difficulty_levels[s.difficulty].hints_enabled,
       (id) => a.update({ completedQuests: [...s.completedQuests, id] }));
     if (quests) main.append(quests);
