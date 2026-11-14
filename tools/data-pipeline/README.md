@@ -2,6 +2,19 @@
 
 Raw downloads go in `raw-data/` (git-ignored, GBs). Outputs go in `public/data/` (≤ 8 MB total, ≤ 2.5 MB gzipped).
 
+```
+raw-data/
+├── SOURCES.md                    local log: file, URL, date, size, sha256 (one row per download)
+├── lola/
+│   ├── gdr-polar-120m/           LDEM_75S_120M.IMG + .LBL           (LOLA GDR, imbrium.mit.edu)
+│   └── pgda78-5m/<Tile>/         <Tile>_final_adj_5mpp_surf.tif     (PGDA product 78; Site01, Site11, Site23, Haworth, LM8)
+├── diviner/prp-south/            dlre_prp_south.tab + .lbl          (Diviner polar resource product)
+├── horizons/                     JPL Horizons API exports (Sun / Earth geometry per site)
+└── pgda69-illumination/          optional: PGDA product 69 illumination maps
+```
+
+One folder per source, so each output's provenance names one folder. Keep file names exactly as published.
+
 | Step | Input | Output | Status |
 |---|---|---|---|
 | 1a LOLA region | `LDEM_75S_120M.IMG` + `.LBL` (LOLA GDR) | `public/data/terrain/region.json` (512², ~350 m cells, ~0.7 MB) | ☐ script ready: `lola_crop.py region` |
@@ -16,9 +29,9 @@ Checks before deploy are listed in spec §11.7. Each data source gets one check 
 Needs only `numpy` and `Pillow`. Run from the repo root:
 
 ```bash
-python3 tools/data-pipeline/lola_crop.py region raw-data/LDEM_75S_120M.LBL
-python3 tools/data-pipeline/lola_crop.py info   raw-data/Site01_final_adj_5mpp_surf.tif   # which catalog sites fall inside
-python3 tools/data-pipeline/lola_crop.py site   raw-data/Site01_final_adj_5mpp_surf.tif --site shackleton_ridge
+python3 tools/data-pipeline/lola_crop.py region raw-data/lola/gdr-polar-120m/LDEM_75S_120M.LBL
+python3 tools/data-pipeline/lola_crop.py info   raw-data/lola/pgda78-5m/Site01/Site01_final_adj_5mpp_surf.tif   # which catalog sites fall inside
+python3 tools/data-pipeline/lola_crop.py site   raw-data/lola/pgda78-5m/Site01/Site01_final_adj_5mpp_surf.tif --site shackleton_ridge
 ```
 
 PGDA-78 tile per catalog site (only the `_surf.tif` is needed; skip `Clones/`, `.xyzi` and the error maps):

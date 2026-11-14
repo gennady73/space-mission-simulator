@@ -20,13 +20,13 @@ Cells outside the source are `nodata`.
 Examples (run from the repo root):
 
   # region from the 120 m grid, centred on the sites, 512 x 512
-  python3 tools/data-pipeline/lola_crop.py region raw-data/LDEM_75S_120M.LBL --n 512
+  python3 tools/data-pipeline/lola_crop.py region raw-data/lola/gdr-polar-120m/LDEM_75S_120M.LBL --n 512
 
   # one site from a 5 m PGDA tile, 256 x 256 cells over +-6 km around the catalog site
-  python3 tools/data-pipeline/lola_crop.py site raw-data/Site01_final_adj_5mpp_surf.tif --site shackleton_ridge
+  python3 tools/data-pipeline/lola_crop.py site raw-data/lola/pgda78-5m/Site01/Site01_final_adj_5mpp_surf.tif --site shackleton_ridge
 
   # inspect a file without writing anything
-  python3 tools/data-pipeline/lola_crop.py info raw-data/Site23_final_adj_5mpp_surf.tif
+  python3 tools/data-pipeline/lola_crop.py info raw-data/lola/pgda78-5m/Site23/Site23_final_adj_5mpp_surf.tif
 """
 from __future__ import annotations
 
