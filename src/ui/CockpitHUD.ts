@@ -6,6 +6,7 @@ import { renderDebrief, renderGateBanner, type Debrief, type DebriefActions } fr
 import { provisionalDesign } from './DesignFlow';
 import { h, kg, pct, usdM } from './dom';
 import { renderPlaceholder } from './GraphicPlaceholderView';
+import { renderSideQuests } from './SideQuestModal';
 
 /** Life-cycle phase that each review closes (NPR 7120.5 naming). */
 const PHASE_PREFIX: Record<Phase, string> = { MCR: 'Pre-Phase A', SRR: 'Phase A', PDR: 'Phase B', CDR: 'Phase C', PLAR: 'Phase D/E' };
@@ -208,6 +209,10 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
     main.append(renderDebrief(c, view.debrief, a));
   } else {
     main.append(phasePanel(view, a));
+    // Lead: optional side-quests for this phase (REQ-008, D-031).
+    const quests = renderSideQuests(c, s.currentPhase, s.completedQuests, c.difficulty_levels[s.difficulty].hints_enabled,
+      (id) => a.update({ completedQuests: [...s.completedQuests, id] }));
+    if (quests) main.append(quests);
     const verb = s.currentPhase === 'CDR' ? 'Submit to review and launch' : 'Submit to review';
     const next = h('button', { id: 'btn-next-phase', type: 'button', ...(mustHandOver ? { disabled: '' } : {}) },
       s.teamMode && owner ? `${verb}: sign-off by ${owner.label}` : verb);

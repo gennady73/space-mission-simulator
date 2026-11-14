@@ -3,7 +3,7 @@
 > Core Triad: load this file together with `docs/space-mission-simulator-implementation-specification-final-v2.md`, `docs/BUILD-PLAN.md` (errata to the spec) and `public/config/engine-constants.json`.
 > Update this file at every stage transition: what changed, what's green, what's blocking.
 
-**Updated:** 2026-11-14 ~18:20 IST by Lead (Claude, Lead instance)
+**Updated:** 2026-11-14 ~18:45 IST by Lead (Claude, Lead instance)
 **Event clock:** NASA Space Apps, Sat 14 – Sun 15 Nov 2026 · **Cut line: Sun 12:00** · Challenge: *Space Mission Design Game*
 
 ## Project lifecycle phase (our own NPR 7120.5 analogue)
@@ -20,7 +20,8 @@
 - The engine runs end to end: constants → gates → 8,760 h simulation → score. Type-checks clean.
 - 15 design scenarios verified (BUILD-PLAN §4). The reference design scores 816, and five different designs win.
 - Cockpit playable end to end: MCR → SRR → PDR → CDR → flight year → debrief → revise; team hot-seat mode; difficulty; export and share link.
-- Tests: 24 unit (vitest) and 9 end-to-end (Playwright) pass.
+- Tests: 24 unit (vitest) and 9 end-to-end (Playwright) pass on the Lead's machine.
+- Side-quests: five optional calculations in SRR, PDR and CDR, answers checked inline (D-031).
 - V-01 done: PDR margins now GSFC-STD-1000 Rule 1.06 (15% power, 10% mass); STMD ranks and need IDs verified (D-021, D-022).
 - Placeholder fallbacks work with zero media files.
 - About & Numbers page built (`src/ui/AboutNumbersView.ts`, open at `#about`): model scope, all 246 numbers with source and tier, credits, AI-use declaration. Provenance coverage is unit-tested (D-027).
@@ -30,7 +31,7 @@
 2. **NASA data:** organiser answer: no restrictions, only recommendations; credit sources (D-028). LOLA / Diviner / Horizons processing is a Could item; the game ships on the synthetic site model until then.
 3. **Repo push:** the Lead's Claude cannot push (GitHub App not installed). It edits the Lead's local clone; the Lead commits and pushes.
 
-4. **Lead:** side-quest modals, GitHub Pages deploy check, README + submission text + demo video.
+4. **Lead:** GitHub Pages deploy check, README + submission text + demo video.
 
 ## Next immediate gate hurdle
 PLAR: the game is live on GitHub Pages and the Space Apps submission is filed before the Sunday 12:00 cut line.

@@ -4,6 +4,18 @@ Newest block on top. One block per session. The Architect writes in `architect.m
 
 ---
 
+## 2026-11-14 ~18:45 IST · Lead (Claude, Lead instance) · side-quests
+**Did**
+- `src/ui/sideQuestModel.ts` (pure: phase filter, forgiving number parser, tolerance check) + `SideQuestModal.ts` (native `<dialog>`, hint, worked answer after 3 misses) + `side-quests.css`. One mounting line in `CockpitHUD.ts` (D-031).
+- Unit tests `tests/side-quests.spec.ts` (4) and browser test `tests/side-quests.e2e.spec.ts` (1).
+- Refreshed the Drive mirror and the Claude Project copies of BUILD-PLAN and the workspace guide from `main` at `ee31e2c`.
+
+**Verification:** `tsc --noEmit` clean; parser and every stored answer checked by running the model. Browser test not run here (no Playwright) — Lead runs `npm run test:e2e`.
+
+**Next (Lead):** GitHub Pages deploy check → README + submission text → demo video plan.
+
+---
+
 ## 2026-11-14 ~18:20 IST · Lead (Claude, Lead instance) · sync after cockpit merge
 **Did**
 - Renumbered the Lead's duplicate D-023/D-024 to D-027/D-028; rule for next IDs (D-029).

@@ -66,7 +66,7 @@ The event ends Sunday 15 Nov. **Cut line: Sunday 12:00.** After that, nothing ne
 | **Must** | Run + debrief: telemetry strip charts (SoC, power, buffer), event list, fault-tree text, score, badges ✅ | Architect | 3 h |
 | **Must** | "About & Numbers" page: renders `provenance` + data credits + AI-use declaration (design guide §4) ✅ *`#about`, D-027* | Lead | 1.5 h |
 | **Must** | GitHub Pages deploy + README + submission text + demo video | Lead | 2 h |
-| **Should** | Side-quest modals (5 quests, inline answer check) | Lead | 1.5 h |
+| **Should** | Side-quest modals (5 quests, inline answer check) ✅ *D-031* | Lead | 1.5 h |
 | **Should** | Team mode: role picker, hot-seat, per-gate sign-off ✅ *D-026* | Architect | 2 h |
 | **Should** | Difficulty selector; share link / JSON export–import / compare two designs — difficulty, export, share done; import + compare open | Architect | 1.5 h |
 | **Should** | 2D site map from LOLA (Canvas): relief + slope layer gated by NDL | Architect + data | 4 h |
@@ -136,6 +136,7 @@ Added by the cockpit (D-024, D-026):
 - `.gate-pass-banner`, `.strip-chart`
 - Team mode: `#toggle-team-mode`, `#btn-role-<roleId>`. The strings in `team_roles[*].decides` are part of this contract: renaming one unlocks that decision for every seat
 - About & Numbers: route `#about`, `#btn-download-constants`
+- Side-quests (D-031): `#btn-quest-<questId>`, `dialog.quest`, `#input-quest-answer`, `#btn-quest-check`, `#btn-quest-hint`, `.quest-feedback--correct|--wrong|--invalid`, `.quest-explanation`, `.quest-btn--done`
 
 ## 7. Data pipeline (spec §11)
 
