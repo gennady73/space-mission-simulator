@@ -38,6 +38,8 @@ export interface SiteMapHandle {
 }
 
 const terrains = new WeakMap<EngineConstants, Terrain>();
+/** Overlays the player switched on. Off by default so the terrain reads first; shared by every map on the page. */
+const shownLayers = { slope: false, ice: false };
 const terrainReady = new WeakMap<Terrain, Promise<void>>();
 const terrainFor = (c: EngineConstants) => { let t = terrains.get(c); if (!t) { t = new Terrain(c); terrains.set(c, t); } return t; };
 /** Load LOLA grids once per terrain (D-106); resolves even when there are none. */
@@ -99,10 +101,16 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
 
   const site = (): SiteGeometry | undefined => terrain.sites.find((s) => s.site.id === state.selectedSite);
   const strict = () => c.difficulty_levels[state.difficulty]?.sensor_gating_strict ?? true;
-  const layers = () => ({
+  /** What the player's instruments can see (sensor gating). */
+  const available = () => ({
     slope: !strict() || state.selectedInstruments.includes('ndl'),
     ice: !strict() || state.selectedInstruments.includes('neutron_spec_radiometer'),
   });
+  /** What is painted: available and switched on with the legend chips. */
+  const layers = () => {
+    const a = available();
+    return { slope: a.slope && shownLayers.slope, ice: a.ice && shownLayers.ice };
+  };
 
   function view(): View {
     const sg = site();
@@ -204,7 +212,7 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
     g.save(); g.font = 'italic 11px system-ui, sans-serif'; g.fillStyle = 'rgba(210,220,235,0.7)'; g.textAlign = 'center';
     for (const cl of terrain.craterLabels()) { const p = toScreen(cl.pos); if (p.x > 0 && p.x < W && p.y > 0 && p.y < H) g.fillText(cl.name, p.x, p.y + 4); }
     g.restore();
-    const showVerdict = layers().slope; // slope known only with the lidar (or in Cadet)
+    const showVerdict = available().slope; // slope known only with the lidar (or in Cadet)
     for (const sg of terrain.sites) {
       const p = toScreen(sg.pos);
       const selected = sg.site.id === state.selectedSite;
@@ -372,16 +380,27 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
       Object.assign(document.createElement('strong'), { textContent: stageText[opts.stage] }),
       ...(line2 ? [Object.assign(document.createElement('span'), { textContent: line2 })] : []),
     );
-    const chip = (on: boolean, text: string, lockedHint: string) => {
-      const el = document.createElement('span');
-      el.className = `sitemap__chip ${on ? 'is-on' : 'is-locked'}`;
-      el.textContent = on ? text : `🔒 ${text}`;
-      if (!on) el.title = lockedHint;
+    const A = available();
+    const chip = (key: 'slope' | 'ice', text: string, lockedHint: string) => {
+      const el = document.createElement('button');
+      el.type = 'button';
+      if (!A[key]) {
+        el.className = 'sitemap__chip is-locked';
+        el.textContent = `🔒 ${text}`;
+        el.title = lockedHint;
+        el.disabled = true;
+        return el;
+      }
+      el.className = `sitemap__chip${L[key] ? ' is-on' : ''}`;
+      el.textContent = text;
+      el.setAttribute('aria-pressed', String(L[key]));
+      el.title = L[key] ? `Hide the ${text.toLowerCase()}` : `Show the ${text.toLowerCase()}`;
+      el.addEventListener('click', () => { shownLayers[key] = !shownLayers[key]; draw(); });
       return el;
     };
     legend.replaceChildren(
-      chip(L.slope, 'Slope map', 'Add the Navigation Doppler Lidar to see slopes'),
-      chip(L.ice, 'Ice map', 'Add the Neutron spectrometer & thermal radiometer to see cold traps'),
+      chip('slope', 'Slope map', 'Add the Navigation Doppler Lidar to see slopes'),
+      chip('ice', 'Ice map', 'Add the Neutron spectrometer & thermal radiometer to see cold traps'),
     );
   }
 
@@ -401,7 +420,7 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
     if (id !== hoverId) { hoverId = id; draw(); }
     canvas.style.cursor = sg ? 'pointer' : 'default';
     if (!sg) { tip.hidden = true; return; }
-    const L = layers();
+    const L = available();
     tip.hidden = false;
     tip.replaceChildren(
       Object.assign(document.createElement('strong'), { textContent: sg.site.name }),
