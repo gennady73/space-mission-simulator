@@ -87,3 +87,45 @@ export async function fetchColdTraps(maxTempK: number, url = './data/diviner/col
     return null;
   }
 }
+
+/**
+ * Permanent-shadow masks around each site (PGDA product 69 LPSR, 60 m; D-111), written by
+ * tools/data-pipeline/psr_grid.py to public/data/psr/sites.json. Finer than Diviner, so the
+ * close-ups can show the small shadowed pockets near a landing site.
+ */
+export interface PsrFile { source: string; grids: Array<{ id: string; site: string; n: number; cx_km: number; cy_km: number; half_km: number; res_m: number; psr_b64: string }> }
+
+export class PsrGrid {
+  private readonly x0: number;
+  private readonly y0: number;
+  private readonly cell: number;
+  private readonly mask: Uint8Array;
+  constructor(private readonly n: number, cx: number, cy: number, half: number, b64: string) {
+    this.cell = (2 * half) / n; this.x0 = cx - half; this.y0 = cy + half; this.mask = bytes(b64);
+  }
+  /**
+   * null outside the mask, otherwise whether (x, y) is permanently shadowed. The 0/1 cells are
+   * interpolated and cut at one half, so shadow pockets have smooth outlines instead of 60 m blocks.
+   */
+  at(x: number, y: number): boolean | null {
+    const fc = (x - this.x0) / this.cell - 0.5, fr = (this.y0 - y) / this.cell - 0.5;
+    if (fc < -0.5 || fr < -0.5 || fc > this.n - 0.5 || fr > this.n - 0.5) return null;
+    const n = this.n, m = this.mask;
+    const c0 = Math.max(0, Math.min(n - 2, Math.floor(fc))), r0 = Math.max(0, Math.min(n - 2, Math.floor(fr)));
+    const tc = Math.max(0, Math.min(1, fc - c0)), tr = Math.max(0, Math.min(1, fr - r0));
+    const v = (m[r0 * n + c0] * (1 - tc) + m[r0 * n + c0 + 1] * tc) * (1 - tr)
+      + (m[(r0 + 1) * n + c0] * (1 - tc) + m[(r0 + 1) * n + c0 + 1] * tc) * tr;
+    return v >= 0.5;
+  }
+}
+
+export async function fetchPsrGrids(url = './data/psr/sites.json'): Promise<PsrGrid[]> {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return [];
+    const f = (await r.json()) as PsrFile;
+    return f.grids.map((g) => new PsrGrid(g.n, g.cx_km, g.cy_km, g.half_km, g.psr_b64));
+  } catch {
+    return [];
+  }
+}

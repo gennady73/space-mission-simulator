@@ -2,7 +2,7 @@ import './site-map.css';
 import type { EngineConstants, Phase, SimulationState } from '../../models/Interfaces';
 import { earthElevationDeg, solarElevationDeg } from '../../engine/SubsystemEngines';
 import { fetchRealGrids } from './realTerrain';
-import { fetchColdTraps } from './coldTraps';
+import { fetchColdTraps, fetchPsrGrids } from './coldTraps';
 import { rasterize, shade, sunAzimuthDeg, Terrain, type Grid, type SiteGeometry, type View, type XY } from './terrain';
 
 /**
@@ -46,9 +46,10 @@ const terrainFor = (c: EngineConstants) => { let t = terrains.get(c); if (!t) { 
 const realTerrain = (t: Terrain) => { // LOLA heights (D-106) and Diviner cold traps (D-109)
   let p = terrainReady.get(t);
   if (!p) {
-    p = Promise.all([fetchRealGrids(), fetchColdTraps(t.coldTrapMaxK)]).then(([g, ct]) => {
+    p = Promise.all([fetchRealGrids(), fetchColdTraps(t.coldTrapMaxK), fetchPsrGrids()]).then(([g, ct, psr]) => {
       if (g.length) t.setReal(g);
       if (ct) t.setColdTraps(ct);
+      if (psr.length) t.setPsr(psr);
     });
     terrainReady.set(t, p);
   }
@@ -77,7 +78,7 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
   const note = document.createElement('div'); note.className = 'sitemap__note';
   const setNote = () => {
     note.textContent = terrain.real.length
-      ? `LOLA terrain (NASA) · ${[...new Set(terrain.real.map((g) => `${Math.round(g.resM)} m`))].join(' / ')} grid${terrain.coldTraps ? ' · Diviner cold traps' : ''} · schematic outside`
+      ? `LOLA terrain (NASA) · ${[...new Set(terrain.real.map((g) => `${Math.round(g.resM)} m`))].join(' / ')} grid${terrain.coldTraps ? ' · Diviner cold traps' : ''}${terrain.psr.length ? ' · LOLA permanent shadow' : ''} · schematic outside`
       : 'Schematic terrain · real crater positions · LOLA data pending';
   };
   setNote();

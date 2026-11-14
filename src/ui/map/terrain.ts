@@ -1,6 +1,6 @@
 import type { EngineConstants, LandingSite, MapFeatures } from '../../models/Interfaces';
 import { stackHeight, type RealGrid } from './realTerrain';
-import { ColdClass, type ColdTrapGrid } from './coldTraps';
+import { ColdClass, type ColdTrapGrid, type PsrGrid } from './coldTraps';
 
 /**
  * South-polar terrain (pure, no DOM). Where LOLA grids are loaded (setReal, D-106) heights are real;
@@ -57,6 +57,8 @@ export class Terrain {
   real: RealGrid[] = [];
   /** Diviner cold traps (null = schematic shadow discs). */
   coldTraps: ColdTrapGrid | null = null;
+  /** 60 m permanent-shadow masks around the sites (empty = Diviner only). */
+  psr: PsrGrid[] = [];
 
   constructor(c: EngineConstants) {
     const f: MapFeatures = c.map_features;
@@ -125,8 +127,19 @@ export class Terrain {
     }
   }
 
-  /** Cold-trap class at (x, y): Diviner where it has data, schematic shadow discs elsewhere. */
+  setPsr(grids: PsrGrid[]): void { this.psr = grids; }
+
+  /**
+   * Cold-trap class at (x, y): near a site the 60 m permanent-shadow mask decides (with Diviner
+   * adding "ice stable at the surface"), elsewhere Diviner, and schematic shadow discs where neither has data.
+   */
   coldClass(x: number, y: number): ColdClass {
+    for (const g of this.psr) {
+      const p = g.at(x, y);
+      if (p === null) continue;
+      if (!p) return ColdClass.None;
+      return this.coldTraps?.classify(x, y) === ColdClass.SurfaceIce ? ColdClass.SurfaceIce : ColdClass.Cold;
+    }
     if (this.coldTraps?.covers(x, y)) return this.coldTraps.classify(x, y);
     return this.isPermanentShadow(x, y) ? ColdClass.Cold : ColdClass.None;
   }
