@@ -8,21 +8,30 @@ import { rasterize, shade, sunAzimuthDeg, Terrain, type Grid, type SiteGeometry,
  *
  *   const map = renderSiteMap(viewportEl, constants, state, { stage: 'MCR', onSelectSite: (id) => … });
  *   map.update(newState, { stage: 'SRR' });   // after every state change
- *   map.setHour(h);                            // flight playback drives the sun and Earth
+ *   map.setHour(h, { drilling, linkUp });      // flight playback drives the sun, Earth and outpost
  *   map.destroy();
  *
  * Stage layers: MCR = whole region, tap a site · SRR = pad and plume keep-out ring ·
  * PDR = mast in sun or shadow (the sun circles once per lunar day) · CDR = route and power link
- * into the cold trap · FLY = like PDR, driven by setHour().
+ * into the cold trap · FLY = the whole outpost (mast, route, rover, link), driven by setHour().
  * Terrain is schematic until the LOLA grid is processed; the map says so in its corner.
  */
 
 export type MapStage = Phase | 'FLY';
 export interface SiteMapOptions { stage: MapStage; hour?: number; onSelectSite?: (siteId: string) => void }
+/** What the flight playback tells the map about the outpost at the current hour. */
+export interface FlightOverlay {
+  /** The drill is running this hour (the rover is at the cold trap). */
+  drilling: boolean;
+  /** The outpost can talk to Earth this hour. */
+  linkUp: boolean;
+  /** Mission over: brownout or logistics failure. */
+  failed: boolean;
+}
 export interface SiteMapHandle {
   element: HTMLElement;
   update(state: SimulationState, opts?: Partial<SiteMapOptions>): void;
-  setHour(hour: number): void;
+  setHour(hour: number, overlay?: FlightOverlay): void;
   destroy(): void;
 }
 
@@ -37,6 +46,7 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
   let opts: SiteMapOptions = { ...initialOpts };
   let hour = opts.hour ?? 0;
   let hoverId: string | null = null;
+  let overlay: FlightOverlay | null = null;
   let anim = 0;
 
   const root = document.createElement('div');
@@ -63,6 +73,9 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
   // ---- caches -------------------------------------------------------------------------------
   let gridKey = '', grid: Grid | null = null;
   const shadeCache = new Map<string, HTMLCanvasElement>();
+  // During fast playback a new sun angle can arrive every frame; re-shade at most this often (ms).
+  const FLY_RESHADE_MS = 150;
+  let lastImg: HTMLCanvasElement | null = null, lastShadeAt = 0;
 
   const site = (): SiteGeometry | undefined => terrain.sites.find((s) => s.site.id === state.selectedSite);
   const strict = () => c.difficulty_levels[state.difficulty]?.sensor_gating_strict ?? true;
@@ -80,7 +93,7 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
       const need = Math.max(pad?.requires_standoff_distance_m ?? 1200, state.padDistanceM ?? 0) / 1000;
       return { cx: p.x, cy: p.y, halfKm: Math.max(1.5, need * 1.35) };
     }
-    if (opts.stage === 'CDR' && sg.coldTrap) {
+    if ((opts.stage === 'CDR' || opts.stage === 'FLY') && sg.coldTrap) {
       const d = sg.site.distance_to_cold_trap_km;
       return { cx: (p.x + sg.coldTrap.x) / 2, cy: (p.y + sg.coldTrap.y) / 2, halfKm: Math.max(2.5, d * 0.95) };
     }
@@ -96,17 +109,21 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
     const key = `${v.cx.toFixed(2)}|${v.cy.toFixed(2)}|${v.halfKm.toFixed(2)}|${n}`;
     if (key !== gridKey) { grid = rasterize(terrain, v, n, n); gridKey = key; shadeCache.clear(); }
     const L = layers();
-    const az = Math.round(sunAzimuthDeg(c, hour) / 10) * 10;
-    const el = Math.round(sunElevation() * 4) / 4;
+    const fly = opts.stage === 'FLY';
+    const az = Math.round(sunAzimuthDeg(c, hour) / (fly ? 15 : 10)) * (fly ? 15 : 10);
+    const el = fly ? Math.round(sunElevation()) : Math.round(sunElevation() * 4) / 4;
     const skey = `${az}|${el}|${L.slope}|${L.ice}`;
     let img = shadeCache.get(skey);
+    if (!img && fly && lastImg && performance.now() - lastShadeAt < FLY_RESHADE_MS) return lastImg;
     if (!img) {
+      lastShadeAt = performance.now();
       const px = shade(grid!, az, el, L);
       img = document.createElement('canvas'); img.width = n; img.height = n;
       img.getContext('2d')!.putImageData(new ImageData(px as Uint8ClampedArray<ArrayBuffer>, n, n), 0, 0);
-      if (shadeCache.size > 40) shadeCache.clear();
+      if (shadeCache.size > (fly ? 120 : 40)) shadeCache.clear();
       shadeCache.set(skey, img);
     }
+    lastImg = img;
     return img;
   }
 
@@ -129,7 +146,7 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
     const side = Math.min(W, H);
     pxPerKm = side / (2 * v.halfKm);
     toScreen = (p) => ({ x: W / 2 + (p.x - v.cx) * pxPerKm, y: H / 2 - (p.y - v.cy) * pxPerKm });
-    const n = opts.stage === 'MCR' ? 360 : 300;
+    const n = opts.stage === 'MCR' ? 360 : opts.stage === 'FLY' ? 240 : 300;
     const img = baseImage(v, n);
     // fill the whole viewport (extra terrain beyond the square is cropped, the map stays undistorted)
     const regional = opts.stage === 'MCR' || !site();
@@ -145,6 +162,7 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
     if (opts.stage === 'MCR' || !site()) drawRegion(g, W, H);
     else if (opts.stage === 'SRR') drawPad(g);
     else if (opts.stage === 'CDR') drawColdTrap(g);
+    else if (opts.stage === 'FLY') drawFlight(g);
     else drawPower(g);
     drawCompass(g, W, H);
     drawScale(g, W, H);
@@ -247,11 +265,54 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
     label(g, `cold trap · ${sg.site.ambient_cold_trap_temperature_k} K`, b, '#8fb8ff', 22);
   }
 
+  function drawFlight(g: CanvasRenderingContext2D) {
+    const sg = site()!;
+    const a = toScreen(sg.pos);
+    const m = mastLit();
+    const o = overlay ?? { drilling: false, linkUp: true, failed: false };
+    const t = performance.now() / 1000;
+    if (sg.coldTrap) {
+      const b = toScreen(sg.coldTrap);
+      const link = state.selectedUtilityLink ? c.hardware_catalog.utility_links[state.selectedUtilityLink] : null;
+      g.save(); g.lineWidth = 3; g.strokeStyle = 'rgba(232,237,244,0.35)'; g.setLineDash([2, 5]);
+      g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke(); g.restore();
+      if (link) {
+        const live = o.drilling && !o.failed;
+        g.save(); g.lineWidth = live ? 3 : 1.5; g.setLineDash(link.attenuated_by_dust ? [10, 6] : []);
+        g.lineDashOffset = live ? -t * 30 : 0;
+        g.strokeStyle = live ? '#ff9a3c' : 'rgba(255,154,60,0.35)';
+        g.beginPath(); g.moveTo(a.x + 8, a.y); g.lineTo(b.x + 8, b.y); g.stroke(); g.restore();
+      }
+      g.beginPath(); g.arc(b.x, b.y, 7, 0, 2 * Math.PI); g.fillStyle = '#8fb8ff'; g.fill();
+      label(g, 'cold trap', b, '#8fb8ff', 22);
+      // rover: at the cold trap while drilling, parked at the outpost otherwise
+      const r = o.drilling ? b : { x: a.x + 14, y: a.y + 10 };
+      g.beginPath(); g.arc(r.x, r.y, 5, 0, 2 * Math.PI); g.fillStyle = o.failed ? COLORS.muted : COLORS.ok; g.fill();
+      if (o.drilling && !o.failed) {
+        g.beginPath(); g.arc(r.x, r.y, 9 + 4 * Math.sin(t * 6), 0, 2 * Math.PI); g.strokeStyle = COLORS.ok; g.lineWidth = 1.5; g.stroke();
+        label(g, 'drilling', r, COLORS.ok, -12);
+      }
+    }
+    // mast
+    g.save(); g.lineWidth = 3; g.strokeStyle = m.lit ? COLORS.sun : '#5b6575';
+    g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(a.x, a.y - 26); g.stroke();
+    g.fillStyle = m.lit ? COLORS.sun : '#5b6575'; g.fillRect(a.x - 5, a.y - 30, 10, 14); g.restore();
+    g.fillStyle = o.failed ? COLORS.fail : '#d9dee7'; g.fillRect(a.x - 6, a.y - 6, 12, 12);
+    // Earth link: a beam toward Earth (map up) when there is line of sight
+    if (o.linkUp && !o.failed) {
+      g.save(); g.strokeStyle = COLORS.accent; g.lineWidth = 2; g.setLineDash([4, 6]); g.lineDashOffset = t * 20;
+      g.beginPath(); g.moveTo(a.x, a.y - 32); g.lineTo(a.x, a.y - 90); g.stroke(); g.restore();
+    }
+    label(g, o.failed ? `${sg.site.name} · offline` : `${sg.site.name} · ${m.lit ? 'in sunlight' : 'night: survival mode'}`, a,
+      o.failed ? COLORS.fail : m.lit ? COLORS.sun : COLORS.muted, -40);
+  }
+
   function drawCompass(g: CanvasRenderingContext2D, W: number, H: number) {
     // Earth is always toward 0°E (up); the Sun circles the horizon once per lunar day.
     const sg = site();
     const earthUp = sg ? earthElevationDeg(c, sg.site, hour) >= c.simulation.min_earth_elevation_for_los_deg : true;
-    label(g, earthUp ? '▲ Earth' : '▲ Earth (below horizon)', { x: W / 2, y: 22 }, earthUp ? COLORS.accent : COLORS.muted, 0);
+    // FLY: the playback's gauges sit along the top edge, so the Earth label goes just below them.
+    label(g, earthUp ? '▲ Earth' : '▲ Earth (below horizon)', { x: W / 2, y: opts.stage === 'FLY' ? 132 : 22 }, earthUp ? COLORS.accent : COLORS.muted, 0);
     const az = sunAzimuthDeg(c, hour) * Math.PI / 180;
     const R = Math.min(W, H) / 2 - 18;
     const sp = { x: W / 2 + R * Math.sin(az), y: H / 2 - R * Math.cos(az) };
@@ -279,7 +340,7 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
       SRR: 'Landing pad and plume keep-out',
       PDR: 'Power: watch the mast through a lunar day',
       CDR: 'Route and power link into the cold trap',
-      PLAR: 'Flight', FLY: 'Flight',
+      PLAR: 'Flight', FLY: 'Flight: one year at the outpost',
     };
     let line2 = '';
     if (sg && opts.stage !== 'MCR') {
@@ -370,7 +431,7 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
       draw();
       syncAnimation();
     },
-    setHour(h) { hour = h; if (!anim) draw(); },
+    setHour(h, o) { hour = h; if (o) overlay = o; if (!anim) draw(); },
     destroy() { cancelAnimationFrame(anim); ro.disconnect(); root.remove(); },
   };
 }

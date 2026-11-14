@@ -138,6 +138,8 @@ Added by the cockpit (D-024, D-026):
 - About & Numbers: route `#about`, `#btn-download-constants`
 - Hypothesis card (Architect D-031): `.prestage`, `#pre-stage-question`, `#input-hypothesis`, `#btn-reveal-explanation`, `#pre-stage-explanation`
 - Side-quests (D-101): `#btn-quest-<questId>`, `dialog.quest`, `#input-quest-answer`, `#btn-quest-check`, `#btn-quest-hint`, `.quest-feedback--correct|--wrong|--invalid`, `.quest-explanation`, `.quest-btn--done`
+- Map (D-104), mount in the console viewport: `const map = renderSiteMap(el, c, state, { stage, onSelectSite })` from `src/ui/map/SiteMap.ts`; call `map.update(state, { stage })` after every change, `map.destroy()` on unmount. `stage` is `'MCR' | 'SRR' | 'PDR' | 'CDR'`. It fills its container (give it a height). Test page: route `#map`
+- Flight (D-105): `createFlightPlayback(el, c, state, result, { onFinish })` from `src/ui/map/FlightPlayback.ts`, where `result = runMission(...)` (use `logEveryHours: 1` for smooth gauges; sampled telemetry also works). `onFinish` = show the debrief. Ids: `#flight-playback`, `#btn-flight-play`, `#btn-flight-skip`, `#flight-scrubber`, `#flight-day`, `#flight-outcome`, `#btn-flight-debrief`
 
 ## 7. Data pipeline (spec §11)
 
