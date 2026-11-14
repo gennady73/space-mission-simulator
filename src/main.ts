@@ -4,6 +4,7 @@ import { runMission, scoreMission } from './engine/SimulationClock';
 import { runDesignGates, totalCostUSD, validatePLAR } from './engine/StageGateValidators';
 import { initialState, PHASES, REFERENCE_DESIGN, StateStore } from './models/StateStore';
 import { renderAboutNumbers } from './ui/AboutNumbersView';
+import { renderMapDemo } from './ui/map/mapDemo';
 import type { Difficulty, EngineConstants, GateValidationResult, Phase, TeamRole } from './models/Interfaces';
 import { renderCockpit, type CockpitActions } from './ui/CockpitHUD';
 import type { Debrief } from './ui/DebriefView';
@@ -24,6 +25,8 @@ async function boot(): Promise<void> {
   }
   // Lead: About & Numbers page at #about (keep this route when the cockpit replaces the shell).
   if (location.hash === '#about') { app.replaceChildren(renderAboutNumbers(c)); return; }
+  // Lead: map test page at #map (D-104).
+  if (location.hash === '#map') { renderMapDemo(app, c); return; }
   const store = new StateStore(initialState(c));
   const shared = StateStore.fromShareHash(location.hash);
   if (shared) store.importDesign(shared);
