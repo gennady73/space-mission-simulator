@@ -8,6 +8,7 @@ import { h, kg, pct, usdM } from './dom';
 import { renderPlaceholder } from './GraphicPlaceholderView';
 import { renderSideQuests } from './SideQuestModal';
 import { renderPreStageQuestion, type PreStageActions } from './PreStageQuestion';
+import { renderReviewModal, type ReviewActions, type ReviewOutcome } from './ReviewModal';
 
 /** Life-cycle phase that each review closes (NPR 7120.5 naming). */
 const PHASE_PREFIX: Record<Phase, string> = { MCR: 'Pre-Phase A', SRR: 'Phase A', PDR: 'Phase B', CDR: 'Phase C', PLAR: 'Phase D/E' };
@@ -17,6 +18,8 @@ export interface CockpitView {
   constants: EngineConstants;
   state: SimulationState;
   banner: GateValidationResult | null;
+  /** Verdict of the last submission, shown as a modal until the player answers it. */
+  review: ReviewOutcome | null;
   padDistanceDraft: string;
   heaterDraft: string;
   debrief: Debrief | null;
@@ -24,7 +27,7 @@ export interface CockpitView {
   viewport: HTMLElement;
 }
 
-export interface CockpitActions extends DebriefActions, PreStageActions {
+export interface CockpitActions extends DebriefActions, PreStageActions, ReviewActions {
   update(patch: Partial<SimulationState>): void;
   setPadDistanceDraft(value: string): void;
   setHeaterDraft(value: string): void;
@@ -287,7 +290,8 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
   if (mode !== 'debrief') grid.append(h('div', { class: 'console-view' }, view.viewport));
   if (mode !== 'flight') grid.append(panel);
   root.append(grid);
+  if (view.review && mode === 'design') root.append(renderReviewModal(view.review, a));
   // A choice re-renders the panel: keep the player's place in it. A new stage starts at its top.
   if (samePhase) panel.scrollTop = panelScroll;
-  if (focusId) document.getElementById(focusId)?.focus({ preventScroll: true });
+  if (focusId && !view.review) document.getElementById(focusId)?.focus({ preventScroll: true });
 }

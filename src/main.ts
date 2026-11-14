@@ -11,6 +11,7 @@ import type { Difficulty, EngineConstants, GateValidationResult, Phase, Simulati
 import { h } from './ui/dom';
 import { renderCockpit, type CockpitActions } from './ui/CockpitHUD';
 import type { Debrief } from './ui/DebriefView';
+import type { ReviewOutcome } from './ui/ReviewModal';
 import { provisionalDesign, submitToReview } from './ui/DesignFlow';
 
 /** Telemetry rows kept for the charts: one every this many hours. Presentation only. */
@@ -36,6 +37,7 @@ async function boot(): Promise<void> {
 
   let banner: GateValidationResult | null = null;
   let debrief: Debrief | null = null;
+  let review: ReviewOutcome | null = null;
   // Console viewport (BUILD-PLAN §6): one persistent element that the cockpit re-adopts on every
   // render, so the map canvas and the flight playback live across re-renders.
   const viewport = h('div', { id: 'console-viewport', class: 'viewport' });
@@ -105,6 +107,7 @@ async function boot(): Promise<void> {
       store.update({ ...draftPatch(), teamMode: on, activeRole: on ? store.get().activeRole ?? first : null });
     },
     setActiveRole: (role) => store.update({ ...draftPatch(), activeRole: role }),
+    // Submitting runs the gates and opens the review verdict (D-035); the player then moves on or revises.
     nextPhase: () => {
       const phase = store.get().currentPhase;
       const candidate = { ...store.get(), ...draftPatch() };
@@ -114,11 +117,19 @@ async function boot(): Promise<void> {
       // D-010: the seat that submits a passed review is recorded as having signed it off.
       const signer = candidate.teamMode ? candidate.activeRole : null;
       const roleSignOffs = signer && !failed ? { ...candidate.roleSignOffs, [phase]: [signer] } : candidate.roleSignOffs;
-      if (failed) { banner = failed; store.update({ ...draftPatch(), gateResults }); return; }
-      if (phase === 'CDR') { store.update({ ...draftPatch(), roleSignOffs }); fly(results); return; }
+      review = { phase, results, failed };
       banner = null;
-      store.update({ ...draftPatch(), gateResults, roleSignOffs, currentPhase: PHASES[PHASES.indexOf(phase) + 1] });
+      store.update({ ...draftPatch(), gateResults, roleSignOffs });
     },
+    reviewNext: () => {
+      if (!review || review.failed) return;
+      const { phase, results } = review;
+      review = null;
+      if (phase === 'CDR') { fly(results); return; }
+      store.update({ currentPhase: PHASES[PHASES.indexOf(phase) + 1] });
+    },
+    // After a failed review the verdict stays on the panel as a reminder of what to fix.
+    reviewRevise: () => { banner = review?.failed ?? null; review = null; store.update({}); },
     goToPhase: (phase) => {
       if (phase === 'PLAR' && !debrief) return;
       banner = null;
@@ -149,7 +160,7 @@ async function boot(): Promise<void> {
 
   store.subscribe((state) => {
     syncViewport(state);
-    renderCockpit(app, { constants: c, state, banner, padDistanceDraft, heaterDraft, debrief, viewport }, actions);
+    renderCockpit(app, { constants: c, state, banner, padDistanceDraft, heaterDraft, debrief, review, viewport }, actions);
   });
 }
 

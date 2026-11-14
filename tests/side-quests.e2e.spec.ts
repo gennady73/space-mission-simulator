@@ -6,6 +6,7 @@ test.describe('Side-quests', () => {
     await page.goto('/');
     await page.click('button#btn-site-shackleton_ridge');
     await page.click('button#btn-next-phase');
+    await page.click('button#btn-review-next'); // review verdict modal (D-035)
     await expect(page.locator('#current-phase-display')).toHaveText('Phase A: System Requirements Review (SRR)');
 
     await page.click('button#btn-quest-quest_plume_deflector');
