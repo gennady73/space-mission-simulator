@@ -20,6 +20,8 @@ export interface CockpitView {
   padDistanceDraft: string;
   heaterDraft: string;
   debrief: Debrief | null;
+  /** Persistent console viewport owned by main.ts: the site map, or the flight playback. */
+  viewport: HTMLElement;
 }
 
 export interface CockpitActions extends DebriefActions, PreStageActions {
@@ -158,6 +160,17 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
   const focusId = document.activeElement?.id;
   root.replaceChildren();
 
+  // In flight (D-105) the playback owns the screen: no design panels, no phase jumps.
+  view.viewport.classList.toggle('is-flight', s.isSimulationRunning);
+  if (s.isSimulationRunning) {
+    root.append(
+      h('header', { class: 'cockpit-header' }, h('h1', {}, 'Polar Outpost Pioneer'),
+        h('p', { class: 'hint' }, 'Flight: one year at the lunar south pole, replayed from the simulation.')),
+      view.viewport,
+    );
+    return;
+  }
+
   const difficulty = h('select', { id: 'select-difficulty', 'aria-label': 'Difficulty' },
     ...Object.entries(c.difficulty_levels).map(([id, d]) => h('option', { value: id, ...(id === s.difficulty ? { selected: '' } : {}) }, `${d.label} · ${usdM(d.budget_usd)}`)));
   difficulty.addEventListener('change', () => a.setDifficulty(difficulty.value));
@@ -194,10 +207,9 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
     const intro = renderPlaceholder(c, 'IMG-PLACEHOLDER-INTRO');
     if (intro) main.append(intro);
   }
-  // The debrief has its own hero card, so the PLAR stage banner is not stacked on top of it.
-  const stage = s.currentPhase === 'PLAR' && view.debrief ? undefined : Object.values(c.graphic_placeholders).find((p) => p.target_stage === s.currentPhase);
-  const stageCard = stage ? renderPlaceholder(c, stage.id) : null;
-  if (stageCard) main.append(stageCard);
+  // The live map (D-104) replaces the per-stage placeholder art in the design phases;
+  // the debrief keeps its own hero card at PLAR.
+  if (s.currentPhase !== 'PLAR') main.append(view.viewport);
 
   const ownerEntry = Object.entries(c.team_roles).find(([, r]) => r.owns_gates.includes(s.currentPhase));
   const owner = ownerEntry?.[1];

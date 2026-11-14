@@ -4,6 +4,18 @@ Newest block on top. One block per session. The Lead writes in `lead.md`, never 
 
 ---
 
+## 2026-11-14 ~21:25 IST · Architect (Claude, Architect instance) · map + flight in the cockpit
+**Did**
+- Wired the Lead's D-104 map and D-105 flight playback into the game (D-032). One persistent `#console-viewport` element lives in `main.ts` and the cockpit re-adopts it on every render, so the canvas and the playback's animation loop survive re-renders. Map shows through MCR–CDR (`map.update` after every state change, site tap selects at MCR); at launch the engine runs with `logEveryHours: 1`, the map is destroyed and the playback takes the viewport; `onFinish` lands at PLAR with the debrief.
+- Debrief strip charts keep one telemetry row in 6 (sampled from the hourly run), so the debrief stays light while the gauges are smooth.
+- In flight the cockpit renders only the header and the viewport (no phase jumps mid-flight). Viewport heights: `min(62vh, 540px)` design, `min(82vh, 780px)` flight.
+- The per-stage placeholder art cards are replaced by the live map; intro (MCR, pre-site) and END (debrief) cards stay. Media: if stage art still matters, it can live inside the map HUD instead.
+- E2E: launches now pass through the playback (`#btn-flight-skip` → `#btn-flight-debrief` helper), plus a viewport test. 31 unit + 12 e2e green, typecheck and build clean; checked `/#map` → FLY and the full in-cockpit flow with screenshots.
+
+**Next (Architect)** — JSON import + compare; failure-hour marker on the debrief charts (the playback already marks it on the scrubber).
+
+---
+
 ## 2026-11-14 ~18:40 IST · Architect (Claude, Architect instance) · hypothesis screen
 **Did**
 - Pre-stage hypothesis card (`src/ui/PreStageQuestion.ts`, D-031) on every phase, fed by D-030's `pre_stage_questions`: question first, textarea for the player's hypothesis, explanation revealed only after a non-empty hypothesis is recorded. Hypotheses sit in `state.userHypotheses`, so export / import / share carry them.
