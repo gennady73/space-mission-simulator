@@ -58,7 +58,7 @@ Polar Outpost Pioneer is a browser game in which players design, review and fly 
 **Goals and impact.** Students rarely see a whole mission, from objective to operations, in one place. This game lets them break a mission and learn from why it broke, in about 15 minutes per run, using the same review vocabulary and margin rules NASA engineers use.
 
 ## NASA data
-The game is built on NASA documents rather than live datasets. Live NASA terrain and temperature data are planned (listed under Space Agency Partner & Other Data).
+The game is built on NASA documents (below) and on four processed NASA datasets — terrain, temperatures and illumination (listed under Space Agency Partner & Other Data).
 - **Design and Develop Science Missions** (NASA, challenge resource): the four mission segments (Launch, Space, Ground, User) are the game's structure, and the team-play seats.
 - **GSFC-STD-1000 Rev I, Rule 1.06 Resource Margins** (NASA Goddard): the PDR power (>15%) and dry-mass (>10%) margins used by the review gate.
 - **FY26 Civil Space Shortfall Prioritization** (NASA STMD): shortfall IDs, ranks and need statements cited in gate messages and end-of-mission badges.
@@ -67,14 +67,18 @@ The game is built on NASA documents rather than live datasets. Live NASA terrain
 - **CubeSat 101 (NASA CSLI):** plain-language mission and subsystem concepts.
 
 ## Space agency partner & other data
-- Planned NASA data, not yet in this build and credited once used: LOLA 5 m/px south-pole site maps (NASA PGDA product 78; Barker et al. 2021), LOLA 120 m polar grid (NASA PDS), LRO Diviner South Polar Resource Product (NASA PDS; D. A. Paige), JPL Horizons ephemerides. The event organisers confirmed outside public data may be used with credit.
+- **LOLA 120 m polar DEM** (LDEM_75S_120M, LRO LOLA GDR; NASA PDS Geosciences): the regional terrain the in-game map renders, plus 120 m close-ups of every landing site.
+- **LOLA 5 m/px south-pole site DEMs** (NASA PGDA product 78; Barker et al. 2021): terrain within 4 km of the Shackleton connecting ridge, de Gerlache rim and Malapert massif sites.
+- **LRO Diviner South Polar Resource Product v2** (NASA PDS; D. A. Paige, UCLA): annual maximum temperature and depth to stable water ice — the cold traps the map paints. The 110 K surface-ice limit follows Paige et al. 2010 (Science 330:479).
+- **Lunar Polar Illumination, NASA PGDA product 69** (Mazarico et al. 2011): 60 m permanent-shadow maps drawn in the site close-ups; average sunlight and Earth visibility cross-check the site catalog (`docs/team/context/ILLUMINATION-CHECK.md`).
+- All raw downloads are processed by small open scripts in `tools/data-pipeline/` into ≤4 MB of JSON served with the game; the map names its data sources on screen. The event organisers confirmed outside public data may be used with credit.
 - Physical constants: NASA Moon Fact Sheet, CODATA 2018.
 - Tools: TypeScript, Vite, Vitest, Playwright, GitHub Actions and GitHub Pages (all open source or free services).
 - All code and text are original work of the team (with AI assistance, see below). No third-party images are used. Team emblem: own work.
 
 ## Use of AI
 - The game specification was drafted with Google Gemini (NotebookLM) from the NASA documents above.
-- Code, the constants file, tests and documentation were written with Anthropic Claude. Each of our two developers worked with their own Claude session, and every change was reviewed, tested and merged by the team.
+- Code, the constants file, tests and documentation were written with Anthropic Claude. Each team member worked with their own Claude session, and every change was reviewed, tested and merged by the team.
 - AI-written code is acknowledged in the README and in every commit's metadata (`Co-Authored-By`).
 - Every AI-produced number is labelled with its source tier on the in-game About & Numbers page, and the NASA citations were checked by hand against the documents.
 - Any AI-generated image added later carries a visible "AI-generated" watermark. No NASA branding is used or modified.

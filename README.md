@@ -63,12 +63,16 @@ Used in this build:
 - NASA Systems Engineering Handbook (SP-2016-6105 Rev 2) and NPR 7120.5: life-cycle phases and reviews.
 - CubeSat 101 (NASA CSLI).
 
-Planned, and credited only once used: LOLA 5 m/px south-pole site maps (PGDA product 78; Barker et al. 2021), the LOLA 120 m polar grid (PDS), the LRO Diviner South Polar Resource Product (PDS; D. A. Paige), and JPL Horizons ephemerides.
+NASA datasets in this build (processed by `tools/data-pipeline/` into `public/data/`, ≤4 MB of JSON; the map names its sources on screen):
+- **LOLA 120 m polar DEM** (LDEM_75S_120M, LRO LOLA GDR; NASA PDS Geosciences) — the map's regional terrain and 120 m site close-ups.
+- **LOLA 5 m/px site DEMs** (NASA PGDA product 78; Barker et al. 2021) — terrain within 4 km of three landing sites.
+- **LRO Diviner South Polar Resource Product v2** (NASA PDS; D. A. Paige, UCLA) — cold-trap temperatures and depth to stable ice; the 110 K surface-ice limit follows Paige et al. 2010.
+- **Lunar Polar Illumination, PGDA product 69** (Mazarico et al. 2011) — 60 m permanent-shadow maps, plus sunlight and Earth-visibility cross-checks of the site catalog.
 
 ## Use of AI
 
 - The game specification was drafted with Google Gemini (NotebookLM) from the NASA materials above.
-- Code, the constants file, tests and documentation were written with Anthropic Claude: each of our two developers (Lead and Architect) worked with their own Claude session, and every change was reviewed, tested and merged by the team.
+- Code, the constants file, tests and documentation were written with Anthropic Claude: each team member worked with their own Claude session, and every change was reviewed, tested and merged by the team.
 - Every AI-produced number is tiered on the About & Numbers page, and the NASA citations were checked against the source documents.
 
 ## Team
