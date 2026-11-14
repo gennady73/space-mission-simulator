@@ -17,10 +17,13 @@ const firstFailure = (r: ResolvedDesign) => Object.values(runDesignGates(c, r)).
 
 describe('engine-constants contract (REQ-003)', () => {
   it('loads and validates', () => expect(c.schema_version).toBe('1.0.0'));
-  it('GSFC PDR margin is 20%', () => expect(c.system_constants.minimum_gsfc_margin_pdr).toBe(0.2));
+  it('GSFC-STD-1000 Rule 1.06 PDR margins: power 15%, dry mass 10%', () => {
+    expect(c.system_constants.minimum_power_margin_pdr).toBe(0.15);
+    expect(c.system_constants.minimum_mass_margin_pdr).toBe(0.1);
+  });
   it('every side quest answer matches its own formula inputs', () => {
     expect(c.side_quests.quest_battery_sizing.correct_value).toBeCloseTo((85 * 54) / 0.8, 1);
-    expect(c.side_quests.quest_pdr_margin.correct_value).toBeCloseTo((85 * 54 * 1.2) / 0.8, 1);
+    expect(c.side_quests.quest_pdr_margin.correct_value).toBeCloseTo((85 * 54 * 1.15) / 0.8, 1);
     expect(c.side_quests.quest_data_buffer.correct_value).toBeCloseTo((120_000 * 14 * 3600) / 1e6, 1);
     expect(c.side_quests.quest_optical_beaming.correct_value).toBeCloseTo(1000 * 0.22 * 0.9, 1);
     expect(c.side_quests.quest_plume_deflector.correct_value).toBe(c.hardware_catalog.launchpads.pad_elevated_45deg.requires_standoff_distance_m);
@@ -31,13 +34,13 @@ describe('GSFC-STD-1000 margins (REQ-005)', () => {
   it('10 m mast at Shackleton sees the 54 h reference shadow', () => {
     expect(shadowHoursForMast(c, c.site_catalog.shackleton_ridge, c.hardware_catalog.power_masts.mast_10m_vsat)).toBeCloseTo(54, 0);
   });
-  it('reference design keeps >= 20% eclipse margin', () => expect(eclipseEnergy(c, design()).margin).toBeGreaterThanOrEqual(0.2));
+  it('reference design keeps the PDR eclipse power margin', () => expect(eclipseEnergy(c, design()).margin).toBeGreaterThanOrEqual(c.system_constants.minimum_power_margin_pdr));
   it('6 kWh "looks enough" but fails PDR', () => expect(firstFailure(design({ selectedBattery: 'batt_liion_6kwh' }))).toBe('ERR_PDR_POWER_MARGIN_VIOLATION'));
   it('4 kWh fails PDR', () => expect(firstFailure(design({ selectedBattery: 'batt_liion_4kwh' }))).toBe('ERR_PDR_POWER_MARGIN_VIOLATION'));
   it('3 m mast fails PDR (long shadows), not later', () => expect(firstFailure(design({ selectedMast: 'mast_3m_fixed' }))).toBe('ERR_PDR_POWER_MARGIN_VIOLATION'));
-  it('wet mass includes 20% contingency and Tsiolkovsky propellant', () => {
+  it('wet mass includes the PDR mass contingency and Tsiolkovsky propellant', () => {
     const m = massStack(c, design());
-    expect(m.contingency).toBeCloseTo(m.dry * 0.2, 6);
+    expect(m.contingency).toBeCloseTo(m.dry * c.system_constants.minimum_mass_margin_pdr, 6);
     expect(m.propellant / (m.dry + m.contingency)).toBeCloseTo(Math.exp(1850 / (320 * 9.80665)) - 1, 6);
   });
 });

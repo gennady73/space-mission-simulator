@@ -2,6 +2,7 @@
 # The JSON is now the source of truth and is edited by hand by the Lead.
 # Kept only to show how derived site fractions were computed (DECISIONS D-003, D-004).
 # Re-running it OVERWRITES manual edits: python3 tools/bootstrap_constants.py <out.json>
+# STALE since D-021/D-022 (PDR margins split to 15% power / 10% mass, badge titles, provenance). Do not re-run.
 import json, math, sys
 SYN_H = 29.530589*24
 SUN_A = 1.54; EARTH_A = 6.7; LOS_MIN = 0.5

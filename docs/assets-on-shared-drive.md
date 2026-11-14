@@ -132,7 +132,7 @@ space-mission-simulator/
 ### 2.8 Empirical Data Contract — `public/config/engine-constants.json`
 * **Purpose:** The binding contract between engineering and code. **No number is hard-coded in `src/`** (REQ-003).
 * **Content:**
-  * physical constants: lunar gravity 1.62 m/s², solar flux 1,361 W/m², σ, ice sublimation 2.8 MJ/kg, PDR margin 20%;
+  * physical constants: lunar gravity 1.62 m/s², solar flux 1,361 W/m², σ, ice sublimation 2.8 MJ/kg, PDR margins per GSFC-STD-1000 Rule 1.06 (15% power, 10% dry mass);
   * simulation settings;
   * difficulty levels and team roles;
   * five candidate sites;
