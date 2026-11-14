@@ -8,6 +8,8 @@ import { expect, test, type Page } from '@playwright/test';
  * #btn-<category>-<catalogId>, #btn-next-phase, #current-phase-display, .gate-error-banner.
  */
 const pick = async (page: Page, ...ids: string[]) => { for (const id of ids) await page.click(`button#${id}`); };
+/** Every fresh load greets the player with the start screen (D-113); begin a normal mission. */
+const start = async (page: Page) => { await page.goto('/'); await page.click('#btn-start-mission'); };
 /** The launch now replays the year in the flight playback (D-105); skip it to reach the debrief. */
 const skipFlight = async (page: Page) => {
   await expect(page.locator('#flight-playback')).toBeVisible();
@@ -24,7 +26,7 @@ const next = async (page: Page) => {
 const phase = (page: Page) => page.locator('#current-phase-display');
 
 async function passMcrAndSrr(page: Page, pad: string, distance: string): Promise<void> {
-  await page.goto('/');
+  await start(page);
   await pick(page, 'btn-site-shackleton_ridge');
   await next(page);
   await expect(phase(page)).toHaveText('Phase A: System Requirements Review (SRR)');
@@ -57,7 +59,7 @@ test.describe('Space Mission Simulator E2E Verification', () => {
   });
 
   test('A review cannot start while a choice of its phase is missing', async ({ page }) => {
-    await page.goto('/');
+    await start(page);
     await next(page);
     await expect(page.locator('.gate-error-banner')).toContainText('ERR_DESIGN_INCOMPLETE');
     await expect(page.locator('.gate-error-banner')).toContainText('landing site');
@@ -90,7 +92,7 @@ test.describe('Space Mission Simulator E2E Verification', () => {
   });
 
   test('Team play: a seat makes only its own decisions and the gate owner signs off', async ({ page }) => {
-    await page.goto('/');
+    await start(page);
     await page.click('#btn-menu');
     await page.check('#toggle-team-mode');
     await expect(page.locator('#btn-role-mission_lead')).toHaveAttribute('aria-pressed', 'true');
@@ -113,17 +115,18 @@ test.describe('Space Mission Simulator E2E Verification', () => {
   });
 
   test('Intro placeholder renders its text fallback when the image is missing', async ({ page }) => {
-    await page.goto('/');
+    await start(page);
     const intro = page.locator('[data-placeholder-id="IMG-PLACEHOLDER-INTRO"]');
     await expect(intro).toBeVisible();
     await expect(intro.locator('.fallback-frame .fallback-badge')).toContainText('2032 POLAR OUTPOST PIONEER');
   });
 
   test('Pre-stage question reveals its explanation only after a hypothesis (spec §8.1)', async ({ page }) => {
-    await page.goto('/');
+    await start(page);
     await expect(page.locator('#pre-stage-question')).toContainText('permanently shadowed craters');
     await expect(page.locator('#pre-stage-explanation')).toHaveCount(0);
     await expect(page.locator('#btn-reveal-explanation')).toBeDisabled();
+    await page.click('.prestage summary'); // the card is folded to one line by default (D-113)
     await page.fill('#input-hypothesis', 'The Sun stays near the horizon, so ridges stay lit and crater floors stay dark.');
     await page.click('#btn-reveal-explanation');
     await expect(page.locator('#pre-stage-explanation')).toContainText('tilted only about 1.5 degrees');
@@ -140,7 +143,7 @@ test.describe('Space Mission Simulator E2E Verification', () => {
   });
 
   test('Reference mission runs end to end', async ({ page }) => {
-    await page.goto('/');
+    await start(page);
     await page.click('button#btn-run-reference');
     await skipFlight(page);
     await expect(page.locator('#reference-output')).toContainText('"uptimeHours": 8760');
@@ -153,7 +156,7 @@ test.describe('Space Mission Simulator E2E Verification', () => {
   });
 
   test('The console viewport holds the live map through the design phases (D-104)', async ({ page }) => {
-    await page.goto('/');
+    await start(page);
     await expect(page.locator('#console-viewport .sitemap')).toBeVisible();
     await pick(page, 'btn-site-shackleton_ridge');
     await next(page);
@@ -162,7 +165,7 @@ test.describe('Space Mission Simulator E2E Verification', () => {
   });
 
   test('Objectives checklist ticks off what the review needs (D-034)', async ({ page }) => {
-    await page.goto('/');
+    await start(page);
     await expect(page.locator('#objectives-status')).toHaveText('1 still to choose before the review.');
     await pick(page, 'btn-site-shackleton_ridge');
     await expect(page.locator('#objective-selectedSite')).toHaveAttribute('data-done', 'true');
@@ -175,7 +178,7 @@ test.describe('Space Mission Simulator E2E Verification', () => {
   });
 
   test('Review modal: a failed verdict gives the reason and the fix, a passed one moves on (D-035)', async ({ page }) => {
-    await page.goto('/');
+    await start(page);
     await page.click('#btn-next-phase');
     const modal = page.locator('#review-modal');
     await expect(modal.locator('#review-verdict')).toHaveText('Verdict: not passed');

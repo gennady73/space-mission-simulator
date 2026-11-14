@@ -3,8 +3,8 @@
 > Core Triad: load this file together with `docs/space-mission-simulator-implementation-specification-final-v2.md`, `docs/BUILD-PLAN.md` (errata to the spec) and `public/config/engine-constants.json`.
 > Update this file at every stage transition: what changed, what's green, what's blocking.
 
-**Updated:** 2026-11-14 ~20:35 IST by Lead (Claude, Lead instance)
-**Team:** Lead · Architect · Hardware · Media (UX) — four sessions from 20:30 (D-107)
+**Updated:** 2026-11-15 ~01:45 IST by Lead (Claude, Lead instance)
+**Team:** Lead only from 11-15 00:40 (Architect, Hardware and Media offline until morning) — the Lead's Claude covers all roles; decision IDs keep their ranges
 **Event clock:** NASA Space Apps, Sat 14 – Sun 15 Nov 2026 · **Cut line: Sun 12:00** · Challenge: *Space Mission Design Game*
 
 ## Project lifecycle phase (our own NPR 7120.5 analogue)
@@ -30,7 +30,7 @@
 - About & Numbers page built (`src/ui/AboutNumbersView.ts`, open at `#about`): model scope, all 246 numbers with source and tier, credits, AI-use declaration. Provenance coverage is unit-tested (D-027).
 
 ## Open / blocking
-0. **Now (20:30 → Sun 12:00):** Architect = full-screen mission console (map viewport + stage panel, no page scroll, 1366×768 / 1024×768) · Lead = LOLA terrain + demo-ready flight · Hardware = number review (role card priority list) + site check · Media = usability pass, player-facing wording, 30 s demo video, placeholder art.
+0. **Now (01:45 → Sun 12:00, solo):** game shell done (D-113); next = NASA data credits in submission/README/About → demo video (30 s, subtitles) → site-number provenance decision (ILLUMINATION-CHECK, needs the Lead's sign-off in Hardware's place) → final Drive refresh and submission.
 1. **Hypothesis screen** (Architect): questions are now in `pre_stage_questions` (D-030). Also open: JSON import + compare, failure-hour marker on charts.
 2. **NASA data:** organiser answer: no restrictions, only recommendations; credit sources (D-028). LOLA / Diviner / Horizons processing is a Could item; the game ships on the synthetic site model until then.
 3. **Repo push:** the Lead's Claude cannot push (GitHub App not installed). It edits the Lead's local clone; the Lead commits and pushes.
