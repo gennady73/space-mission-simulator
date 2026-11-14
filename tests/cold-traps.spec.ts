@@ -23,3 +23,13 @@ describe('Diviner cold traps (D-109)', () => {
     expect(g.tmaxAt(5, 5)).toBeNull();
   });
 });
+
+describe('permanent-shadow masks (D-111)', () => {
+  it('answers inside the mask and returns null outside', async () => {
+    const { PsrGrid } = await import('../src/ui/map/coldTraps');
+    const g = new PsrGrid(2, 0, 0, 1, btoa(String.fromCharCode(1, 0, 0, 1)));
+    expect(g.at(-0.5, 0.5)).toBe(true);
+    expect(g.at(0.5, 0.5)).toBe(false);
+    expect(g.at(3, 3)).toBeNull();
+  });
+});
