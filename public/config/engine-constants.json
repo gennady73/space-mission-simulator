@@ -841,6 +841,48 @@
       "source": "NASA STMD FY26 Civil Space Shortfall Prioritization, Final Shortfall Rankings pp. 7-8; need statements pp. 15-16",
       "tier": "nasa-doc",
       "note": "Verified 2026-11-14 (V-01): SF02=1, SF16=2, SF24=8, SF03=15, SF04=16, SF05=19. Badge titles are short labels of the official SF descriptions"
+    },
+    "simulation.mission_duration_h": {
+      "source": "Spec v2 REQ-001: one year of operations = 8,760 h",
+      "tier": "game-rule"
+    },
+    "simulation.time_step_h": {
+      "source": "Spec v2 REQ-002: 1-hour simulation step",
+      "tier": "game-rule",
+      "note": "Scale of every telemetry value shown to the player"
+    },
+    "simulation.default_seed": {
+      "source": "Event date 2026-11-14; any integer works (D-009)",
+      "tier": "game-rule"
+    },
+    "simulation.min_earth_elevation_for_los_deg": {
+      "source": "Spec v2 3.3 (Earth must clear the local mask by 0.5 deg)",
+      "tier": "spec-provisional"
+    },
+    "simulation.dust_transmission_nominal": {
+      "source": "Spec v2 3.2 (array dust transmission 0.95 nominal)",
+      "tier": "spec-provisional"
+    },
+    "simulation.dust_transmission_scoured": {
+      "source": "Spec v2 3.2 (0.40 after plume scouring)",
+      "tier": "spec-provisional"
+    },
+    "simulation.ice_score_normaliser_kg": {
+      "source": "Spec v2 3.4 science metric (1,000 kg normaliser)",
+      "tier": "game-rule"
+    },
+    "simulation.dust_event_duration_h": {
+      "source": "Team estimate",
+      "tier": "game-rule"
+    },
+    "simulation.dust_event_beam_transmittance": {
+      "source": "Spec v2 6.4 (10% beam attenuation in dust events)",
+      "tier": "spec-provisional"
+    },
+    "side_quests": {
+      "source": "Spec v2 8.2 quest registry; answers recomputed from each prompt's own inputs (checked by unit test)",
+      "tier": "game-rule",
+      "note": "quest_pdr_margin uses GSFC-STD-1000 Rule 1.06 (D-021)"
     }
   }
 }

@@ -4,6 +4,18 @@ Newest block on top. One block per session. The Architect writes in `architect.m
 
 ---
 
+## 2026-11-14 ~18:05 IST · Lead (Claude, Lead instance) · About & Numbers
+**Did**
+- `src/ui/aboutModel.ts` (pure: numbers, units, provenance groups, tier counts) + `src/ui/AboutNumbersView.ts` + `src/ui/about.css`. Route `#about` added to the build shell in `main.ts` (3 lines; Architect keeps it when replacing the shell).
+- Found 19 numbers with no provenance; added sources. New test `tests/about-numbers.spec.ts` keeps coverage at 100% (D-023).
+- Recorded the organiser's data answer (D-024). Credits list LOLA/Diviner/Horizons as "planned" until used.
+
+**Verification:** `tsc --noEmit` clean; model run: 246 numbers, 0 uncovered, 0 dangling. Page not yet viewed in a browser (no node_modules here) — Lead to open `npm run dev` → `/#about`.
+
+**Next (Lead):** side-quest modals → submission package → Drive mirror refresh.
+
+---
+
 ## 2026-11-14 ~17:40 IST · Lead (Claude, Lead instance) · V-01 source check
 **Did**
 - Verified STMD FY26 shortfall ranks (pp. 7–8) and need IDs (pp. 15–16): ranks correct; power-delivery label fixed to Need 2.04 (D-022).

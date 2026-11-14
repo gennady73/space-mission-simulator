@@ -5,6 +5,7 @@ import { computeLedger, isResolved, resolveDesign } from './engine/SubsystemEngi
 import { runMission, scoreMission } from './engine/SimulationClock';
 import { initialState, PHASES, REFERENCE_DESIGN, StateStore } from './models/StateStore';
 import { renderPlaceholder } from './ui/GraphicPlaceholderView';
+import { renderAboutNumbers } from './ui/AboutNumbersView';
 import type { EngineConstants } from './models/Interfaces';
 
 /**
@@ -22,6 +23,8 @@ async function boot(): Promise<void> {
     app.querySelector('pre')!.textContent = String(e);
     return;
   }
+  // Lead: About & Numbers page at #about (keep this route when the cockpit replaces the shell).
+  if (location.hash === '#about') { app.replaceChildren(renderAboutNumbers(c)); return; }
   const store = new StateStore(initialState(c));
   const shared = StateStore.fromShareHash(location.hash);
   if (shared) store.importDesign(shared);

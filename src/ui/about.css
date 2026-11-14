@@ -1,0 +1,25 @@
+/* About & Numbers page. Uses the cockpit tokens from styles.css. */
+.about { max-width: 960px; margin: 0 auto; padding: 8px 0 48px; }
+.about h1 { margin: 8px 0 4px; }
+.about h2 { margin: 28px 0 8px; font-size: 1.15rem; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+.about__lead { color: var(--muted); }
+.about ul { padding-left: 20px; }
+.about li { margin: 4px 0; }
+.about a { color: var(--accent); }
+.about code { font: 12px var(--mono); }
+.about__tiers { list-style: none; padding: 0; }
+.about__numbers details { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; margin: 6px 0; padding: 6px 10px; }
+.about__numbers summary { cursor: pointer; }
+.about__numbers summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.about__source { margin: 8px 0; font-size: 0.9rem; }
+.about table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.about th, .about td { text-align: left; padding: 3px 6px; border-top: 1px solid var(--line); }
+.about td.num { text-align: right; font: 13px var(--mono); white-space: nowrap; }
+.about__planned { color: var(--warn); font-size: 0.85rem; }
+.about__team { color: var(--muted); font-size: 0.85rem; margin-top: 32px; }
+.tier { display: inline-block; font: 11px var(--mono); padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; }
+.tier--nasa-doc { color: var(--ok); }
+.tier--physical-constant { color: var(--accent); }
+.tier--literature { color: var(--accent); }
+.tier--spec-provisional { color: var(--warn); }
+.tier--game-rule { color: var(--muted); }
