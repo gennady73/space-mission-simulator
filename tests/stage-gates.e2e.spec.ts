@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * Spec v2 §10.1 E2E suite, adapted (DECISIONS D-006/D-007/D-021):
+ * Spec v2 §10.1 E2E suite, adapted (DECISIONS D-006/D-007/D-023):
  *  - no default pad; each phase needs its own choices before its review can start;
  *  - the fallback badge text is the one in engine-constants.json.
  * The element ids are the UI contract of the cockpit (docs/BUILD-PLAN.md §6):
@@ -22,13 +22,13 @@ async function passMcrAndSrr(page: Page, pad: string, distance: string): Promise
 }
 
 test.describe('Space Mission Simulator E2E Verification', () => {
-  test('PDR gate rejects a battery with < 20% power margin', async ({ page }) => {
+  test('PDR gate rejects a battery below the 15% power margin', async ({ page }) => {
     await passMcrAndSrr(page, 'btn-pad-pad_sintered', '1500');
     await pick(page, 'btn-mast-mast_10m_vsat', 'btn-battery-batt_liion_4kwh', 'btn-comm-dte_xband', 'btn-storage-ssmm_128gb');
     await next(page);
     const banner = page.locator('.gate-error-banner');
     await expect(banner).toBeVisible();
-    await expect(banner).toContainText('GSFC-STD-1000');
+    await expect(banner).toContainText('GSFC-STD-1000 Rule 1.06');
     await expect(banner).toContainText('ERR_PDR_POWER_MARGIN_VIOLATION');
     await expect(phase(page)).toHaveText('Phase B: Preliminary Design Review (PDR)');
   });

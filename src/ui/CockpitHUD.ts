@@ -136,7 +136,7 @@ function resourceBar(view: CockpitView): HTMLElement {
   const bar = h('section', { class: 'resources', 'aria-label': 'Mission resources' });
   if (!design) return bar;
   const l = computeLedger(c, design, s.allocatedBudgetUSD);
-  const minMargin = c.system_constants.minimum_gsfc_margin_pdr;
+  const minMargin = c.system_constants.minimum_power_margin_pdr;
   const cell = (name: string, value: string, note: string, ok: boolean) =>
     h('div', { class: ok ? 'resource' : 'resource bad' }, h('dt', {}, name), h('dd', {}, value), h('small', {}, `${ok ? '' : 'Problem: '}${note}`));
   bar.append(h('dl', {},

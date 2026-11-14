@@ -4,7 +4,7 @@ import { PHASES, REFERENCE_DESIGN } from '../models/StateStore';
 import type { EngineConstants, GateValidationResult, Phase, SimulationState } from '../models/Interfaces';
 
 /**
- * How the cockpit walks a design through the reviews (D-021).
+ * How the cockpit walks a design through the reviews (D-023).
  *
  * Each review needs the choices of its own phase and of the phases before it. Choices that
  * belong to later phases are not made yet, so the engine is given the reference design's
