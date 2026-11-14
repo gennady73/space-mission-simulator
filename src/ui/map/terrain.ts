@@ -208,6 +208,8 @@ export interface ShadeLayers { slope: boolean; ice: boolean }
 
 /** Tangent of the Sun's apparent diameter (about half a degree): the width of a shadow's soft edge. Display only. */
 const PENUMBRA = Math.tan(0.53 * DEG);
+/** How strongly the sub-resolution regolith speckle modulates brightness (display only, D-117). */
+const GRAIN_STRENGTH = 0.38;
 
 /** Slope in degrees at grid cell (i, j). */
 export function slopeAt(g: Grid, i: number, j: number): number {
@@ -259,7 +261,12 @@ export function shade(g: Grid, sunAzDeg: number, sunElDeg: number, layers: Shade
       // earthshine-like ambient from the top (Earth side) keeps shadowed relief readable
       const relief = Math.max(0, 0.5 + 0.5 * (ny * 0.7 - nx * 0.3) * 4); // fixed soft light so dark relief still reads
       const amb = 0.035 + 0.07 * Math.min(1, relief);
-      const v = Math.min(1, amb + lit * 3.2);
+      // Sub-resolution regolith texture as brightness, not height (D-117): height bumps under a
+      // 2-3 degree sun cast hundred-metre streaks, albedo speckle does not.
+      const wx = g.view.cx + (i + 0.5 - w / 2) * kmPerPx;
+      const wy = g.view.cy + (h / 2 - j - 0.5) * kmPerPx;
+      const grain = 1 + GRAIN_STRENGTH * (fbm(wx, wy, 0.22, 1, 3) + fbm(wx, wy, 0.045, 0.5, 2));
+      const v = Math.min(1, (amb + lit * 3.2) * grain);
       let r = 22 + 214 * v, gg = 24 + 210 * v, b = 32 + 200 * v;
       if (psr[k]) {
         // permanently shadowed floor: keep the relief, tint it (blue when the ice layer is on)
