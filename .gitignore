@@ -10,3 +10,4 @@ raw-data/
 *.tif
 *.IMG
 *.tab
+__pycache__/
