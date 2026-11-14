@@ -94,3 +94,7 @@ details summary { cursor: pointer; color: var(--muted); }
 .prestage textarea { display: block; width: 100%; margin-top: 4px; resize: vertical; }
 .prestage button { justify-self: start; }
 #pre-stage-explanation { border-top: 1px solid var(--line); padding-top: 10px; }
+
+/* Console viewport (BUILD-PLAN §6): the site map or the flight playback fills it. */
+#console-viewport { height: min(62vh, 540px); margin: 16px 0; }
+#console-viewport.is-flight { height: min(82vh, 780px); }

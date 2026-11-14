@@ -5,7 +5,10 @@ import { runDesignGates, totalCostUSD, validatePLAR } from './engine/StageGateVa
 import { initialState, PHASES, REFERENCE_DESIGN, StateStore } from './models/StateStore';
 import { renderAboutNumbers } from './ui/AboutNumbersView';
 import { renderMapDemo } from './ui/map/mapDemo';
-import type { Difficulty, EngineConstants, GateValidationResult, Phase, TeamRole } from './models/Interfaces';
+import { renderSiteMap, type SiteMapHandle } from './ui/map/SiteMap';
+import { createFlightPlayback, type FlightPlaybackHandle } from './ui/map/FlightPlayback';
+import type { Difficulty, EngineConstants, GateValidationResult, Phase, SimulationState, TeamRole } from './models/Interfaces';
+import { h } from './ui/dom';
 import { renderCockpit, type CockpitActions } from './ui/CockpitHUD';
 import type { Debrief } from './ui/DebriefView';
 import { provisionalDesign, submitToReview } from './ui/DesignFlow';
@@ -33,6 +36,11 @@ async function boot(): Promise<void> {
 
   let banner: GateValidationResult | null = null;
   let debrief: Debrief | null = null;
+  // Console viewport (BUILD-PLAN §6): one persistent element that the cockpit re-adopts on every
+  // render, so the map canvas and the flight playback live across re-renders.
+  const viewport = h('div', { id: 'console-viewport', class: 'viewport' });
+  let map: SiteMapHandle | null = null;
+  let flight: FlightPlaybackHandle | null = null;
   let padDistanceDraft = store.get().padDistanceM?.toString() ?? '';
   let heaterDraft = store.get().drillHeaterW.toString();
 
@@ -43,18 +51,42 @@ async function boot(): Promise<void> {
     return { padDistanceM: Number.isFinite(distance) ? distance : null, drillHeaterW: Number.isFinite(heater) ? heater : 0 };
   };
 
-  /** Fly the year for a design that has been through all four design reviews. */
+  /**
+   * Fly the year for a design that has been through all four design reviews: run the engine once
+   * with hourly telemetry, replay it as the flight playback (D-105) in the console viewport, and
+   * show the debrief when the player asks for it.
+   */
   const fly = (gates: Partial<Record<Phase, GateValidationResult>>): void => {
     const s = store.get();
     const { design } = provisionalDesign(c, s);
     if (!design) return;
-    const result = runMission(c, design, { seed: s.seed, randomEvents: c.difficulty_levels[s.difficulty].random_events_enabled, logEveryHours: CHART_SAMPLE_HOURS });
+    const result = runMission(c, design, { seed: s.seed, randomEvents: c.difficulty_levels[s.difficulty].random_events_enabled, logEveryHours: 1 });
+    // The playback reads every hour; the debrief strip charts keep one row in CHART_SAMPLE_HOURS.
+    const sampled = result.telemetry.filter((t, i, all) => t.hour % CHART_SAMPLE_HOURS === 0 || i === all.length - 1);
     const passed = Object.values(gates).filter((g) => g?.passed).length;
     const costUSD = totalCostUSD(design);
     const plar = validatePLAR(result.uptimeHours, c.simulation.mission_duration_h, costUSD, s.allocatedBudgetUSD);
-    debrief = { result, score: scoreMission(c, design, result, passed, s.allocatedBudgetUSD), plar, gates, costUSD, budgetUSD: s.allocatedBudgetUSD };
+    debrief = { result: { ...result, telemetry: sampled }, score: scoreMission(c, design, result, passed, s.allocatedBudgetUSD), plar, gates, costUSD, budgetUSD: s.allocatedBudgetUSD };
     banner = null;
-    store.update({ currentPhase: 'PLAR', gateResults: { ...gates, PLAR: plar }, telemetryLog: result.telemetry, remainingBudgetUSD: s.allocatedBudgetUSD - costUSD });
+    const land = (): void => {
+      flight?.destroy();
+      flight = null;
+      store.update({ isSimulationRunning: false, currentPhase: 'PLAR', gateResults: { ...gates, PLAR: plar }, telemetryLog: sampled, remainingBudgetUSD: s.allocatedBudgetUSD - costUSD });
+    };
+    map?.destroy();
+    map = null;
+    flight?.destroy();
+    flight = createFlightPlayback(viewport, c, s, result, { onFinish: land });
+    store.update({ isSimulationRunning: true });
+  };
+
+  /** Keep the site map (D-104) in the viewport during the design phases; the playback owns it in flight. */
+  const syncViewport = (state: SimulationState): void => {
+    if (state.isSimulationRunning) return;
+    if (state.currentPhase === 'PLAR') { map?.destroy(); map = null; return; }
+    const stage = state.currentPhase;
+    if (map) map.update(state, { stage });
+    else map = renderSiteMap(viewport, c, state, { stage, onSelectSite: (id) => actions.update({ selectedSite: id }) });
   };
 
   const actions: CockpitActions = {
@@ -115,7 +147,10 @@ async function boot(): Promise<void> {
     },
   };
 
-  store.subscribe((state) => renderCockpit(app, { constants: c, state, banner, padDistanceDraft, heaterDraft, debrief }, actions));
+  store.subscribe((state) => {
+    syncViewport(state);
+    renderCockpit(app, { constants: c, state, banner, padDistanceDraft, heaterDraft, debrief, viewport }, actions);
+  });
 }
 
 void boot();

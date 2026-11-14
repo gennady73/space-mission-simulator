@@ -8,6 +8,12 @@ import { expect, test, type Page } from '@playwright/test';
  * #btn-<category>-<catalogId>, #btn-next-phase, #current-phase-display, .gate-error-banner.
  */
 const pick = async (page: Page, ...ids: string[]) => { for (const id of ids) await page.click(`button#${id}`); };
+/** The launch now replays the year in the flight playback (D-105); skip it to reach the debrief. */
+const skipFlight = async (page: Page) => {
+  await expect(page.locator('#flight-playback')).toBeVisible();
+  await page.click('#btn-flight-skip');
+  await page.click('#btn-flight-debrief');
+};
 const next = (page: Page) => page.click('button#btn-next-phase');
 const phase = (page: Page) => page.locator('#current-phase-display');
 
@@ -59,6 +65,7 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await expect(phase(page)).toHaveText('Phase C: Critical Design Review (CDR)');
     await pick(page, 'btn-logistics-hts_maglev_guideway', 'btn-link-laser_power_beaming');
     await next(page);
+    await skipFlight(page);
     await expect(phase(page)).toHaveText('Phase D/E: Post-Launch Assessment Review (PLAR)');
     await expect(page.locator('.gate-pass-banner')).toContainText('Mission successful');
     await expect(page.locator('.strip-chart')).toHaveCount(4);
@@ -128,8 +135,18 @@ test.describe('Space Mission Simulator E2E Verification', () => {
   test('Reference mission runs end to end', async ({ page }) => {
     await page.goto('/');
     await page.click('button#btn-run-reference');
+    await skipFlight(page);
     await expect(page.locator('#reference-output')).toContainText('"uptimeHours": 8760');
     await page.click('button#btn-revise-design');
     await expect(phase(page)).toHaveText('Pre-Phase A: Mission Concept Review (MCR)');
+  });
+
+  test('The console viewport holds the live map through the design phases (D-104)', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#console-viewport .sitemap')).toBeVisible();
+    await pick(page, 'btn-site-shackleton_ridge');
+    await next(page);
+    await expect(phase(page)).toHaveText('Phase A: System Requirements Review (SRR)');
+    await expect(page.locator('#console-viewport .sitemap')).toBeVisible();
   });
 });
