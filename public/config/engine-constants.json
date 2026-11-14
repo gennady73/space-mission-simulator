@@ -191,7 +191,7 @@
       "id": "faustini_rim",
       "name": "Faustini Rim",
       "lola_dataset_id": null,
-      "latitude_deg": -87.2,
+      "latitude_deg": -86.6,
       "longitude_deg": 77.0,
       "slope_deg": 12.3,
       "illumination_fraction": 0.898,
@@ -222,6 +222,84 @@
       "extra_cost_usd": 3000000.0,
       "description": "Uses Sun-Earth gravity to arrive slower: less propellant, but ~100 days of cruise operations."
     }
+  },
+  "map_features": {
+    "moon_radius_km": 1737.4,
+    "sun_azimuth_at_hour0_deg": 90,
+    "craters": [
+      {
+        "name": "Shackleton",
+        "lat_deg": -89.67,
+        "lon_deg": 129.8,
+        "radius_km": 10.5,
+        "depth_km": 4.2,
+        "permanently_shadowed": true
+      },
+      {
+        "name": "de Gerlache",
+        "lat_deg": -88.5,
+        "lon_deg": 272.9,
+        "radius_km": 16.3,
+        "depth_km": 3.0,
+        "permanently_shadowed": true
+      },
+      {
+        "name": "Sverdrup",
+        "lat_deg": -88.3,
+        "lon_deg": 152.0,
+        "radius_km": 16.0,
+        "depth_km": 2.0,
+        "permanently_shadowed": true
+      },
+      {
+        "name": "Shoemaker",
+        "lat_deg": -88.1,
+        "lon_deg": 44.9,
+        "radius_km": 25.9,
+        "depth_km": 2.5,
+        "permanently_shadowed": true
+      },
+      {
+        "name": "Slater",
+        "lat_deg": -88.1,
+        "lon_deg": 110.5,
+        "radius_km": 12.0,
+        "depth_km": 1.8,
+        "permanently_shadowed": true
+      },
+      {
+        "name": "Faustini",
+        "lat_deg": -87.3,
+        "lon_deg": 77.0,
+        "radius_km": 20.6,
+        "depth_km": 2.5,
+        "permanently_shadowed": true
+      },
+      {
+        "name": "Haworth",
+        "lat_deg": -87.45,
+        "lon_deg": 355.0,
+        "radius_km": 25.7,
+        "depth_km": 3.0,
+        "permanently_shadowed": true
+      }
+    ],
+    "massifs": [
+      {
+        "name": "Malapert Massif",
+        "lat_deg": -86.0,
+        "lon_deg": 2.9,
+        "radius_km": 22.0,
+        "height_km": 4.5
+      },
+      {
+        "name": "Connecting Ridge",
+        "lat_deg": -89.2,
+        "lon_deg": 230.0,
+        "radius_km": 9.0,
+        "height_km": 1.0
+      }
+    ]
   },
   "hardware_catalog": {
     "spacecraft_bus": {
@@ -910,6 +988,11 @@
       "source": "Spec v2 8.2 quest registry; answers recomputed from each prompt's own inputs (checked by unit test)",
       "tier": "game-rule",
       "note": "quest_pdr_margin uses GSFC-STD-1000 Rule 1.06 (D-021)"
+    },
+    "map_features": {
+      "source": "Approximate crater and massif positions and sizes after the IAU Gazetteer of Planetary Nomenclature; depths and the synthetic height field are schematic",
+      "tier": "spec-provisional",
+      "note": "Display only, not used by the engine. To be replaced by the LOLA 120 m polar grid (D-104)"
     }
   }
 }

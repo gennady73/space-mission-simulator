@@ -40,6 +40,8 @@ export interface EngineConstants {
   team_roles: Record<TeamRole, TeamRoleConfig>;
   site_catalog: Record<string, LandingSite>;
   trajectories: Record<string, TrajectoryOption>;
+  /** Schematic map geometry (display only; never read by the engine). */
+  map_features: MapFeatures;
   hardware_catalog: {
     spacecraft_bus: Record<string, SpacecraftBusConfig>;
     launch_vehicles: Record<string, LaunchVehicle>;
@@ -139,6 +141,31 @@ export interface LandingSite {
   max_route_slope_deg: number;
   ambient_cold_trap_temperature_k: number;
   description: string;
+}
+
+export interface MapCrater {
+  name: string;
+  lat_deg: number;
+  lon_deg: number;
+  radius_km: number;
+  depth_km: number;
+  permanently_shadowed: boolean;
+}
+
+export interface MapMassif {
+  name: string;
+  lat_deg: number;
+  lon_deg: number;
+  radius_km: number;
+  height_km: number;
+}
+
+export interface MapFeatures {
+  moon_radius_km: number;
+  /** Map bearing of the Sun at mission hour 0 (0 = up/0°E, 90 = right). */
+  sun_azimuth_at_hour0_deg: number;
+  craters: MapCrater[];
+  massifs: MapMassif[];
 }
 
 export interface TrajectoryOption {
