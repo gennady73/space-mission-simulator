@@ -206,6 +206,9 @@ export function rasterize(t: Terrain, view: View, w: number, h: number): Grid {
 
 export interface ShadeLayers { slope: boolean; ice: boolean }
 
+/** Tangent of the Sun's apparent diameter (about half a degree): the width of a shadow's soft edge. Display only. */
+const PENUMBRA = Math.tan(0.53 * DEG);
+
 /** Slope in degrees at grid cell (i, j). */
 export function slopeAt(g: Grid, i: number, j: number): number {
   const { w, h, z, kmPerPx } = g;
@@ -238,13 +241,20 @@ export function shade(g: Grid, sunAzDeg: number, sunElDeg: number, layers: Shade
       const nx = -dzdx / nl, ny = -dzdy / nl, nz = 1 / nl;
       let lit = sunUp && !psr[k] ? Math.max(0, nx * sx + ny * sy + nz * sz) : 0;
       if (lit > 0) {
-        // march toward the sun; any terrain above the ray casts a shadow
+        // March toward the sun. The Sun is a disc, not a point: terrain that only grazes the ray
+        // gives a partial shadow (penumbra), which also hides the pixel grid along shadow edges.
         const z0 = z[k] + 0.002;
+        let clearance = PENUMBRA; // smallest angular clearance (as a tangent) of the ray over the terrain
         for (let s = 1; s < maxSteps; s++) {
-          const ii = Math.round(i + stepX * s), jj = Math.round(j + stepY * s);
-          if (ii < 0 || jj < 0 || ii >= w || jj >= h) break;
-          if (z[jj * w + ii] > z0 + s * kmPerPx * tanEl) { lit = 0; break; }
+          const fx = i + stepX * s, fy = j + stepY * s;
+          const ix = Math.floor(fx), iy = Math.floor(fy);
+          if (ix < 0 || iy < 0 || ix >= w - 1 || iy >= h - 1) break;
+          const tx = fx - ix, ty = fy - iy, q = iy * w + ix;
+          const zt = (z[q] * (1 - tx) + z[q + 1] * tx) * (1 - ty) + (z[q + w] * (1 - tx) + z[q + w + 1] * tx) * ty;
+          const cl = (z0 + s * kmPerPx * tanEl - zt) / (s * kmPerPx);
+          if (cl < clearance) { clearance = cl; if (cl <= 0) break; }
         }
+        lit *= Math.max(0, Math.min(1, clearance / PENUMBRA));
       }
       // earthshine-like ambient from the top (Earth side) keeps shadowed relief readable
       const relief = Math.max(0, 0.5 + 0.5 * (ny * 0.7 - nx * 0.3) * 4); // fixed soft light so dark relief still reads
