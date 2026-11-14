@@ -141,6 +141,17 @@ details summary { cursor: pointer; color: var(--muted); }
 .objectives li[data-done="true"] { color: var(--ok); }
 .console-panel .panel-submit { position: sticky; bottom: -16px; margin-top: auto; padding: 10px 0 16px; background: linear-gradient(transparent, var(--bg) 30%); display: grid; gap: 6px; z-index: 5; }
 .panel-submit #btn-next-phase { width: 100%; min-height: 44px; }
+.review-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: rgb(3 5 8 / .72); }
+.review { width: min(560px, 100%); max-height: 100%; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-top: 4px solid var(--ok); border-radius: 10px; padding: 20px 24px; display: grid; gap: 12px; box-shadow: 0 12px 40px rgb(0 0 0 / .6); }
+.review.is-fail { border-top-color: var(--fail); }
+.review h2 { margin: 0; font-size: 22px; }
+.review.is-pass h2 { color: var(--ok); }
+.review.is-fail h2 { color: var(--fail); }
+.review-kicker { margin: 0; font: 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.review-gates { display: flex; gap: 6px; flex-wrap: wrap; list-style: none; margin: 0; padding: 0; font: 12px var(--mono); }
+.review-gates li { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; color: var(--fail); }
+.review-gates li[data-passed="true"] { color: var(--ok); }
+.review .actions { margin: 4px 0 0; }
 /* Tablet portrait: the map (45vh) stacked over the panel. */
 @media (max-width: 899px) {
   .console { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 45vh minmax(0, 1fr); }
