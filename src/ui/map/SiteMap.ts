@@ -1,6 +1,7 @@
 import './site-map.css';
 import type { EngineConstants, Phase, SimulationState } from '../../models/Interfaces';
 import { earthElevationDeg, solarElevationDeg } from '../../engine/SubsystemEngines';
+import { fetchRealGrids } from './realTerrain';
 import { rasterize, shade, sunAzimuthDeg, Terrain, type Grid, type SiteGeometry, type View, type XY } from './terrain';
 
 /**
@@ -36,7 +37,14 @@ export interface SiteMapHandle {
 }
 
 const terrains = new WeakMap<EngineConstants, Terrain>();
+const terrainReady = new WeakMap<Terrain, Promise<void>>();
 const terrainFor = (c: EngineConstants) => { let t = terrains.get(c); if (!t) { t = new Terrain(c); terrains.set(c, t); } return t; };
+/** Load LOLA grids once per terrain (D-106); resolves even when there are none. */
+const realTerrain = (t: Terrain) => {
+  let p = terrainReady.get(t);
+  if (!p) { p = fetchRealGrids().then((g) => { if (g.length) t.setReal(g); }); terrainReady.set(t, p); }
+  return p;
+};
 
 const COLORS = { ok: '#3ddc84', warn: '#ffb020', fail: '#ff4d4f', accent: '#4ea8ff', text: '#e8edf4', muted: '#9aa7b8', sun: '#ffd34d' };
 
@@ -58,7 +66,12 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
   const hud = document.createElement('div'); hud.className = 'sitemap__hud';
   const legend = document.createElement('div'); legend.className = 'sitemap__legend';
   const note = document.createElement('div'); note.className = 'sitemap__note';
-  note.textContent = 'Schematic terrain · real crater positions · LOLA data pending';
+  const setNote = () => {
+    note.textContent = terrain.real.length
+      ? `LOLA terrain (NASA) · ${[...new Set(terrain.real.map((g) => `${Math.round(g.resM)} m`))].join(' / ')} grid · schematic outside`
+      : 'Schematic terrain · real crater positions · LOLA data pending';
+  };
+  setNote();
   const tip = document.createElement('div'); tip.className = 'sitemap__tip'; tip.hidden = true;
   root.append(canvas, hud, legend, note, tip);
   container.append(root);
@@ -420,6 +433,12 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
   ro.observe(root);
   draw();
   syncAnimation();
+  let alive = true;
+  // Swap in LOLA heights when they arrive (the first frame uses schematic terrain).
+  void realTerrain(terrain).then(() => {
+    if (!alive || !terrain.real.length) return;
+    gridKey = ''; shadeCache.clear(); lastImg = null; setNote(); draw();
+  });
 
   return {
     element: root,
@@ -432,6 +451,6 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
       syncAnimation();
     },
     setHour(h, o) { hour = h; if (o) overlay = o; if (!anim) draw(); },
-    destroy() { cancelAnimationFrame(anim); ro.disconnect(); root.remove(); },
+    destroy() { alive = false; cancelAnimationFrame(anim); ro.disconnect(); root.remove(); },
   };
 }

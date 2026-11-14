@@ -32,4 +32,4 @@ PGDA-78 tile per catalog site (only the `_surf.tif` is needed; skip `Clones/`, `
 | `faustini_rim` | LM8 (Faustini Rim A) |
 
 If `info` says the site is outside the tile, crop the tile's middle instead: `--center tile --id <site_id>`.
-Output grids: int16 metres around `h_offset_m`, row 0 = north (+y), stereographic like `terrain.ts toXY()`.
+Output grids: int16, `metres = value × h_scale_m + h_offset_m` (finest step ≥ 0.1 m that fits the relief), row 0 = north (+y), stereographic like `terrain.ts toXY()`. Each run also updates `public/data/terrain/index.json`; the map loads only the grids listed there (`src/ui/map/realTerrain.ts`), finest first, feathered into the coarser grid, schematic terrain outside. An empty index means schematic terrain everywhere.
