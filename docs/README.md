@@ -3,3 +3,4 @@
 - `space-mission-simulator-implementation-specification-final-v1.md` — prior baseline (copy from Drive).
 - `BUILD-PLAN.md` — errata + scope + contract. Wins over the spec where they differ.
 - `team/` — context, decisions, handovers, role cards.
+- `assets-on-shared-drive.md` — Drive ↔ GitHub map and the Core Triad bootstrap (mirror of the Drive root file).
