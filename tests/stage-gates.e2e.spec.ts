@@ -151,6 +151,19 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await expect(page.locator('#console-viewport .sitemap')).toBeVisible();
   });
 
+  test('Objectives checklist ticks off what the review needs (D-034)', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#objectives-status')).toHaveText('1 still to choose before the review.');
+    await pick(page, 'btn-site-shackleton_ridge');
+    await expect(page.locator('#objective-selectedSite')).toHaveAttribute('data-done', 'true');
+    await expect(page.locator('#objectives-status')).toHaveText('Ready for the review.');
+    await next(page);
+    await expect(page.locator('#objectives li')).toHaveCount(3);
+    await expect(page.locator('#objective-padDistanceM')).toHaveAttribute('data-done', 'false');
+    await page.fill('input#input-pad-distance', '800');
+    await expect(page.locator('#objective-padDistanceM')).toHaveAttribute('data-done', 'true');
+  });
+
   test('Full mission at 1024x768 never scrolls the page (D-033)', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
     const noPageScroll = async () =>
