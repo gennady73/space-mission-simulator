@@ -13,10 +13,11 @@ function grid(id: string, cx: number, cy: number, half: number, n: number, offse
 
 describe('real LOLA grids (D-106)', () => {
   it('decodes int16 heights with offset and scale and samples them bilinearly', () => {
+    // heights are Float32 (km): compare to the millimetre, not to float64 precision
     const g = new RealGrid(grid('a', 0, 0, 1, 4, 100, 0.5));
     // cell centres at x = -0.75, -0.25, 0.25, 0.75 km hold columns 0..3 → 100, 100.5, 101, 101.5 m
-    expect(g.sample(-0.25, 0).h * 1000).toBeCloseTo(100.5, 6);
-    expect(g.sample(0, 0).h * 1000).toBeCloseTo(100.75, 6);
+    expect(g.sample(-0.25, 0).h * 1000).toBeCloseTo(100.5, 3);
+    expect(g.sample(0, 0).h * 1000).toBeCloseTo(100.75, 3);
     expect(g.sample(2, 0).w).toBe(0); // outside
     expect(g.sample(0, 0).w).toBe(1); // far from the edge
     expect(g.sample(0.95, 0).w).toBeGreaterThan(0);
