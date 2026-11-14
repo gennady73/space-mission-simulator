@@ -88,7 +88,12 @@ async function boot(): Promise<void> {
     if (state.currentPhase === 'PLAR') { map?.destroy(); map = null; return; }
     const stage = state.currentPhase;
     if (map) map.update(state, { stage });
-    else map = renderSiteMap(viewport, c, state, { stage, onSelectSite: (id) => actions.update({ selectedSite: id }) });
+    else map = renderSiteMap(viewport, c, state, {
+      stage,
+      onSelectSite: (id) => actions.update({ selectedSite: id }),
+      // Lead: tapping the SRR map places the solar mast; the distance is the same value as the typed field.
+      onPlaceMast: (distanceM) => { padDistanceDraft = String(distanceM); actions.update({ padDistanceM: distanceM }); },
+    });
   };
 
   const actions: CockpitActions = {

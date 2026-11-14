@@ -20,7 +20,13 @@ import { rasterize, shade, sunAzimuthDeg, Terrain, type Grid, type SiteGeometry,
  */
 
 export type MapStage = Phase | 'FLY';
-export interface SiteMapOptions { stage: MapStage; hour?: number; onSelectSite?: (siteId: string) => void }
+export interface SiteMapOptions {
+  stage: MapStage;
+  hour?: number;
+  onSelectSite?: (siteId: string) => void;
+  /** SRR: the player tapped the map to place the solar mast; distance from the landing pad in metres. */
+  onPlaceMast?: (distanceM: number) => void;
+}
 /** What the flight playback tells the map about the outpost at the current hour. */
 export interface FlightOverlay {
   /** The drill is running this hour (the rover is at the cold trap). */
@@ -40,6 +46,13 @@ export interface SiteMapHandle {
 const terrains = new WeakMap<EngineConstants, Terrain>();
 /** Overlays the player switched on. Off by default so the terrain reads first; shared by every map on the page. */
 const shownLayers = { slope: false, ice: false };
+/** Map bearing (degrees, 0 = up) of the solar mast from the pad, per site, as placed by the player. Display only: the engine uses the distance. */
+const mastBearing = new Map<string, number>();
+const DEFAULT_MAST_BEARING_DEG = 90;
+/** Placement snaps to this many metres, matching the step of the distance field. */
+const MAST_STEP_M = 10;
+/** How long a map message stays up, ms. */
+const MESSAGE_MS = 5000;
 const terrainReady = new WeakMap<Terrain, Promise<void>>();
 const terrainFor = (c: EngineConstants) => { let t = terrains.get(c); if (!t) { t = new Terrain(c); terrains.set(c, t); } return t; };
 /** Load LOLA grids once per terrain (D-106); resolves even when there are none. */
@@ -83,7 +96,15 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
   };
   setNote();
   const tip = document.createElement('div'); tip.className = 'sitemap__tip'; tip.hidden = true;
-  root.append(canvas, hud, legend, note, tip);
+  const msg = document.createElement('div'); msg.className = 'sitemap__msg'; msg.hidden = true; msg.setAttribute('role', 'status');
+  root.append(canvas, hud, legend, note, tip, msg);
+  let msgTimer = 0;
+  let legendShown = '';
+  /** Short message above the legend (why a layer is locked, and so on). */
+  const say = (text: string) => {
+    msg.textContent = text; msg.hidden = false;
+    window.clearTimeout(msgTimer); msgTimer = window.setTimeout(() => { msg.hidden = true; }, MESSAGE_MS);
+  };
   container.append(root);
 
   // Regional view frames every site (and the pole) with a margin.
@@ -118,9 +139,12 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
     if (opts.stage === 'MCR' || !sg) return regionView;
     const p = sg.pos;
     if (opts.stage === 'SRR') {
+      // Framed on the keep-out ring so a tap does not re-zoom the map; only a mast placed beyond the frame widens it.
       const pad = state.selectedLaunchpad ? c.hardware_catalog.launchpads[state.selectedLaunchpad] : null;
-      const need = Math.max(pad?.requires_standoff_distance_m ?? 1200, state.padDistanceM ?? 0) / 1000;
-      return { cx: p.x, cy: p.y, halfKm: Math.max(1.5, need * 1.35) };
+      const ringKm = (pad?.requires_standoff_distance_m ?? 1200) / 1000;
+      const mastKm = (state.padDistanceM ?? 0) / 1000;
+      const frame = Math.max(1.5, ringKm * 1.6);
+      return { cx: p.x, cy: p.y, halfKm: mastKm > frame * 0.95 ? mastKm * 1.15 : frame };
     }
     if ((opts.stage === 'CDR' || opts.stage === 'FLY') && sg.coldTrap) {
       const d = sg.site.distance_to_cold_trap_km;
@@ -175,7 +199,8 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
     const side = Math.min(W, H);
     pxPerKm = side / (2 * v.halfKm);
     toScreen = (p) => ({ x: W / 2 + (p.x - v.cx) * pxPerKm, y: H / 2 - (p.y - v.cy) * pxPerKm });
-    const n = opts.stage === 'MCR' ? 360 : opts.stage === 'FLY' ? 240 : 300;
+    // Static stages are shaded once, so they can afford a finer raster than the animated ones.
+    const n = opts.stage === 'MCR' ? 480 : opts.stage === 'FLY' ? 280 : opts.stage === 'PDR' ? 320 : 440;
     const img = baseImage(v, n);
     // fill the whole viewport (extra terrain beyond the square is cropped, the map stays undistorted)
     const regional = opts.stage === 'MCR' || !site();
@@ -242,7 +267,8 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
     if (pad) ring(g, sg.pos, pad.requires_standoff_distance_m / 1000, COLORS.fail, [6, 5], `plume keep-out ${pad.requires_standoff_distance_m} m`);
     const d = state.padDistanceM;
     if (d != null && d > 0) {
-      const arr = { x: sg.pos.x + d / 1000, y: sg.pos.y };
+      const b = (mastBearing.get(sg.site.id) ?? DEFAULT_MAST_BEARING_DEG) * Math.PI / 180;
+      const arr = { x: sg.pos.x + (d / 1000) * Math.sin(b), y: sg.pos.y + (d / 1000) * Math.cos(b) };
       const q = toScreen(arr);
       const safe = !pad || d >= pad.requires_standoff_distance_m;
       g.save(); g.setLineDash([3, 4]); g.strokeStyle = COLORS.muted; g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(q.x, q.y); g.stroke(); g.restore();
@@ -345,9 +371,23 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
     const az = sunAzimuthDeg(c, hour) * Math.PI / 180;
     const R = Math.min(W, H) / 2 - 18;
     const sp = { x: W / 2 + R * Math.sin(az), y: H / 2 - R * Math.cos(az) };
-    g.beginPath(); g.arc(sp.x, sp.y, 9, 0, 2 * Math.PI); g.fillStyle = COLORS.sun; g.fill();
+    // In the stages where time runs, show the path the Sun takes around the horizon.
+    if (opts.stage === 'PDR' || opts.stage === 'FLY') {
+      g.save(); g.setLineDash([2, 7]); g.strokeStyle = 'rgba(255,211,77,0.35)'; g.lineWidth = 1.5;
+      g.beginPath(); g.arc(W / 2, H / 2, R, 0, 2 * Math.PI); g.stroke(); g.restore();
+    }
+    // A sun glyph with rays and an arrow pointing the way the light travels, so it reads as a direction, not a dot.
+    g.save(); g.translate(sp.x, sp.y);
+    g.strokeStyle = COLORS.sun; g.lineWidth = 2;
+    for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; g.beginPath(); g.moveTo(11 * Math.cos(a), 11 * Math.sin(a)); g.lineTo(15 * Math.cos(a), 15 * Math.sin(a)); g.stroke(); }
+    g.beginPath(); g.arc(0, 0, 8, 0, 2 * Math.PI); g.fillStyle = COLORS.sun; g.fill();
     g.strokeStyle = 'rgba(0,0,0,0.6)'; g.lineWidth = 1.5; g.stroke();
-    label(g, 'Sun', sp, COLORS.sun, -14);
+    const ux = (W / 2 - sp.x) / R, uy = (H / 2 - sp.y) / R; // toward the map centre
+    g.strokeStyle = COLORS.sun; g.fillStyle = COLORS.sun; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(ux * 20, uy * 20); g.lineTo(ux * 44, uy * 44); g.stroke();
+    g.beginPath(); g.moveTo(ux * 50, uy * 50); g.lineTo(ux * 42 - uy * 5, uy * 42 + ux * 5); g.lineTo(ux * 42 + uy * 5, uy * 42 - ux * 5); g.closePath(); g.fill();
+    g.restore();
+    label(g, 'Sunlight from here', sp, COLORS.sun, sp.y < 60 ? 34 : -22);
   }
 
   function drawScale(g: CanvasRenderingContext2D, W: number, H: number) {
@@ -366,7 +406,7 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
     const L = layers();
     const stageText: Record<MapStage, string> = {
       MCR: 'Lunar south pole · tap a site',
-      SRR: 'Landing pad and plume keep-out',
+      SRR: opts.onPlaceMast ? 'Tap the map to place the solar mast' : 'Landing pad and plume keep-out',
       PDR: 'Power: watch the mast through a lunar day',
       CDR: 'Route and power link into the cold trap',
       PLAR: 'Flight', FLY: 'Flight: one year at the outpost',
@@ -382,6 +422,11 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
       ...(line2 ? [Object.assign(document.createElement('span'), { textContent: line2 })] : []),
     );
     const A = available();
+    // Rebuild the chips only when their state changes: draw() runs on every hover, and replacing a
+    // button under the pointer would swallow the click.
+    const legendKey = `${A.slope}|${A.ice}|${L.slope}|${L.ice}`;
+    if (legendKey === legendShown) return;
+    legendShown = legendKey;
     const chip = (key: 'slope' | 'ice', text: string, lockedHint: string) => {
       const el = document.createElement('button');
       el.type = 'button';
@@ -389,7 +434,8 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
         el.className = 'sitemap__chip is-locked';
         el.textContent = `🔒 ${text}`;
         el.title = lockedHint;
-        el.disabled = true;
+        el.setAttribute('aria-disabled', 'true');
+        el.addEventListener('click', () => say(`${text} is locked. ${lockedHint}.`));
         return el;
       }
       el.className = `sitemap__chip${L[key] ? ' is-on' : ''}`;
@@ -400,8 +446,8 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
       return el;
     };
     legend.replaceChildren(
-      chip('slope', 'Slope map', 'Add the Navigation Doppler Lidar to see slopes'),
-      chip('ice', 'Ice map', 'Add the Neutron spectrometer & thermal radiometer to see cold traps'),
+      chip('slope', 'Slope map', 'Add the Navigation Doppler Lidar in the Concept stage to see slopes'),
+      chip('ice', 'Ice map', 'Add the Neutron spectrometer & thermal radiometer in the Concept stage to see cold traps'),
     );
   }
 
@@ -419,7 +465,7 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
     const sg = siteAt(e.clientX, e.clientY);
     const id = sg?.site.id ?? null;
     if (id !== hoverId) { hoverId = id; draw(); }
-    canvas.style.cursor = sg ? 'pointer' : 'default';
+    canvas.style.cursor = sg ? 'pointer' : opts.stage === 'SRR' && opts.onPlaceMast && site() ? 'crosshair' : 'default';
     if (!sg) { tip.hidden = true; return; }
     const L = available();
     tip.hidden = false;
@@ -434,6 +480,19 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
     tip.style.top = `${Math.max(8, e.clientY - r.top - 10)}px`;
   }
   function onClick(e: PointerEvent) {
+    const here = site();
+    if (opts.stage === 'SRR' && here && opts.onPlaceMast) {
+      // tap = put the solar mast here; the distance from the pad is what the plume check uses
+      const r = canvas.getBoundingClientRect();
+      const dx = (e.clientX - r.left - r.width / 2) / pxPerKm, dy = -(e.clientY - r.top - r.height / 2) / pxPerKm;
+      const v = view();
+      const x = v.cx + dx - here.pos.x, y = v.cy + dy - here.pos.y;
+      const meters = Math.round((Math.hypot(x, y) * 1000) / MAST_STEP_M) * MAST_STEP_M;
+      if (meters <= 0) return;
+      mastBearing.set(here.site.id, (Math.atan2(x, y) * 180 / Math.PI + 360) % 360);
+      opts.onPlaceMast(meters);
+      return;
+    }
     const sg = siteAt(e.clientX, e.clientY);
     if (sg && opts.onSelectSite) opts.onSelectSite(sg.site.id);
   }
@@ -470,6 +529,7 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
   return {
     element: root,
     update(next, o) {
+      if (o?.stage && o.stage !== opts.stage) { tip.hidden = true; hoverId = null; } // no tooltip left over from the last stage
       state = next;
       if (o) opts = { ...opts, ...o };
       if (o?.hour != null) hour = o.hour;
