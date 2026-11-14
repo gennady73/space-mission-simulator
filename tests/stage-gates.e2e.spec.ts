@@ -105,6 +105,26 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await expect(intro.locator('.fallback-frame .fallback-badge')).toContainText('2032 POLAR OUTPOST PIONEER');
   });
 
+  test('Pre-stage question reveals its explanation only after a hypothesis (spec §8.1)', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#pre-stage-question')).toContainText('permanently shadowed craters');
+    await expect(page.locator('#pre-stage-explanation')).toHaveCount(0);
+    await expect(page.locator('#btn-reveal-explanation')).toBeDisabled();
+    await page.fill('#input-hypothesis', 'The Sun stays near the horizon, so ridges stay lit and crater floors stay dark.');
+    await page.click('#btn-reveal-explanation');
+    await expect(page.locator('#pre-stage-explanation')).toContainText('tilted only about 1.5 degrees');
+    // The next phase asks its own question again, unanswered.
+    await pick(page, 'btn-site-shackleton_ridge');
+    await next(page);
+    await expect(phase(page)).toHaveText('Phase A: System Requirements Review (SRR)');
+    await expect(page.locator('#pre-stage-question')).toContainText('sandblast');
+    await expect(page.locator('#pre-stage-explanation')).toHaveCount(0);
+    // Going back to MCR, the recorded hypothesis and the answer are still there.
+    await page.click('button#btn-phase-MCR');
+    await expect(page.locator('#input-hypothesis')).toHaveValue(/ridges stay lit/);
+    await expect(page.locator('#pre-stage-explanation')).toBeVisible();
+  });
+
   test('Reference mission runs end to end', async ({ page }) => {
     await page.goto('/');
     await page.click('button#btn-run-reference');

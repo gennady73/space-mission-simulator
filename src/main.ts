@@ -57,6 +57,8 @@ async function boot(): Promise<void> {
   const actions: CockpitActions = {
     update: (patch) => { banner = null; store.update(patch); },
     setPadDistanceDraft: (v) => { padDistanceDraft = v; },
+    // Keeps any gate banner on screen: writing a hypothesis is not a design change.
+    recordHypothesis: (phase, text) => store.update({ userHypotheses: { ...store.get().userHypotheses, [phase]: text } }),
     setHeaterDraft: (v) => { heaterDraft = v; },
     setDifficulty: (id) => {
       const difficulty = id as Difficulty;
