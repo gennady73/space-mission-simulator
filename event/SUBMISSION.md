@@ -85,18 +85,18 @@ The game is built on NASA documents (below) and on four processed NASA datasets 
 
 ---
 
-## Demo video — 30 seconds, English subtitles (shot list)
+## Demo video — 30 seconds, English subtitles (as recorded 11-15)
 
-Record the live site at 1080p. Burn in subtitles (the text below is also the voice-over). Upload as unlisted on YouTube or publicly shared on Drive.
+`demo_polar_outpost_pioneer.mp4`, 29.9 s, 1280×720, subtitles burned in (`demo.srt` alongside). A screen recording of the game itself — no AI-generated imagery, no NASA branding. Upload as unlisted on YouTube or publicly shared on Drive and paste the link above.
 
-| Time | Screen | Subtitle / voice-over |
+| Time | Screen | Subtitle |
 |---|---|---|
-| 0–3 s | Title card with emblem: *Polar Outpost Pioneer · Team eleven-two · Space Mission Design Game* | "Team eleven-two: Polar Outpost Pioneer." |
-| 3–8 s | First screen: the "Think first" question, typing a short hypothesis, the explanation appearing | "Design a robotic Moon-base the way NASA does: questions first." |
-| 8–14 s | Picking a site, launcher, mast and battery; the resource bar changing; the POWER tile turning red with a 6 kWh battery | "Every choice moves mass, power, budget, data and time." |
-| 14–19 s | Submit to PDR → red banner citing *GSFC-STD-1000 Rule 1.06*; switch to 8 kWh → green | "NASA-style reviews catch weak designs, and say exactly why." |
-| 19–25 s | Fly the year → debrief: telemetry charts, score, badges | "Then fly it, hour by hour, for a full year." |
-| 25–30 s | Team-play seats, then the About & Numbers page scrolling | "Play as a team of four. Every number has a source. Play now: link below." |
+| 0–3 s | Start screen over the live map | "Team eleven-two — design a Moon outpost the way NASA does." |
+| 3–8 s | Concept: picking Shackleton connecting ridge on the LOLA map; the MCR review board passes it | "Choose a landing site on real NASA terrain — LOLA and Diviner data." |
+| 8–13.5 s | Landing: tapping the map to place the solar mast — first inside the plume ring (✗), then at 690 m (✓ safe) | "Place your hardware on the map. Physics checks every metre." |
+| 13.5–18.5 s | Power: the Sun circling the horizon, shadows sweeping the terrain, mast and battery cards | "Survive the two-week polar night with power, batteries and comms." |
+| 18.5–26.5 s | Launch → the year replayed at 16×: gauges, first lunar night, dust events | "Pass four NASA-style reviews, then fly the whole year, hour by hour." |
+| 26.5–30 s | Debrief: outcome, score 816, captioned telemetry | "Debrief, improve, fly again. Every number cites its NASA source." |
 
 **Seven-slide alternative:**
 1. Title, team name and members, challenge.
