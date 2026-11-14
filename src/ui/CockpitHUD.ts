@@ -3,7 +3,7 @@ import { computeLedger, shadowHoursForMast } from '../engine/SubsystemEngines';
 import { PHASES } from '../models/StateStore';
 import type { EngineConstants, GateValidationResult, Phase, SimulationState, TeamRole } from '../models/Interfaces';
 import { renderDebrief, renderGateBanner, type Debrief, type DebriefActions } from './DebriefView';
-import { provisionalDesign } from './DesignFlow';
+import { PHASE_CHOICES, provisionalDesign } from './DesignFlow';
 import { h, kg, pct, usdM } from './dom';
 import { renderPlaceholder } from './GraphicPlaceholderView';
 import { renderSideQuests } from './SideQuestModal';
@@ -97,7 +97,11 @@ function phasePanel(view: CockpitView, a: CockpitActions): HTMLElement {
       choices('Landing pad', 'pad', hw.launchpads, s.selectedLaunchpad,
         (x) => `${kg(x.mass_kg)} · ${usdM(x.cost_usd)} · must stand at least ${x.requires_standoff_distance_m} m from the solar mast`,
         (id) => a.update({ selectedLaunchpad: id }), lock('landing pad')),
-      numberField('input-pad-distance', 'Distance from pad to solar mast (m)', view.padDistanceDraft, '50', a.setPadDistanceDraft, lock('pad standoff distance')),
+      numberField('input-pad-distance', 'Distance from pad to solar mast (m)', view.padDistanceDraft, '50', (v) => {
+        a.setPadDistanceDraft(v);
+        const line = document.getElementById('objective-padDistanceM');
+        if (line) { line.dataset.done = String(isNumber(v)); line.textContent = objectiveText('pad standoff distance', isNumber(v)); }
+      }, lock('pad standoff distance')),
     );
   } else if (s.currentPhase === 'PDR') {
     const site = s.selectedSite ? c.site_catalog[s.selectedSite] : undefined;
@@ -132,11 +136,34 @@ function phasePanel(view: CockpitView, a: CockpitActions): HTMLElement {
   return box;
 }
 
+const isNumber = (text: string): boolean => Number.isFinite(Number.parseFloat(text));
+const objectiveText = (label: string, done: boolean): string => `${done ? '✓' : '○'} Choose the ${label}`;
+
+/**
+ * Objectives checklist (D-034): what this stage's review needs, ticked as the player chooses.
+ * The typed pad distance is a draft outside the store, so its line is also updated by the field.
+ */
+function objectives(view: CockpitView): HTMLElement {
+  const { constants: c, state: s } = view;
+  const items = PHASE_CHOICES[s.currentPhase].map(({ key, label }) => ({
+    key, label, done: key === 'padDistanceM' ? isNumber(view.padDistanceDraft) : s[key] !== null,
+  }));
+  const left = items.filter((i) => !i.done).length;
+  const { assumed } = provisionalDesign(c, { ...s, padDistanceM: isNumber(view.padDistanceDraft) ? Number.parseFloat(view.padDistanceDraft) : null });
+  const later = assumed.filter((label) => !items.some((i) => i.label === label));
+  return h('section', { id: 'objectives', class: 'objectives', 'aria-label': 'Objectives for this review' },
+    h('h3', {}, 'Objectives for this review'),
+    h('ul', {}, ...items.map((i) => h('li', { id: `objective-${i.key}`, 'data-done': String(i.done) }, objectiveText(i.label, i.done)))),
+    h('p', { id: 'objectives-status', class: 'hint' }, left ? `${left} still to choose before the review.` : 'Ready for the review.'),
+    later.length > 0 && h('p', { class: 'hint' }, `Later stages are estimated from the reference design until you choose: ${later.join(', ')}.`),
+  );
+}
+
 const formatShadow = (hours: number): string => (!Number.isFinite(hours) ? 'permanent' : hours > 0 ? `${Math.round(hours)} h` : 'none');
 
 function resourceBar(view: CockpitView): HTMLElement {
   const { constants: c, state: s } = view;
-  const { design, assumed } = provisionalDesign(c, s);
+  const { design } = provisionalDesign(c, s);
   const bar = h('section', { class: 'resources', 'aria-label': 'Mission resources' });
   if (!design) return bar;
   const l = computeLedger(c, design, s.allocatedBudgetUSD);
@@ -151,7 +178,6 @@ function resourceBar(view: CockpitView): HTMLElement {
     cell('Comms', `${Math.round(l.downlinkMbPerDay).toLocaleString('en-US')} Mb per day`, 'can be sent home on average', l.downlinkMbPerDay >= l.dataGeneratedMbPerDay),
     cell('Time', `${Math.round(l.missionDurationDays)} days`, 'cruise plus one year of operations', true),
   ));
-  if (assumed.length) bar.append(h('p', { class: 'hint resources-note' }, `Estimate: the reference design is assumed for ${assumed.join(', ')}.`));
   return bar;
 }
 
@@ -232,14 +258,14 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
     const owner = ownerEntry?.[1];
     const mustHandOver = s.teamMode && ownerEntry !== undefined && ownerEntry[0] !== s.activeRole;
     panel.append(h('h2', { id: 'current-phase-display', class: 'phase-title' }, phaseTitle(s.currentPhase)));
-    if (owner) panel.append(h('p', { class: 'hint' }, `Review owner in team play: ${owner.label}. ${owner.priority_hint}`));
+    if (owner && s.teamMode) panel.append(h('p', { class: 'hint' }, `Review owner: ${owner.label}. ${owner.priority_hint}`));
     if (view.banner) panel.append(renderGateBanner(view.banner));
     panel.append(renderPreStageQuestion(c, s, a));
 
     if (debriefing && view.debrief) {
       panel.append(renderDebrief(c, view.debrief, a));
     } else {
-      panel.append(phasePanel(view, a));
+      panel.append(objectives(view), phasePanel(view, a));
       // Lead: optional side-quests for this phase (REQ-008, D-101).
       const quests = renderSideQuests(c, s.currentPhase, s.completedQuests, c.difficulty_levels[s.difficulty].hints_enabled,
         (id) => a.update({ completedQuests: [...s.completedQuests, id] }));
@@ -248,8 +274,10 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
       const next = h('button', { id: 'btn-next-phase', type: 'button', ...(mustHandOver ? { disabled: '' } : {}) },
         s.teamMode && owner ? `${verb}: sign-off by ${owner.label}` : verb);
       next.addEventListener('click', a.nextPhase);
-      panel.append(next);
-      if (mustHandOver && owner) panel.append(h('p', { id: 'signoff-note', class: 'hint' }, `Only ${owner.label} can sign off this review. Select that seat to submit.`));
+      // The submit bar stays in reach at the bottom of the panel while the cards scroll under it.
+      panel.append(h('div', { class: 'panel-submit' },
+        mustHandOver && owner && h('p', { id: 'signoff-note', class: 'hint' }, `Only ${owner.label} can sign off this review. Select that seat to submit.`),
+        next));
     }
   }
 
