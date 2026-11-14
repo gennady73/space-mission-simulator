@@ -18,6 +18,8 @@ One folder per source, so each output's provenance names one folder. Keep file n
 | Step | Input | Output | Status |
 |---|---|---|---|
 | 1a LOLA region + site close-ups | `LDEM_75S_120M.IMG` + `.LBL` (LOLA GDR) | `public/data/terrain/region.json` (512², ~350 m cells, 0.7 MB) + `<site>_120m.json` (±8 km, 62.5 m cells, σ 2 cells) | ✅ D-108 |
+| 1b LOLA sites | PGDA-78 `<Tile>_final_adj_5mpp_surf.tif` (Site01, Site11, Site23) | `public/data/terrain/<site_id>_5m.json` (384² over ±4 km, ~21 m cells, 384 KB each; `--half-km 4 --n 384`). Haworth tile does not contain the floor site; Faustini has no tile → 120 m close-ups | ✅ |
+| 2 Diviner PRP | `dlre_prp_south.tab` | `public/data/diviner-psr-temperature.json` | ☐ |
 | 1b LOLA sites | PGDA-78 `<Tile>_final_adj_5mpp_surf.tif` | `public/data/terrain/<site_id>.json` (256² over ±6 km, ~47 m cells, ~170 KB each) | ☐ script ready: `lola_crop.py site` |
 | 2 Diviner PRP | `raw-data/diviner/prp-south/dlre_prp_south.tab` | `public/data/diviner/coldtraps.json` (512², Tmax + ice depth, per-site cross-check): `diviner_grid.py` | ✅ D-109 |
 | 3 JPL Horizons | API, 2028-01-01 → 2029-01-01, 1 h | `public/data/ephemeris-{earth-visibility,solar-azimuth}.json` | ☐ → then recalibrate D-003/D-004 |
