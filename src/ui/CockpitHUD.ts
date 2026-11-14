@@ -6,6 +6,7 @@ import { renderDebrief, renderGateBanner, type Debrief, type DebriefActions } fr
 import { provisionalDesign } from './DesignFlow';
 import { h, kg, pct, usdM } from './dom';
 import { renderPlaceholder } from './GraphicPlaceholderView';
+import { renderPreStageQuestion, type PreStageActions } from './PreStageQuestion';
 
 /** Life-cycle phase that each review closes (NPR 7120.5 naming). */
 const PHASE_PREFIX: Record<Phase, string> = { MCR: 'Pre-Phase A', SRR: 'Phase A', PDR: 'Phase B', CDR: 'Phase C', PLAR: 'Phase D/E' };
@@ -20,7 +21,7 @@ export interface CockpitView {
   debrief: Debrief | null;
 }
 
-export interface CockpitActions extends DebriefActions {
+export interface CockpitActions extends DebriefActions, PreStageActions {
   update(patch: Partial<SimulationState>): void;
   setPadDistanceDraft(value: string): void;
   setHeaterDraft(value: string): void;
@@ -203,6 +204,7 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
   main.append(h('h2', { id: 'current-phase-display', class: 'phase-title' }, phaseTitle(s.currentPhase)));
   if (owner) main.append(h('p', { class: 'hint' }, `Review owner in team play: ${owner.label}. ${owner.priority_hint}`));
   if (view.banner) main.append(renderGateBanner(view.banner));
+  main.append(renderPreStageQuestion(c, s, a));
 
   if (s.currentPhase === 'PLAR' && view.debrief) {
     main.append(renderDebrief(c, view.debrief, a));
