@@ -13,6 +13,8 @@ import { renderCockpit, type CockpitActions } from './ui/CockpitHUD';
 import type { Debrief } from './ui/DebriefView';
 import type { ReviewOutcome } from './ui/ReviewModal';
 import { provisionalDesign, submitToReview } from './ui/DesignFlow';
+import { renderHome, type HomeHandle } from './ui/home/HomeView';
+import { loadUiConfig, type UiConfig } from './ui/home/uiConfig';
 
 /** Telemetry rows kept for the charts: one every this many hours. Presentation only. */
 const CHART_SAMPLE_HOURS = 6;
@@ -20,17 +22,38 @@ const CHART_SAMPLE_HOURS = 6;
 async function boot(): Promise<void> {
   const app = document.getElementById('app')!;
   let c: EngineConstants;
+  let ui: UiConfig | null = null;
   try {
-    c = await loadConstants();
+    // Both files load at once. A missing ui-config only skips the landing page; it never blocks the game.
+    [c, ui] = await Promise.all([loadConstants(), loadUiConfig().catch(() => null)]);
   } catch (e) {
     app.innerHTML = '<div class="gate-error-banner"><h2>Could not load engine constants</h2><pre></pre></div>';
     app.querySelector('pre')!.textContent = String(e);
     return;
   }
-  // Lead: About & Numbers page at #about (keep this route when the cockpit replaces the shell).
-  if (location.hash === '#about') { app.replaceChildren(renderAboutNumbers(c)); return; }
   // Lead: map test page at #map (D-104).
   if (location.hash === '#map') { renderMapDemo(app, c); return; }
+  // Cockpit at #mission; share links (#design=…) still land straight in it (D-301).
+  if (location.hash === '#mission' || location.hash.startsWith('#design=')) { startConsole(app, c); return; }
+  // The landing page and the Lead's About & Numbers page (#about) hold no state, so a hash change
+  // just swaps them in place: no reload, and the browser Back button works (D-301).
+  let home: HomeHandle | null = null;
+  const showPage = (): void => {
+    home?.destroy();
+    home = null;
+    if (location.hash === '#about') { app.replaceChildren(renderAboutNumbers(c)); return; }
+    if (!ui) { removeEventListener('hashchange', showPage); startConsole(app, c); return; }
+    home = renderHome(app, ui, () => { removeEventListener('hashchange', showPage); history.replaceState(null, '', '#mission'); startConsole(app, c); });
+  };
+  addEventListener('hashchange', showPage);
+  showPage();
+}
+
+/**
+ * The mission console (cockpit): state store, viewport, actions and the render loop.
+ * Mounted at #mission and for #design= share links, or when the landing page's START is pressed (D-301).
+ */
+function startConsole(app: HTMLElement, c: EngineConstants): void {
   const store = new StateStore(initialState(c));
   const shared = StateStore.fromShareHash(location.hash);
   if (shared) store.importDesign(shared);

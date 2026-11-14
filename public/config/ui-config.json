@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "_note": "Landing-page copy and settings (D-301). Media owns this file. Edit the words here; no code change needed. game_name is a placeholder until the team decides.",
+  "game_name": "ZAP ZAP ZAP",
+  "home": {
+    "kicker": "NASA SPACE APPS 2026 · SPACE MISSION DESIGN GAME",
+    "tagline": "Build the first lighthouse at the Moon's south pole.",
+    "subtitle": "In a year, the first crew lands here. Your radio station is how they call home.",
+    "cta_label": "START MISSION",
+    "footnote": "about 25 min · no space background needed · best on a laptop or tablet",
+    "nav": {
+      "how_it_works": "How it works",
+      "about": "About & numbers",
+      "demo": "Demo (3 min)",
+      "demo_video_url": ""
+    },
+    "hero_image": {
+      "path": "assets/images/home-hero.jpg",
+      "caption": "AI-generated image",
+      "alt": "Lunar south-pole landscape with Earth low over the horizon"
+    },
+    "starfield": { "mode": "twinkle", "star_count": 85 },
+    "cards": [
+      { "icon": "globe", "title": "Real NASA terrain", "text": "5 m lunar elevation maps and the true Earth positions from JPL. No made-up worlds." },
+      { "icon": "scales", "title": "Every choice has a price", "text": "Mass, money, night power, radio contact and the untouched ice. You can't max them all." },
+      { "icon": "target", "title": "Bet first, then the Moon answers", "text": "Each role bets on a question before seeing the data. The debrief shows who was right." }
+    ],
+    "narrator_line": "> No pressure. It's only the Moon."
+  }
+}
