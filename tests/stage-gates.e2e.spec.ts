@@ -144,8 +144,12 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await page.click('button#btn-run-reference');
     await skipFlight(page);
     await expect(page.locator('#reference-output')).toContainText('"uptimeHours": 8760');
+    await expect(page.locator('#debrief-overlay #debrief-score')).toContainText('of 1000');
+    // Revise returns to the last design stage with the design intact (D-036).
     await page.click('button#btn-revise-design');
-    await expect(phase(page)).toHaveText('Pre-Phase A: Mission Concept Review (MCR)');
+    await expect(page.locator('#debrief-overlay')).toHaveCount(0);
+    await expect(phase(page)).toHaveText('Phase C: Critical Design Review (CDR)');
+    await expect(page.locator('#btn-logistics-hts_maglev_guideway')).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('The console viewport holds the live map through the design phases (D-104)', async ({ page }) => {

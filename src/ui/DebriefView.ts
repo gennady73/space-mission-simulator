@@ -40,18 +40,30 @@ function faultTree(d: Debrief): HTMLElement {
   return h('ol', { class: 'fault-tree' }, ...steps.map((s) => h('li', { class: /failed|empty|off|loss/.test(s) ? 'bad' : '' }, s)));
 }
 
+/**
+ * Debrief (D-036): shown as a full-viewport overlay after the flight. Left column: the verdict,
+ * score, what happened and the badges. Right column: the flight year as strip charts, with a
+ * marker at the hour the outpost was lost when the mission failed.
+ */
 export function renderDebrief(c: EngineConstants, d: Debrief, actions: DebriefActions): HTMLElement {
   const { result: r, score } = d;
   const hours = c.simulation.mission_duration_h;
   const box = h('section', { class: 'debrief' });
-  const hero = renderPlaceholder(c, 'IMG-PLACEHOLDER-END');
-  if (hero) box.append(hero);
-  box.append(renderGateBanner(d.plar));
+
+  const revise = h('button', { id: 'btn-revise-design', type: 'button' }, 'Revise design');
+  revise.addEventListener('click', actions.revise);
+  const exportBtn = h('button', { id: 'btn-export-design', type: 'button', class: 'secondary' }, 'Save design as a file');
+  exportBtn.addEventListener('click', actions.exportJson);
+  const share = h('button', { id: 'btn-share-design', type: 'button', class: 'secondary' }, 'Copy share link');
+  share.addEventListener('click', actions.copyShareLink);
 
   const tile = (label: string, value: string) => h('div', { class: 'tile' }, h('dt', {}, label), h('dd', {}, value));
-  box.append(
+  const summary = h('div', { class: 'debrief-col' },
+    h('div', { class: 'debrief-score', id: 'debrief-score' },
+      h('span', {}, 'Mission score (game rule)'), h('strong', {}, String(score.total)), h('span', {}, 'of 1000')),
+    renderGateBanner(d.plar),
+    h('div', { class: 'actions' }, revise, exportBtn, share),
     h('dl', { class: 'tiles' },
-      tile('Mission score (game rule)', `${score.total} of 1000`),
       tile('Reviews passed', `${score.gatesPassed} of 5`),
       tile('Water ice assayed', `${Math.round(r.iceKg).toLocaleString('en-US')} kg`),
       tile('Operating time', `${r.uptimeHours} of ${hours} h`),
@@ -59,40 +71,34 @@ export function renderDebrief(c: EngineConstants, d: Debrief, actions: DebriefAc
       tile('Lowest battery charge', `${r.minSoCPercent.toFixed(0)}%`),
       tile('Cost against budget', `${usdM(d.costUSD)} of ${usdM(d.budgetUSD)}`),
     ),
-    h('h2', {}, 'What happened, in order'),
+    h('h3', {}, 'What happened, in order'),
     faultTree(d),
   );
-
   if (score.badges.length) {
-    box.append(
-      h('h2', {}, 'NASA technology shortfalls this design addressed'),
-      h('ul', { class: 'badges' }, ...score.badges.map((id) => h('li', {}, h('strong', {}, id), ` ${c.shortfall_badges[id]?.title ?? ''}`))),
+    summary.append(
+      h('h3', {}, 'NASA technology shortfalls this design addressed'),
+      h('ul', { class: 'badges', id: 'debrief-badges' }, ...score.badges.map((id) => h('li', {}, h('strong', {}, id), ` ${c.shortfall_badges[id]?.title ?? ''}`))),
     );
   }
+  const hero = renderPlaceholder(c, 'IMG-PLACEHOLDER-END');
+  if (hero) summary.append(hero);
 
-  box.append(h('h2', {}, 'The flight year'));
-  box.append(
-    renderStripChart(r.telemetry, { title: 'Battery charge', unit: '%', value: (t) => t.batterySoCPercent, max: 100 }, hours),
-    renderStripChart(r.telemetry, { title: 'Solar power generated', unit: 'W', value: (t) => t.solarPowerGeneratedW }, hours),
-    renderStripChart(r.telemetry, { title: 'Data memory in use', unit: '%', value: (t) => t.ssmmBufferOccupancyPercent, max: 100 }, hours),
-    renderStripChart(r.telemetry, { title: 'Water ice assayed so far', unit: 'kg', value: (t) => t.cumulativeIceAssayedKg }, hours),
-  );
-
-  box.append(h('h2', {}, 'Events'));
-  box.append(r.events.length
-    ? h('ul', { class: 'events' }, ...r.events.map((e) => h('li', {}, `Day ${Math.floor(e.hour / 24)}: ${e.text}`)))
-    : h('p', { class: 'hint' }, 'No events this year.'));
-
-  const revise = h('button', { id: 'btn-revise-design', type: 'button' }, 'Change the design and fly again');
-  revise.addEventListener('click', actions.revise);
-  const exportBtn = h('button', { id: 'btn-export-design', type: 'button', class: 'secondary' }, 'Save design as a file');
-  exportBtn.addEventListener('click', actions.exportJson);
-  const share = h('button', { id: 'btn-share-design', type: 'button', class: 'secondary' }, 'Copy share link');
-  share.addEventListener('click', actions.copyShareLink);
-  box.append(h('div', { class: 'actions' }, revise, exportBtn, share));
-
+  const marker = r.failureHour == null ? null : { hour: r.failureHour, label: `lost on day ${Math.floor(r.failureHour / 24)}` };
   const raw = h('pre', { id: 'reference-output' });
   raw.textContent = JSON.stringify({ gates: d.gates, plar: d.plar, result: { ...r, telemetry: `${r.telemetry.length} rows` }, score }, null, 2);
-  box.append(h('details', {}, h('summary', {}, 'Raw result'), raw));
+  const flight = h('div', { class: 'debrief-col' },
+    h('h3', {}, 'The flight year'),
+    renderStripChart(r.telemetry, { title: 'Battery charge', unit: '%', value: (t) => t.batterySoCPercent, max: 100 }, hours, marker),
+    renderStripChart(r.telemetry, { title: 'Solar power generated', unit: 'W', value: (t) => t.solarPowerGeneratedW }, hours, marker),
+    renderStripChart(r.telemetry, { title: 'Data memory in use', unit: '%', value: (t) => t.ssmmBufferOccupancyPercent, max: 100 }, hours, marker),
+    renderStripChart(r.telemetry, { title: 'Water ice assayed so far', unit: 'kg', value: (t) => t.cumulativeIceAssayedKg }, hours, marker),
+    h('h3', {}, 'Events'),
+    r.events.length
+      ? h('ul', { class: 'events' }, ...r.events.map((e) => h('li', {}, `Day ${Math.floor(e.hour / 24)}: ${e.text}`)))
+      : h('p', { class: 'hint' }, 'No events this year.'),
+    h('details', {}, h('summary', {}, 'Raw result'), raw),
+  );
+
+  box.append(summary, flight);
   return box;
 }
