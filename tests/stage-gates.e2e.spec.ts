@@ -85,6 +85,7 @@ test.describe('Space Mission Simulator E2E Verification', () => {
 
   test('Team play: a seat makes only its own decisions and the gate owner signs off', async ({ page }) => {
     await page.goto('/');
+    await page.click('#btn-menu');
     await page.check('#toggle-team-mode');
     await expect(page.locator('#btn-role-mission_lead')).toHaveAttribute('aria-pressed', 'true');
     await pick(page, 'btn-site-shackleton_ridge');
@@ -148,5 +149,26 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await next(page);
     await expect(phase(page)).toHaveText('Phase A: System Requirements Review (SRR)');
     await expect(page.locator('#console-viewport .sitemap')).toBeVisible();
+  });
+
+  test('Full mission at 1024x768 never scrolls the page (D-033)', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    const noPageScroll = async () =>
+      expect(await page.evaluate(() => document.scrollingElement!.scrollHeight <= window.innerHeight)).toBe(true);
+    await passMcrAndSrr(page, 'btn-pad-pad_elevated_45deg', '800');
+    await noPageScroll();
+    await pick(page, 'btn-mast-mast_10m_vsat', 'btn-battery-batt_liion_8kwh', 'btn-comm-dte_xband', 'btn-storage-ssmm_128gb',
+      'btn-instrument-ndl', 'btn-instrument-neutron_spec_radiometer');
+    await noPageScroll();
+    await next(page);
+    await expect(phase(page)).toHaveText('Phase C: Critical Design Review (CDR)');
+    await pick(page, 'btn-logistics-hts_maglev_guideway', 'btn-link-laser_power_beaming');
+    await noPageScroll();
+    await next(page);
+    await expect(page.locator('#flight-playback')).toBeVisible();
+    await noPageScroll();
+    await skipFlight(page);
+    await expect(page.locator('.gate-pass-banner')).toContainText('Mission successful');
+    await noPageScroll();
   });
 });

@@ -151,24 +151,41 @@ function resourceBar(view: CockpitView): HTMLElement {
     cell('Comms', `${Math.round(l.downlinkMbPerDay).toLocaleString('en-US')} Mb per day`, 'can be sent home on average', l.downlinkMbPerDay >= l.dataGeneratedMbPerDay),
     cell('Time', `${Math.round(l.missionDurationDays)} days`, 'cruise plus one year of operations', true),
   ));
-  if (assumed.length) bar.append(h('p', { class: 'hint' }, `Estimate. Not chosen yet, so the reference design's choice is assumed for: ${assumed.join(', ')}.`));
+  if (assumed.length) bar.append(h('p', { class: 'hint resources-note' }, `Estimate: the reference design is assumed for ${assumed.join(', ')}.`));
   return bar;
 }
 
+/** Track label per phase: the last stop is the flight itself, with its debrief. */
+const TRACK_LABEL: Record<Phase, string> = { MCR: 'MCR', SRR: 'SRR', PDR: 'PDR', CDR: 'CDR', PLAR: 'FLY' };
+
+/**
+ * Full-screen mission console (D-033): a fixed 100dvh grid with no page scroll.
+ * Top bar: title, stage track, six resource tiles, menu. Left: the viewport (map or flight).
+ * Right: the stage panel, which scrolls inside itself only.
+ */
 export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitActions): void {
   const { constants: c, state: s } = view;
   const focusId = document.activeElement?.id;
+  const panelScroll = root.querySelector('.console-panel')?.scrollTop ?? 0;
+  const samePhase = root.querySelector('.console')?.getAttribute('data-phase') === s.currentPhase;
   root.replaceChildren();
+  root.classList.add('console-host');
 
-  // In flight (D-105) the playback owns the screen: no design panels, no phase jumps.
-  view.viewport.classList.toggle('is-flight', s.isSimulationRunning);
-  if (s.isSimulationRunning) {
-    root.append(
-      h('header', { class: 'cockpit-header' }, h('h1', {}, 'Polar Outpost Pioneer'),
-        h('p', { class: 'hint' }, 'Flight: one year at the lunar south pole, replayed from the simulation.')),
-      view.viewport,
-    );
-    return;
+  const flying = s.isSimulationRunning;
+  const debriefing = s.currentPhase === 'PLAR' && !!view.debrief;
+  view.viewport.classList.toggle('is-flight', flying);
+
+  // ---- top bar ----
+  const track = h('ol', { class: 'phase-track' });
+  for (const p of PHASES) {
+    const reached = PHASES.indexOf(p) <= PHASES.indexOf(s.currentPhase);
+    const current = flying ? p === 'PLAR' : p === s.currentPhase;
+    const id = `btn-phase-${p === 'PLAR' ? 'FLY' : p}`;
+    const button = h('button', { type: 'button', id, 'data-phase': p, ...(reached && !flying ? {} : { disabled: '' }) }, TRACK_LABEL[p]);
+    button.addEventListener('click', () => a.goToPhase(p));
+    const item = h('li', { class: [current ? 'current' : '', s.gateResults[p]?.passed ? 'passed' : ''].join(' ').trim() }, button);
+    if (current) item.setAttribute('aria-current', 'step');
+    track.append(item);
   }
 
   const difficulty = h('select', { id: 'select-difficulty', 'aria-label': 'Difficulty' },
@@ -176,64 +193,73 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
   difficulty.addEventListener('change', () => a.setDifficulty(difficulty.value));
   const teamBox = h('input', { id: 'toggle-team-mode', type: 'checkbox', ...(s.teamMode ? { checked: '' } : {}) });
   teamBox.addEventListener('change', () => a.setTeamMode(teamBox.checked));
-  const team = h('label', { class: 'toggle' }, teamBox, ' Team play');
-  const reference = h('button', { id: 'btn-run-reference', type: 'button', class: 'secondary' }, 'Fly the reference mission');
+  const exportBtn = h('button', { id: 'btn-menu-export', type: 'button', class: 'secondary' }, 'Save design as a file');
+  exportBtn.addEventListener('click', a.exportJson);
+  const shareBtn = h('button', { id: 'btn-menu-share', type: 'button', class: 'secondary' }, 'Copy share link');
+  shareBtn.addEventListener('click', a.copyShareLink);
+  const menu = h('details', { class: 'menu' },
+    h('summary', { id: 'btn-menu' }, 'Menu'),
+    h('div', { class: 'menu-items' },
+      h('label', { class: 'toggle' }, teamBox, ' Team play'),
+      h('label', { class: 'field' }, 'Difficulty ', difficulty),
+      exportBtn, shareBtn,
+      h('a', { href: '#about', target: '_blank', rel: 'noopener' }, 'About & numbers')));
+  const reference = h('button', { id: 'btn-run-reference', type: 'button', class: 'secondary', ...(flying ? { disabled: '' } : {}) }, 'Reference mission');
   reference.addEventListener('click', a.runReference);
 
-  const track = h('ol', { class: 'phase-track' });
-  for (const p of PHASES) {
-    const reached = PHASES.indexOf(p) <= PHASES.indexOf(s.currentPhase);
-    const button = h('button', { type: 'button', id: `btn-phase-${p}`, 'data-phase': p, ...(reached ? {} : { disabled: '' }) }, p);
-    button.addEventListener('click', () => a.goToPhase(p));
-    const item = h('li', { class: [p === s.currentPhase ? 'current' : '', s.gateResults[p]?.passed ? 'passed' : ''].join(' ').trim() }, button);
-    if (p === s.currentPhase) item.setAttribute('aria-current', 'step');
-    track.append(item);
-  }
-  root.append(h('header', { class: 'cockpit-header' }, h('h1', {}, 'Polar Outpost Pioneer'), track, h('div', { class: 'header-tools' }, team, difficulty, reference)));
-  if (s.teamMode) {
-    const seats = h('div', { class: 'seats', role: 'group', 'aria-label': 'Whose turn is it' });
-    for (const [id, role] of Object.entries(c.team_roles)) {
-      const seat = h('button', { id: `btn-role-${id}`, type: 'button', class: 'choice seat', 'aria-pressed': String(id === s.activeRole) },
-        h('strong', {}, role.label), h('span', {}, `${role.segment} segment · decides ${role.decides.join(', ')}`), h('span', { class: 'why' }, role.priority_hint));
-      seat.addEventListener('click', () => a.setActiveRole(id as TeamRole));
-      seats.append(seat);
+  const top = h('header', { class: 'console-top' },
+    h('div', { class: 'console-bar' }, h('h1', {}, 'Polar Outpost Pioneer'), track, h('div', { class: 'header-tools' }, reference, menu)),
+    resourceBar(view));
+
+  // ---- right: the stage panel ----
+  const panel = h('main', { class: 'console-panel' });
+  if (!flying) {
+    if (s.teamMode) {
+      const seats = h('div', { class: 'seats', role: 'group', 'aria-label': 'Whose turn is it' });
+      for (const [id, role] of Object.entries(c.team_roles)) {
+        const seat = h('button', { id: `btn-role-${id}`, type: 'button', class: 'choice seat', 'aria-pressed': String(id === s.activeRole) },
+          h('strong', {}, role.label), h('span', {}, `${role.segment} segment · decides ${role.decides.join(', ')}`), h('span', { class: 'why' }, role.priority_hint));
+        seat.addEventListener('click', () => a.setActiveRole(id as TeamRole));
+        seats.append(seat);
+      }
+      panel.append(h('section', { class: 'team' }, h('p', { class: 'hint' }, 'Team play: pass the device to the player whose seat is selected. Each player makes only their own decisions, and all share one budget and one mass limit.'), seats));
     }
-    root.append(h('section', { class: 'team' }, h('p', { class: 'hint' }, 'Team play: pass the device to the player whose seat is selected. Each player makes only their own decisions, and all share one budget and one mass limit.'), seats));
-  }
-  root.append(resourceBar(view));
+    if (s.currentPhase === 'MCR' && !s.selectedSite) {
+      const intro = renderPlaceholder(c, 'IMG-PLACEHOLDER-INTRO');
+      if (intro) panel.append(intro);
+    }
+    const ownerEntry = Object.entries(c.team_roles).find(([, r]) => r.owns_gates.includes(s.currentPhase));
+    const owner = ownerEntry?.[1];
+    const mustHandOver = s.teamMode && ownerEntry !== undefined && ownerEntry[0] !== s.activeRole;
+    panel.append(h('h2', { id: 'current-phase-display', class: 'phase-title' }, phaseTitle(s.currentPhase)));
+    if (owner) panel.append(h('p', { class: 'hint' }, `Review owner in team play: ${owner.label}. ${owner.priority_hint}`));
+    if (view.banner) panel.append(renderGateBanner(view.banner));
+    panel.append(renderPreStageQuestion(c, s, a));
 
-  const main = h('main', { class: 'cockpit-main' });
-  if (s.currentPhase === 'MCR' && !s.selectedSite) {
-    const intro = renderPlaceholder(c, 'IMG-PLACEHOLDER-INTRO');
-    if (intro) main.append(intro);
+    if (debriefing && view.debrief) {
+      panel.append(renderDebrief(c, view.debrief, a));
+    } else {
+      panel.append(phasePanel(view, a));
+      // Lead: optional side-quests for this phase (REQ-008, D-101).
+      const quests = renderSideQuests(c, s.currentPhase, s.completedQuests, c.difficulty_levels[s.difficulty].hints_enabled,
+        (id) => a.update({ completedQuests: [...s.completedQuests, id] }));
+      if (quests) panel.append(quests);
+      const verb = s.currentPhase === 'CDR' ? 'Submit to review and launch' : 'Submit to review';
+      const next = h('button', { id: 'btn-next-phase', type: 'button', ...(mustHandOver ? { disabled: '' } : {}) },
+        s.teamMode && owner ? `${verb}: sign-off by ${owner.label}` : verb);
+      next.addEventListener('click', a.nextPhase);
+      panel.append(next);
+      if (mustHandOver && owner) panel.append(h('p', { id: 'signoff-note', class: 'hint' }, `Only ${owner.label} can sign off this review. Select that seat to submit.`));
+    }
   }
-  // The live map (D-104) replaces the per-stage placeholder art in the design phases;
-  // the debrief keeps its own hero card at PLAR.
-  if (s.currentPhase !== 'PLAR') main.append(view.viewport);
 
-  const ownerEntry = Object.entries(c.team_roles).find(([, r]) => r.owns_gates.includes(s.currentPhase));
-  const owner = ownerEntry?.[1];
-  const mustHandOver = s.teamMode && ownerEntry !== undefined && ownerEntry[0] !== s.activeRole;
-  main.append(h('h2', { id: 'current-phase-display', class: 'phase-title' }, phaseTitle(s.currentPhase)));
-  if (owner) main.append(h('p', { class: 'hint' }, `Review owner in team play: ${owner.label}. ${owner.priority_hint}`));
-  if (view.banner) main.append(renderGateBanner(view.banner));
-  main.append(renderPreStageQuestion(c, s, a));
-
-  if (s.currentPhase === 'PLAR' && view.debrief) {
-    main.append(renderDebrief(c, view.debrief, a));
-  } else {
-    main.append(phasePanel(view, a));
-    // Lead: optional side-quests for this phase (REQ-008, D-101).
-    const quests = renderSideQuests(c, s.currentPhase, s.completedQuests, c.difficulty_levels[s.difficulty].hints_enabled,
-      (id) => a.update({ completedQuests: [...s.completedQuests, id] }));
-    if (quests) main.append(quests);
-    const verb = s.currentPhase === 'CDR' ? 'Submit to review and launch' : 'Submit to review';
-    const next = h('button', { id: 'btn-next-phase', type: 'button', ...(mustHandOver ? { disabled: '' } : {}) },
-      s.teamMode && owner ? `${verb}: sign-off by ${owner.label}` : verb);
-    next.addEventListener('click', a.nextPhase);
-    main.append(next);
-    if (mustHandOver && owner) main.append(h('p', { id: 'signoff-note', class: 'hint' }, `Only ${owner.label} can sign off this review. Select that seat to submit.`));
-  }
-  root.append(main);
-  if (focusId) document.getElementById(focusId)?.focus();
+  // ---- grid ----
+  const mode = flying ? 'flight' : debriefing ? 'debrief' : 'design';
+  const grid = h('div', { class: `console console--${mode}`, 'data-phase': s.currentPhase }, top);
+  if (mode !== 'debrief') grid.append(h('div', { class: 'console-view' }, view.viewport));
+  if (mode !== 'flight') grid.append(panel);
+  root.append(grid);
+  // A choice re-renders the panel: keep the player's place in it. A new stage starts at its top.
+  if (samePhase) panel.scrollTop = panelScroll;
+  if (focusId) document.getElementById(focusId)?.focus({ preventScroll: true });
 }
