@@ -895,9 +895,9 @@
       "tier": "game-rule"
     },
     "site_catalog": {
-      "source": "Positions/slopes provisional; to be replaced from LOLA PGDA product 78 (Barker et al. 2021) and Diviner PRP (Paige)",
-      "tier": "spec-provisional",
-      "note": "Derived fractions computed by tools/gen-constants model, D-003/D-004"
+      "source": "Game-rule site set, checked against NASA data on 2026-11-15: PGDA product 69 average illumination and Earth visibility (Mazarico et al. 2011, 60 m) and the Diviner polar resource product (Paige, UCLA). The measured values at and near each catalog point are tabulated in docs/team/context/ILLUMINATION-CHECK.md. Where the game value differs (notably faustini_rim illumination 0.90 vs <=0.40 measured nearby; de_gerlache_rim 0.89 vs 0.75; haworth_floor earth_visibility 0.20 vs 0.00; cold-trap temperatures of 38-45 K match Diviner annual averages inside the large PSRs, not the warmer near-site maxima), the game keeps a simplified, balanced value on purpose",
+      "tier": "game-rule",
+      "note": "Kept playable rather than strictly measured (D-114). The map, by contrast, draws the measured NASA data; lat/lon are approximate site positions (D-104)"
     },
     "trajectories": {
       "source": "Spec v2 3.1 (1,850 m/s); BLT saving is a team estimate",
