@@ -1,8 +1,9 @@
 import type { EngineConstants, LandingSite, MapFeatures } from '../../models/Interfaces';
+import { stackHeight, type RealGrid } from './realTerrain';
 
 /**
- * Schematic south-polar terrain (pure, no DOM). Until LOLA data is processed, the height field is
- * synthetic: real craters at their approximate positions (constants.map_features) plus gentle noise,
+ * South-polar terrain (pure, no DOM). Where LOLA grids are loaded (setReal, D-106) heights are real;
+ * elsewhere, and until they load, the height field is synthetic: real craters at their approximate positions (constants.map_features) plus gentle noise,
  * and a small local cold trap for each site at the catalog's distance. Clearly labelled as schematic on screen.
  *
  * Coordinates: south polar stereographic, km. 0° E points up (+y), 90° E to the right (+x),
@@ -39,7 +40,7 @@ function fbm(x: number, y: number, scaleKm: number, amp: number, octaves: number
   return sum;
 }
 
-interface Bowl { x: number; y: number; r: number; depth: number; psr: boolean; name?: string }
+interface Bowl { x: number; y: number; r: number; depth: number; psr: boolean; name?: string; /** invented cold trap: hidden where LOLA heights exist */ local?: boolean }
 interface Bump { x: number; y: number; r: number; h: number }
 
 export interface SiteGeometry { site: LandingSite; pos: XY; coldTrap: XY | null; bearingDeg: number }
@@ -49,6 +50,8 @@ export class Terrain {
   readonly bumps: Bump[] = [];
   readonly sites: SiteGeometry[] = [];
   readonly moonR: number;
+  /** LOLA grids, finest first (empty = schematic everywhere). */
+  real: RealGrid[] = [];
 
   constructor(c: EngineConstants) {
     const f: MapFeatures = c.map_features;
@@ -76,7 +79,7 @@ export class Terrain {
       const coldTrap = dist > 0 ? { x: pos.x + dist * Math.sin(ang), y: pos.y + dist * Math.cos(ang) } : null;
       if (coldTrap) {
         const r = Math.min(2.5, Math.max(0.7, dist * 0.6));
-        this.bowls.push({ x: coldTrap.x, y: coldTrap.y, r, depth: r * 0.45, psr: true });
+        this.bowls.push({ x: coldTrap.x, y: coldTrap.y, r, depth: r * 0.45, psr: true, local: true });
       }
       if (site.solar_elevation_mean_deg > 0) this.bumps.push({ x: pos.x, y: pos.y, r: 1.6, h: 0.45 });
       this.sites.push({ site, pos, coldTrap, bearingDeg: ((ang / DEG) + 360) % 360 });
@@ -98,8 +101,14 @@ export class Terrain {
     });
   }
 
+  setReal(grids: RealGrid[]): void { this.real = grids; }
+
   /** Height in km at (x, y). */
   height(x: number, y: number): number {
+    if (this.real.length) {
+      const r = stackHeight(this.real, x, y);
+      if (Number.isFinite(r)) return r;
+    }
     let h = fbm(x, y, 18, 0.35, 4) + fbm(x, y, 0.9, 0.025, 3);
     for (const m of this.bumps) {
       const d2 = ((x - m.x) ** 2 + (y - m.y) ** 2) / (m.r * m.r);
@@ -117,7 +126,16 @@ export class Terrain {
 
   /** True where a permanently shadowed crater floor lies (never sunlit, cold trap). */
   isPermanentShadow(x: number, y: number): boolean {
-    for (const b of this.bowls) if (b.psr && Math.abs(x - b.x) < b.r && Math.abs(y - b.y) < b.r && Math.hypot(x - b.x, y - b.y) < b.r * 0.82) return true;
+    let realHere: boolean | null = null;
+    for (const b of this.bowls) {
+      if (!b.psr || Math.abs(x - b.x) >= b.r || Math.abs(y - b.y) >= b.r || Math.hypot(x - b.x, y - b.y) >= b.r * 0.82) continue;
+      if (b.local) {
+        // the invented per-site cold trap has no place on real terrain; the map still marks its position
+        realHere ??= this.real.length > 0 && Number.isFinite(stackHeight(this.real, x, y));
+        if (realHere) continue;
+      }
+      return true;
+    }
     return false;
   }
 
