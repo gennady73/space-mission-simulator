@@ -4,6 +4,18 @@ Newest block on top. One block per session. The Architect writes in `architect.m
 
 ---
 
+## 2026-11-14 ~19:45 IST · Lead (Claude, Lead instance) · map and flight playback
+**Did**
+- South-pole map component with stage layers and a `#map` test page (D-104). Terrain is schematic with real crater positions; LOLA 120 m swap pending the download into `raw-data/`.
+- Flight playback: the year replayed on the map with gauges, events and controls (D-105). `#map` → **FLY ▶** tries it with the reference design.
+- API for the Architect's console in BUILD-PLAN §6.
+
+**Verification:** `tsc --noEmit` clean; rendered in headless Chromium at 1366×768, 1024×768 and 820×1100 (no console errors; survive and brownout paths, skip, scrub). Helpers checked by running them; `tests/flight-playback.spec.ts` added — Lead runs `npm test`.
+
+**Next (Lead):** LOLA crop into `public/data/` → swap the schematic heights; demo video from the FLY replay.
+
+---
+
 ## 2026-11-14 ~19:20 IST · Lead (Claude, Lead instance) · live site, README, submission
 **Did**
 - GitHub Pages enabled by the Lead (Source: GitHub Actions); deploy succeeded, site live (D-103).
