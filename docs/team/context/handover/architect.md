@@ -4,6 +4,19 @@ Newest block on top. One block per session. The Lead writes in `lead.md`, never 
 
 ---
 
+## 2026-11-14 ~18:40 IST · Architect (Claude, Architect instance) · hypothesis screen
+**Did**
+- Pre-stage hypothesis card (`src/ui/PreStageQuestion.ts`, D-031) on every phase, fed by D-030's `pre_stage_questions`: question first, textarea for the player's hypothesis, explanation revealed only after a non-empty hypothesis is recorded. Hypotheses sit in `state.userHypotheses`, so export / import / share carry them.
+- E2E test for the flow (reveal gating, next phase resets, going back keeps the recorded answer). Suite is now 10 e2e + 24 unit, all green; typecheck and build clean.
+
+**Notes for the Lead**
+- BUILD-PLAN §3 "Objective + hypothesis screen" Must row can be ticked; §6 can add the four ids from D-031.
+- The PLAR card also shows above the debrief, which fits its comms-blackout question.
+
+**Next (Architect)** — unchanged: JSON import + compare; failure-hour marker on charts.
+
+---
+
 ## 2026-11-14 ~17:30 IST · Architect (Claude, Architect instance) · cockpit
 **Did**
 - First real install and test run of the bootstrap. `npm test` failed on a clean install because Vitest picked up the Playwright file; fixed in `vite.config.ts` (D-025).
