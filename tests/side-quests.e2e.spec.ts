@@ -4,6 +4,7 @@ import { expect, test } from '@playwright/test';
 test.describe('Side-quests', () => {
   test('SRR offers the plume quest; a wrong then a right answer, solved mark stays', async ({ page }) => {
     await page.goto('/');
+    await page.click('#btn-start-mission'); // start screen (D-113)
     await page.click('button#btn-site-shackleton_ridge');
     await page.click('button#btn-next-phase');
     await page.click('button#btn-review-next'); // review verdict modal (D-035)

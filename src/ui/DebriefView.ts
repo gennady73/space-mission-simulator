@@ -50,7 +50,7 @@ export function renderDebrief(c: EngineConstants, d: Debrief, actions: DebriefAc
   const hours = c.simulation.mission_duration_h;
   const box = h('section', { class: 'debrief' });
 
-  const revise = h('button', { id: 'btn-revise-design', type: 'button' }, 'Revise design');
+  const revise = h('button', { id: 'btn-revise-design', type: 'button' }, 'Improve the design \u2192 back to Ice (CDR)');
   revise.addEventListener('click', actions.revise);
   const exportBtn = h('button', { id: 'btn-export-design', type: 'button', class: 'secondary' }, 'Save design as a file');
   exportBtn.addEventListener('click', actions.exportJson);
@@ -58,11 +58,20 @@ export function renderDebrief(c: EngineConstants, d: Debrief, actions: DebriefAc
   share.addEventListener('click', actions.copyShareLink);
 
   const tile = (label: string, value: string) => h('div', { class: 'tile' }, h('dt', {}, label), h('dd', {}, value));
+  const lostDay = r.failureHour == null ? null : Math.floor(r.failureHour / 24);
+  const outcome = lostDay == null
+    ? `Your outpost survived the year: ${Math.round(r.iceKg).toLocaleString('en-US')} kg of water ice assayed.`
+    : `Your outpost was lost on day ${lostDay} of 365.`;
   const summary = h('div', { class: 'debrief-col' },
+    h('p', { class: 'debrief-crumb' }, 'The flight is over. This is mission control\u2019s debrief: what your design did, and where to improve it.'),
+    h('h2', { class: lostDay == null ? 'debrief-outcome ok' : 'debrief-outcome bad' }, outcome),
     h('div', { class: 'debrief-score', id: 'debrief-score' },
       h('span', {}, 'Mission score (game rule)'), h('strong', {}, String(score.total)), h('span', {}, 'of 1000')),
+    h('div', { class: 'actions' },
+      revise,
+      h('p', { class: 'hint' }, 'Your design is kept. Change anything in any stage, then launch again from the Ice (CDR) review.'),
+      exportBtn, share),
     renderGateBanner(d.plar),
-    h('div', { class: 'actions' }, revise, exportBtn, share),
     h('dl', { class: 'tiles' },
       tile('Reviews passed', `${score.gatesPassed} of 5`),
       tile('Water ice assayed', `${Math.round(r.iceKg).toLocaleString('en-US')} kg`),
@@ -86,12 +95,17 @@ export function renderDebrief(c: EngineConstants, d: Debrief, actions: DebriefAc
   const marker = r.failureHour == null ? null : { hour: r.failureHour, label: `lost on day ${Math.floor(r.failureHour / 24)}` };
   const raw = h('pre', { id: 'reference-output' });
   raw.textContent = JSON.stringify({ gates: d.gates, plar: d.plar, result: { ...r, telemetry: `${r.telemetry.length} rows` }, score }, null, 2);
+  const chart = (el: HTMLElement, caption: string) => h('div', { class: 'chart-block' }, el, h('p', { class: 'chart-caption' }, caption));
   const flight = h('div', { class: 'debrief-col' },
-    h('h3', {}, 'The flight year'),
-    renderStripChart(r.telemetry, { title: 'Battery charge', unit: '%', value: (t) => t.batterySoCPercent, max: 100 }, hours, marker),
-    renderStripChart(r.telemetry, { title: 'Solar power generated', unit: 'W', value: (t) => t.solarPowerGeneratedW }, hours, marker),
-    renderStripChart(r.telemetry, { title: 'Data memory in use', unit: '%', value: (t) => t.ssmmBufferOccupancyPercent, max: 100 }, hours, marker),
-    renderStripChart(r.telemetry, { title: 'Water ice assayed so far', unit: 'kg', value: (t) => t.cumulativeIceAssayedKg }, hours, marker),
+    h('h3', {}, 'The flight year, hour by hour'),
+    chart(renderStripChart(r.telemetry, { title: 'Battery charge', unit: '%', value: (t) => t.batterySoCPercent, max: 100 }, hours, marker),
+      'Each dip is a lunar night running on the battery. Touching 0% ends the mission.'),
+    chart(renderStripChart(r.telemetry, { title: 'Solar power generated', unit: 'W', value: (t) => t.solarPowerGeneratedW }, hours, marker),
+      'What the mast harvested. The gaps are nights and dust events.'),
+    chart(renderStripChart(r.telemetry, { title: 'Data memory in use', unit: '%', value: (t) => t.ssmmBufferOccupancyPercent, max: 100 }, hours, marker),
+      'Science piles up while Earth is below the horizon. At 100% full, new science is lost.'),
+    chart(renderStripChart(r.telemetry, { title: 'Water ice assayed so far', unit: 'kg', value: (t) => t.cumulativeIceAssayedKg }, hours, marker),
+      'The mission goal. Flat stretches mean the drill had no power, no delivery, or no sunlight.'),
     h('h3', {}, 'Events'),
     r.events.length
       ? h('ul', { class: 'events' }, ...r.events.map((e) => h('li', {}, `Day ${Math.floor(e.hour / 24)}: ${e.text}`)))

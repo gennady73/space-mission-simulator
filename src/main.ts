@@ -36,6 +36,9 @@ async function boot(): Promise<void> {
   if (shared) store.importDesign(shared);
 
   let banner: GateValidationResult | null = null;
+  // Start screen (D-113): shown on a fresh load; a shared design goes straight to the console.
+  let started = !!shared;
+  let notice: string | null = null;
   let debrief: Debrief | null = null;
   let review: ReviewOutcome | null = null;
   // Console viewport (BUILD-PLAN §6): one persistent element that the cockpit re-adopts on every
@@ -98,6 +101,19 @@ async function boot(): Promise<void> {
 
   const actions: CockpitActions = {
     update: (patch) => { banner = null; store.update(patch); },
+    startGame: (mode) => {
+      started = true;
+      if (mode === 'watch') { actions.runReference(); return; }
+      if (mode === 'team') { actions.setTeamMode(true); return; }
+      if (mode === 'example') {
+        padDistanceDraft = String(REFERENCE_DESIGN.padDistanceM ?? '');
+        heaterDraft = String(REFERENCE_DESIGN.drillHeaterW);
+        notice = 'The example design is loaded, with every choice already made. Walk the stages with the pills above, read why each choice was made, and submit each review yourself.';
+        store.update({ ...REFERENCE_DESIGN, currentPhase: 'MCR', gateResults: {} });
+        return;
+      }
+      store.update({});
+    },
     setPadDistanceDraft: (v) => { padDistanceDraft = v; },
     // Keeps any gate banner on screen: writing a hypothesis is not a design change.
     recordHypothesis: (phase, text) => store.update({ userHypotheses: { ...store.get().userHypotheses, [phase]: text } }),
@@ -114,6 +130,7 @@ async function boot(): Promise<void> {
     setActiveRole: (role) => store.update({ ...draftPatch(), activeRole: role }),
     // Submitting runs the gates and opens the review verdict (D-035); the player then moves on or revises.
     nextPhase: () => {
+      notice = null;
       const phase = store.get().currentPhase;
       const candidate = { ...store.get(), ...draftPatch() };
       const results = submitToReview(c, candidate, phase);
@@ -127,6 +144,7 @@ async function boot(): Promise<void> {
       store.update({ ...draftPatch(), gateResults, roleSignOffs });
     },
     reviewNext: () => {
+      notice = null;
       if (!review || review.failed) return;
       const { phase, results } = review;
       review = null;
@@ -138,6 +156,7 @@ async function boot(): Promise<void> {
     goToPhase: (phase) => {
       if (phase === 'PLAR' && !debrief) return;
       banner = null;
+      notice = null;
       store.update({ ...draftPatch(), currentPhase: phase });
     },
     runReference: () => {
@@ -148,7 +167,12 @@ async function boot(): Promise<void> {
       if (design) fly(runDesignGates(c, design));
     },
     // Back to the last design stage: the whole design is still there to change, stage by stage.
-    revise: () => { banner = null; debrief = null; store.update({ currentPhase: 'CDR' }); },
+    revise: () => {
+      banner = null;
+      debrief = null;
+      notice = 'Back from the debrief. Your whole design is still here \u2014 change what you need in any stage, then submit the Ice (CDR) review to launch again.';
+      store.update({ currentPhase: 'CDR' });
+    },
     exportJson: () => {
       const blob = new Blob([JSON.stringify(store.exportDesign(), null, 2)], { type: 'application/json' });
       const link = document.createElement('a');
@@ -166,7 +190,7 @@ async function boot(): Promise<void> {
 
   store.subscribe((state) => {
     syncViewport(state);
-    renderCockpit(app, { constants: c, state, banner, padDistanceDraft, heaterDraft, debrief, review, viewport }, actions);
+    renderCockpit(app, { constants: c, state, banner, notice, showStart: !started, padDistanceDraft, heaterDraft, debrief, review, viewport }, actions);
   });
 }
 

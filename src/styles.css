@@ -88,8 +88,14 @@ details summary { cursor: pointer; color: var(--muted); }
 .seats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
 .choice-group.locked legend { color: var(--muted); font-weight: 400; }
 
-.prestage { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin: 0 0 16px; display: grid; gap: 10px; }
-.prestage h3 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.prestage { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 4px 12px; margin: 0 0 16px; }
+.prestage summary { list-style: none; display: flex; align-items: center; gap: 10px; min-height: 40px; cursor: pointer; }
+.prestage summary::-webkit-details-marker { display: none; }
+.prestage summary b { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); white-space: nowrap; }
+.prestage-q { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 14px; }
+.prestage[open] .prestage-q { white-space: normal; color: var(--text); }
+.prestage-state { font-size: 11px; color: var(--accent); white-space: nowrap; }
+.prestage-body { display: grid; gap: 10px; padding: 4px 0 12px; }
 .prestage p { margin: 0; }
 .prestage textarea { display: block; width: 100%; margin-top: 4px; resize: vertical; }
 .prestage button { justify-self: start; }
@@ -97,7 +103,7 @@ details summary { cursor: pointer; color: var(--muted); }
 
 /* ---- Full-screen mission console (D-033): fixed 100dvh grid, no page scroll ---- */
 #app.console-host { max-width: none; padding: 0; height: 100vh; height: 100dvh; overflow: hidden; }
-.console { height: 100%; display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding: 8px; }
+.console { height: 100%; display: grid; grid-template-columns: minmax(0, 45fr) minmax(0, 55fr); grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding: 8px; }
 .console-top { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }
 .console-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
 .console-bar h1 { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -178,3 +184,30 @@ details summary { cursor: pointer; color: var(--muted); }
   .console-bar { flex-wrap: wrap; }
   .console .resources dl { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+/* ---- start screen (D-113) ---- */
+.start-overlay { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; overflow-y: auto; background: rgb(5 7 11 / 0.9); }
+.start-card { width: min(640px, calc(100% - 32px)); margin: 24px 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 26px 30px; display: grid; gap: 12px; box-shadow: 0 16px 60px rgb(0 0 0 / .6); }
+.start-card h2 { margin: 0; font-size: 26px; letter-spacing: 0.03em; }
+.start-card > p { margin: 0; }
+.start-loop { font: 600 13px var(--mono); color: var(--accent); letter-spacing: 0.02em; }
+.start-choices { display: grid; gap: 8px; margin-top: 4px; }
+.start-choice { display: grid; gap: 3px; text-align: left; }
+.start-choice.primary { border-color: var(--accent); background: rgb(78 168 255 / 0.1); }
+.start-choice.primary strong { color: var(--accent); }
+
+/* ---- orientation notice ---- */
+.console-notice { margin: 0; padding: 8px 12px; border-left: 4px solid var(--accent); background: rgb(78 168 255 / 0.08); border-radius: 0 6px 6px 0; font-size: 14px; }
+
+/* ---- debrief rework (D-113) ---- */
+.debrief-crumb { margin: 0; font-size: 13px; color: var(--muted); }
+.debrief-outcome { margin: 0; font-size: 22px; }
+.debrief-outcome.ok { color: var(--ok); }
+.debrief-outcome.bad { color: var(--fail); }
+.debrief .actions .hint { flex-basis: 100%; margin: 0; }
+.chart-block { display: grid; gap: 2px; }
+.chart-caption { margin: 0 0 8px; font-size: 12px; color: var(--muted); }
+.console .objectives { padding: 8px 12px; }
+.console .objectives h3 { margin: 0; font-size: 12px; }
+.console .objectives ul { margin: 4px 0; }
+.console .objectives .hint { margin: 4px 0 0; font-size: 12px; }

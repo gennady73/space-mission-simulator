@@ -25,10 +25,10 @@ const DOCUMENT_CREDITS: Credit[] = [
 ];
 
 const DATA_CREDITS: Credit[] = [
-  { title: 'LOLA 5 m/px south-pole site maps — NASA PGDA product 78 (Barker et al. 2021)', href: 'https://pgda.gsfc.nasa.gov/products/78', detail: 'Terrain and slope for the site map.', status: 'planned' },
-  { title: 'LOLA polar grid 120 m — NASA PDS, LRO-L-LOLA-4-GDR-V1.0', href: 'https://imbrium.mit.edu/DATA/LOLA_GDR/POLAR/IMG/', detail: 'Regional terrain context.', status: 'planned' },
-  { title: 'LRO Diviner South Polar Resource Product — NASA PDS (D. A. Paige, UCLA)', href: 'https://pds-geosciences.wustl.edu/lro/urn-nasa-pds-lro_diviner_derived1/data_derived_prp/', detail: 'Cold-trap temperatures and depth to stable ice.', status: 'planned' },
-  { title: 'JPL Horizons ephemeris service (DE441)', href: 'https://ssd.jpl.nasa.gov/horizons/app.html', detail: 'Hour-by-hour Sun and Earth positions seen from the Moon.', status: 'planned' },
+  { title: 'LOLA 120 m polar grid (LDEM_75S_120M) — NASA PDS, LRO-L-LOLA-4-GDR-V1.0', href: 'https://imbrium.mit.edu/DATA/LOLA_GDR/POLAR/IMG/', detail: 'The regional terrain the map renders, and 120 m close-ups of every landing site (processed by tools/data-pipeline/lola_crop.py into public/data/terrain/).', status: 'used' },
+  { title: 'LOLA 5 m/px south-pole site maps — NASA PGDA product 78 (Barker et al. 2021)', href: 'https://pgda.gsfc.nasa.gov/products/78', detail: 'Sharp terrain within 4 km of the Shackleton connecting ridge, de Gerlache rim and Malapert massif sites.', status: 'used' },
+  { title: 'LRO Diviner South Polar Resource Product v2 — NASA PDS (D. A. Paige, UCLA)', href: 'https://pds-geosciences.wustl.edu/lro/urn-nasa-pds-lro_diviner_derived1/data_derived_prp/', detail: 'Annual maximum temperature and depth to stable water ice: the cold traps the map paints. The 110 K surface-ice limit follows Paige et al. 2010, Science 330.', status: 'used' },
+  { title: 'Lunar Polar Illumination — NASA PGDA product 69 (Mazarico et al. 2011)', href: 'https://pgda.gsfc.nasa.gov/products/69', detail: 'Permanent-shadow maps (60 m) drawn in the site close-ups; average sunlight and Earth visibility used to cross-check the site catalog.', status: 'used' },
 ];
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<HTMLElementTagNameMap[K]> = {}, ...children: Array<Node | string>): HTMLElementTagNameMap[K] {
@@ -58,6 +58,7 @@ export function renderAboutNumbers(c: EngineConstants): HTMLElement {
       el('li', {}, `Runs your outpost for ${fmt('simulation.mission_duration_h', s.mission_duration_h)} in steps of ${fmt('simulation.time_step_h', s.time_step_h)}. Every chart value is an hourly value.`),
       el('li', {}, 'Each hour it updates the four NASA mission segments together: sunlight and power (Space), Earth visibility and data (Ground), ice assayed (User), after the launch checks (Launch).'),
       el('li', {}, 'Checks your design at four review gates (MCR, SRR, PDR, CDR) and a final review (PLAR). Every failure names the check, the cause and what to change.'),
+      el('li', {}, 'The south-pole map draws real NASA terrain (LOLA, 120 m and 5 m per pixel) with Diviner cold traps and LOLA permanent shadow; where the processed data ends it falls back to schematic terrain and says so in its corner.'),
       el('li', {}, `Random events (dust, cable snags, rover wear) come from a seeded generator: the same design and seed always give the same mission (seed ${s.default_seed}).`),
     ),
     el('h2', {}, 'What the model leaves out'),
