@@ -2,6 +2,7 @@ import './site-map.css';
 import type { EngineConstants, Phase, SimulationState } from '../../models/Interfaces';
 import { earthElevationDeg, solarElevationDeg } from '../../engine/SubsystemEngines';
 import { fetchRealGrids } from './realTerrain';
+import { fetchColdTraps } from './coldTraps';
 import { rasterize, shade, sunAzimuthDeg, Terrain, type Grid, type SiteGeometry, type View, type XY } from './terrain';
 
 /**
@@ -40,9 +41,15 @@ const terrains = new WeakMap<EngineConstants, Terrain>();
 const terrainReady = new WeakMap<Terrain, Promise<void>>();
 const terrainFor = (c: EngineConstants) => { let t = terrains.get(c); if (!t) { t = new Terrain(c); terrains.set(c, t); } return t; };
 /** Load LOLA grids once per terrain (D-106); resolves even when there are none. */
-const realTerrain = (t: Terrain) => {
+const realTerrain = (t: Terrain) => { // LOLA heights (D-106) and Diviner cold traps (D-109)
   let p = terrainReady.get(t);
-  if (!p) { p = fetchRealGrids().then((g) => { if (g.length) t.setReal(g); }); terrainReady.set(t, p); }
+  if (!p) {
+    p = Promise.all([fetchRealGrids(), fetchColdTraps(t.coldTrapMaxK)]).then(([g, ct]) => {
+      if (g.length) t.setReal(g);
+      if (ct) t.setColdTraps(ct);
+    });
+    terrainReady.set(t, p);
+  }
   return p;
 };
 
@@ -68,7 +75,7 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
   const note = document.createElement('div'); note.className = 'sitemap__note';
   const setNote = () => {
     note.textContent = terrain.real.length
-      ? `LOLA terrain (NASA) · ${[...new Set(terrain.real.map((g) => `${Math.round(g.resM)} m`))].join(' / ')} grid · schematic outside`
+      ? `LOLA terrain (NASA) · ${[...new Set(terrain.real.map((g) => `${Math.round(g.resM)} m`))].join(' / ')} grid${terrain.coldTraps ? ' · Diviner cold traps' : ''} · schematic outside`
       : 'Schematic terrain · real crater positions · LOLA data pending';
   };
   setNote();
@@ -436,7 +443,7 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
   let alive = true;
   // Swap in LOLA heights when they arrive (the first frame uses schematic terrain).
   void realTerrain(terrain).then(() => {
-    if (!alive || !terrain.real.length) return;
+    if (!alive || (!terrain.real.length && !terrain.coldTraps)) return;
     gridKey = ''; shadeCache.clear(); lastImg = null; setNote(); draw();
   });
 
