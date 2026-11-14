@@ -1,1 +1,40 @@
-{"grids":[]}
+{
+ "grids": [
+  {
+   "id": "shackleton_ridge_120m",
+   "file": "shackleton_ridge_120m.json",
+   "res_m": 62.5,
+   "source": "LDEM_75S_120M.IMG (LOLA GDR polar grid, resampled)"
+  },
+  {
+   "id": "de_gerlache_rim_120m",
+   "file": "de_gerlache_rim_120m.json",
+   "res_m": 62.5,
+   "source": "LDEM_75S_120M.IMG (LOLA GDR polar grid, resampled)"
+  },
+  {
+   "id": "malapert_massif_120m",
+   "file": "malapert_massif_120m.json",
+   "res_m": 62.5,
+   "source": "LDEM_75S_120M.IMG (LOLA GDR polar grid, resampled)"
+  },
+  {
+   "id": "haworth_floor_120m",
+   "file": "haworth_floor_120m.json",
+   "res_m": 62.5,
+   "source": "LDEM_75S_120M.IMG (LOLA GDR polar grid, resampled)"
+  },
+  {
+   "id": "faustini_rim_120m",
+   "file": "faustini_rim_120m.json",
+   "res_m": 62.5,
+   "source": "LDEM_75S_120M.IMG (LOLA GDR polar grid, resampled)"
+  },
+  {
+   "id": "region",
+   "file": "region.json",
+   "res_m": 348.356,
+   "source": "LDEM_75S_120M.IMG (LOLA GDR polar grid, resampled)"
+  }
+ ]
+}

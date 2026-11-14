@@ -22,6 +22,9 @@ Examples (run from the repo root):
   # region from the 120 m grid, centred on the sites, 512 x 512
   python3 tools/data-pipeline/lola_crop.py region raw-data/lola/gdr-polar-120m/LDEM_75S_120M.LBL --n 512
 
+  # close-up per site from the same 120 m grid (until the 5 m tile is in), smoothed against track striping
+  python3 tools/data-pipeline/lola_crop.py site raw-data/lola/gdr-polar-120m/LDEM_75S_120M.LBL --site malapert_massif --half-km 8 --id malapert_massif_120m --smooth-cells 2
+
   # one site from a 5 m PGDA tile, 256 x 256 cells over +-6 km around the catalog site
   python3 tools/data-pipeline/lola_crop.py site raw-data/lola/pgda78-5m/Site01/Site01_final_adj_5mpp_surf.tif --site shackleton_ridge
 
@@ -96,6 +99,25 @@ class Source:
             return np.where(cnt > 0, out / np.maximum(cnt, 1), np.nan)
 
 
+def gaussian_smooth(grid: np.ndarray, sigma_cells: float) -> np.ndarray:
+    """Separable Gaussian blur that ignores NaN (normalised convolution). Removes LOLA ground-track
+    striping that a low sun turns into stripes when a coarse grid is shown close up."""
+    if sigma_cells <= 0:
+        return grid
+    r = int(math.ceil(3 * sigma_cells))
+    k = np.exp(-0.5 * (np.arange(-r, r + 1) / sigma_cells) ** 2)
+    good = np.isfinite(grid).astype(np.float64)
+    val = np.where(good > 0, grid, 0.0)
+
+    def conv(a: np.ndarray) -> np.ndarray:
+        a = np.apply_along_axis(lambda v: np.convolve(v, k, mode="same"), 0, a)
+        return np.apply_along_axis(lambda v: np.convolve(v, k, mode="same"), 1, a)
+
+    num, den = conv(val), conv(good)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return np.where(good > 0, num / den, np.nan)
+
+
 def _lbl_value(text: str, key: str) -> str:
     m = re.search(rf"^\s*{key}\s*=\s*(.+?)\s*$", text, re.M)
     if not m:
@@ -140,9 +162,10 @@ class PdsGrid(Source):
         # heights relative to the reference sphere, metres (OFFSET is the radius in km or m)
         off_m = offset * (1000.0 if offset < 1e5 else 1.0)
         self._raw, self._scale, self._off = raw, scale, off_m - r_m
-        # PDS: x = (sample - S0) * res, y = (L0 - line) * res, samples/lines 1-based
-        self.x0_m = (1 - s0) * res_m
-        self.y0_m = (l0 - 1) * res_m
+        # LOLA polar IMG (1-based): x = (sample - S0 - 1) * res, y = (1 - line + L0) * res.
+        # With S0 = L0 = n/2 - 0.5 the pole sits exactly in the middle of the grid.
+        self.x0_m = (1 - s0 - 1) * res_m
+        self.y0_m = (1 - 1 + l0) * res_m
         self.data = _LazyScaled(raw, scale * (1000.0 if scale < 0.01 else 1.0), self._off)
         self.meta = dict(lines=lines, samples=samples, res_m=res_m, type=str(dt), scale=scale, offset=offset,
                          line_proj_offset=l0, sample_proj_offset=s0, radius_m=r_m)
@@ -302,6 +325,8 @@ def main() -> None:
     ap.add_argument("--margin-km", type=float, default=18.0, help="region: margin around the sites")
     ap.add_argument("--n", type=int, default=None, help="cells per side (site: 256, region: 512)")
     ap.add_argument("--id", help="output name (default: site id, or 'region')")
+    ap.add_argument("--smooth-cells", type=float, default=0.0,
+                    help="Gaussian blur sigma in output cells (use ~2 when a 120 m grid is cropped finer than 120 m)")
     a = ap.parse_args()
 
     src = open_source(a.path)
@@ -342,8 +367,10 @@ def main() -> None:
         cx, cy = site_xy_m(c, a.site)
     half = (a.half_km or 6.0) * 1000
     n = a.n or 256
-    grid = src.block_mean(cx, cy, half, n)
-    write_grid(a.id or a.site, src, grid, cx, cy, half, "nasa-data", "PGDA product 78, LOLA 5 m/px, resampled")
+    grid = gaussian_smooth(src.block_mean(cx, cy, half, n), a.smooth_cells)
+    note = ("LOLA GDR polar grid, resampled" if isinstance(src, PdsGrid)
+            else "PGDA product 78, LOLA 5 m/px, resampled")
+    write_grid(a.id or a.site, src, grid, cx, cy, half, "nasa-data", note)
 
 
 if __name__ == "__main__":
