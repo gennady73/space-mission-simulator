@@ -3,15 +3,7 @@ import { loadConstants } from './engine/ConstantsLoader';
 import { runMission, scoreMission } from './engine/SimulationClock';
 import { runDesignGates, totalCostUSD, validatePLAR } from './engine/StageGateValidators';
 import { initialState, PHASES, REFERENCE_DESIGN, StateStore } from './models/StateStore';
-import { renderPlaceholder } from './ui/GraphicPlaceholderView';
 import { renderAboutNumbers } from './ui/AboutNumbersView';
-import type { EngineConstants } from './models/Interfaces';
-
-/**
- * Bootstrapper. BUILD SHELL ONLY: proves constants → gates → 8,760 h run → score end to end.
- * The cockpit UI (CockpitHUD, CanvasMap2D, OrbitViewCanvas, TelemetryStripCharts, SideQuestModal,
- * FeynmanSummaryView) replaces renderShell() — see docs/BUILD-PLAN.md §6.
- */
 import type { Difficulty, EngineConstants, GateValidationResult, Phase, TeamRole } from './models/Interfaces';
 import { renderCockpit, type CockpitActions } from './ui/CockpitHUD';
 import type { Debrief } from './ui/DebriefView';

@@ -61,14 +61,14 @@ The event ends Sunday 15 Nov. **Cut line: Sunday 12:00.** After that, nothing ne
 | Pri | Item | Owner | Est. |
 |---|---|---|---|
 | **Must** | Engine core: constants loader, gates, 8,760 h run, score ✅ *done in bootstrap commit* | Lead (handed to Arch) | — |
-| **Must** | Cockpit layout: phase tracker, resource bar (6 resources), choice cards per phase, gate result banner, Next Phase | Architect | 4 h |
-| **Must** | Objective + hypothesis screen (Feynman "questions first", §8.1) | Architect / Media | 1 h |
-| **Must** | Run + debrief: telemetry strip charts (SoC, power, buffer), event list, fault-tree text, score, badges | Architect | 3 h |
-| **Must** | "About & Numbers" page: renders `provenance` + data credits + AI-use declaration (design guide §4) ✅ *`#about`, D-023* | Lead | 1.5 h |
+| **Must** | Cockpit layout: phase tracker, resource bar (6 resources), choice cards per phase, gate result banner, Next Phase ✅ *D-023, D-024* | Architect | 4 h |
+| **Must** | Objective + hypothesis screen (Feynman "questions first", §8.1) — objective field done; questions now in `pre_stage_questions` (D-030) | Architect / Media | 1 h |
+| **Must** | Run + debrief: telemetry strip charts (SoC, power, buffer), event list, fault-tree text, score, badges ✅ | Architect | 3 h |
+| **Must** | "About & Numbers" page: renders `provenance` + data credits + AI-use declaration (design guide §4) ✅ *`#about`, D-027* | Lead | 1.5 h |
 | **Must** | GitHub Pages deploy + README + submission text + demo video | Lead | 2 h |
 | **Should** | Side-quest modals (5 quests, inline answer check) | Lead | 1.5 h |
-| **Should** | Team mode: role picker, hot-seat, per-gate sign-off | Architect | 2 h |
-| **Should** | Difficulty selector; share link / JSON export–import / compare two designs | Architect | 1.5 h |
+| **Should** | Team mode: role picker, hot-seat, per-gate sign-off ✅ *D-026* | Architect | 2 h |
+| **Should** | Difficulty selector; share link / JSON export–import / compare two designs — difficulty, export, share done; import + compare open | Architect | 1.5 h |
 | **Should** | 2D site map from LOLA (Canvas): relief + slope layer gated by NDL | Architect + data | 4 h |
 | **Could** | Diviner ice heatmap layer (gated by the neutron spectrometer) | data | 2 h |
 | **Could** | Horizons ephemeris replacing the synthetic Sun/Earth model | Lead | 3 h |
@@ -126,7 +126,16 @@ DOM ids used by the E2E tests (keep them stable):
 - `#input-pad-distance`
 - `.gate-error-banner`
 - `[data-placeholder-id]`, `.fallback-frame`, `.fallback-badge`
-- `#btn-run-reference`, `#reference-output` (build shell; may be moved to a dev menu)
+- `#btn-run-reference` loads the reference design and opens the debrief; `#reference-output` holds the raw result
+
+Added by the cockpit (D-024, D-026):
+
+- `#btn-<category>-<catalogId>` categories: `site`, `lv`, `trajectory`, `pad`, `mast`, `battery`, `comm`, `storage`, `instrument`, `logistics`, `link`
+- `#input-drill-heater`, `#input-objective`, `#select-difficulty`
+- `#btn-phase-<PHASE>`, `#btn-revise-design`, `#btn-export-design`, `#btn-share-design`
+- `.gate-pass-banner`, `.strip-chart`
+- Team mode: `#toggle-team-mode`, `#btn-role-<roleId>`. The strings in `team_roles[*].decides` are part of this contract: renaming one unlocks that decision for every seat
+- About & Numbers: route `#about`, `#btn-download-constants`
 
 ## 7. Data pipeline (spec §11)
 
