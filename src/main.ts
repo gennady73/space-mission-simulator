@@ -142,7 +142,8 @@ async function boot(): Promise<void> {
       const { design } = provisionalDesign(c, store.get());
       if (design) fly(runDesignGates(c, design));
     },
-    revise: () => { banner = null; debrief = null; store.update({ currentPhase: 'MCR' }); },
+    // Back to the last design stage: the whole design is still there to change, stage by stage.
+    revise: () => { banner = null; debrief = null; store.update({ currentPhase: 'CDR' }); },
     exportJson: () => {
       const blob = new Blob([JSON.stringify(store.exportDesign(), null, 2)], { type: 'application/json' });
       const link = document.createElement('a');

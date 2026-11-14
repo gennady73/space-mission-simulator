@@ -23,7 +23,10 @@ function svg<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string,
   return node;
 }
 
-export function renderStripChart(rows: SubsystemTelemetry[], spec: StripSpec, totalHours: number): HTMLElement {
+/** A moment worth marking on every chart, such as the hour the outpost was lost. */
+export interface StripMarker { hour: number; label: string }
+
+export function renderStripChart(rows: SubsystemTelemetry[], spec: StripSpec, totalHours: number, marker?: StripMarker | null): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'strip-chart';
   const caption = document.createElement('figcaption');
@@ -52,6 +55,15 @@ export function renderStripChart(rows: SubsystemTelemetry[], spec: StripSpec, to
     root.append(label);
   }
   root.append(svg('polyline', { points: rows.map((r, i) => `${x(r.hour).toFixed(1)},${y(values[i]).toFixed(1)}`).join(' '), class: 'strip-line' }));
+
+  if (marker) {
+    const mx = x(Math.min(marker.hour, totalHours));
+    root.append(svg('line', { x1: mx, x2: mx, y1: TOP, y2: H - BOTTOM, class: 'strip-marker' }));
+    const nearEnd = mx > W - RIGHT - 120;
+    const label = svg('text', { x: nearEnd ? mx - 5 : mx + 5, y: TOP + 10, 'text-anchor': nearEnd ? 'end' : 'start', class: 'strip-marker-label' });
+    label.textContent = marker.label;
+    root.append(label);
+  }
 
   const cursor = svg('line', { y1: TOP, y2: H - BOTTOM, class: 'strip-cursor', visibility: 'hidden' });
   const dot = svg('circle', { r: 4, class: 'strip-dot', visibility: 'hidden' });

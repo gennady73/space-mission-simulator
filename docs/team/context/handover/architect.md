@@ -4,6 +4,21 @@ Newest block on top. One block per session. The Lead writes in `lead.md`, never 
 
 ---
 
+## 2026-11-15 ~00:30 IST · Architect (Claude, Architect instance) · full-screen mission console
+**Did** (four PRs: shell #14, panel #15, review modal #16, debrief overlay)
+- D-033 shell: `#app.console-host`, fixed 100dvh grid, no page scroll; top bar (title, MCR→FLY track, six compact resource tiles, Reference mission, menu with team/difficulty/export/share/About); viewport left ~60%, panel right ~40% and the only scroller; under 900 px the map (45vh) stacks over the panel; controls ≥ 40 px. New e2e: full mission at 1024×768 asserting `scrollHeight <= innerHeight` at every beat.
+- D-034 panel: briefing card, objectives checklist (`#objectives`, `#objective-<key>`, `#objectives-status`), stage-only choice cards + side-quests, sticky submit bar.
+- D-035 review modal: submit runs the gates and opens `#review-modal` with the verdict, reason, fix and a pill per re-run review; pass → `#btn-review-next` (Launch after CDR), fail → `#btn-review-revise` and the banner stays on the panel. Passing no longer auto-advances (one click added to the Lead's side-quest e2e).
+- D-036 debrief: full-viewport overlay, score left, charts right with a failure-hour marker; Revise returns to CDR, design intact.
+
+**Notes for Media/Lead**
+- Id changes: `#btn-phase-FLY` (was `-PLAR`); team toggle and difficulty behind `#btn-menu`; export/share also as `#btn-menu-export`/`#btn-menu-share`. BUILD-PLAN §6 should take D-033..D-036.
+- Per-stage placeholder art cards are gone (intro + END stay); stage art could live in the map HUD.
+
+**Next (Architect)** — JSON import + compare view; a defeat/victory sting on the debrief would land well if Media has time.
+
+---
+
 ## 2026-11-14 ~21:25 IST · Architect (Claude, Architect instance) · map + flight in the cockpit
 **Did**
 - Wired the Lead's D-104 map and D-105 flight playback into the game (D-032). One persistent `#console-viewport` element lives in `main.ts` and the cockpit re-adopts it on every render, so the canvas and the playback's animation loop survive re-renders. Map shows through MCR–CDR (`map.update` after every state change, site tap selects at MCR); at launch the engine runs with `logEveryHours: 1`, the map is destroyed and the playback takes the viewport; `onFinish` lands at PLAR with the debrief.

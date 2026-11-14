@@ -108,7 +108,7 @@ details summary { cursor: pointer; color: var(--muted); }
 .console-panel { min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 12px; padding: 2px 6px 16px 2px; }
 .console-panel > * { flex: none; }
 .console-panel #btn-next-phase { align-self: flex-start; }
-.console--flight .console-view, .console--debrief .console-panel { grid-column: 1 / -1; }
+.console--flight .console-view { grid-column: 1 / -1; }
 .console button, .console select, .console input:not([type="checkbox"]), .console summary { min-height: 40px; }
 .console .phase-track { gap: 4px; }
 .console .phase-track li { padding: 0; }
@@ -152,11 +152,25 @@ details summary { cursor: pointer; color: var(--muted); }
 .review-gates li { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; color: var(--fail); }
 .review-gates li[data-passed="true"] { color: var(--ok); }
 .review .actions { margin: 4px 0 0; }
+.debrief-overlay { position: fixed; inset: 0; z-index: 40; overflow-y: auto; overscroll-behavior: contain; background: var(--bg); padding: 12px 16px 24px; display: flex; flex-direction: column; gap: 12px; }
+.debrief-overlay > * { flex: none; }
+.debrief-overlay button, .debrief-overlay summary { min-height: 40px; }
+.debrief { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 16px; align-items: start; }
+.debrief-col { display: grid; gap: 10px; min-width: 0; }
+.debrief-col h3 { margin: 6px 0 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.debrief-col .tiles, .debrief-col .actions { margin: 0; }
+.debrief-col .tiles { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.debrief-col .strip-chart { margin: 0; }
+.debrief-col .placeholder { height: 132px; max-height: none; aspect-ratio: auto !important; }
+.debrief-score { display: flex; align-items: baseline; gap: 10px; color: var(--muted); }
+.debrief-score strong { font-size: 44px; line-height: 1; color: var(--text); font-variant-numeric: tabular-nums; }
+.strip-marker { stroke: var(--fail); stroke-width: 2; stroke-dasharray: 4 3; }
+.strip-marker-label { fill: var(--fail); font: 11px var(--font); }
 /* Tablet portrait: the map (45vh) stacked over the panel. */
 @media (max-width: 899px) {
   .console { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 45vh minmax(0, 1fr); }
   .console--flight { grid-template-rows: auto minmax(0, 1fr); }
-  .console--debrief { grid-template-rows: auto minmax(0, 1fr); }
+  .debrief { grid-template-columns: minmax(0, 1fr); }
   .console-bar { flex-wrap: wrap; }
   .console .resources dl { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }

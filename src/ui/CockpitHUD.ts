@@ -242,7 +242,7 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
 
   // ---- right: the stage panel ----
   const panel = h('main', { class: 'console-panel' });
-  if (!flying) {
+  if (!flying && !debriefing) {
     if (s.teamMode) {
       const seats = h('div', { class: 'seats', role: 'group', 'aria-label': 'Whose turn is it' });
       for (const [id, role] of Object.entries(c.team_roles)) {
@@ -265,9 +265,7 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
     if (view.banner) panel.append(renderGateBanner(view.banner));
     panel.append(renderPreStageQuestion(c, s, a));
 
-    if (debriefing && view.debrief) {
-      panel.append(renderDebrief(c, view.debrief, a));
-    } else {
+    if (!debriefing) {
       panel.append(objectives(view), phasePanel(view, a));
       // Lead: optional side-quests for this phase (REQ-008, D-101).
       const quests = renderSideQuests(c, s.currentPhase, s.completedQuests, c.difficulty_levels[s.difficulty].hints_enabled,
@@ -288,8 +286,15 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
   const mode = flying ? 'flight' : debriefing ? 'debrief' : 'design';
   const grid = h('div', { class: `console console--${mode}`, 'data-phase': s.currentPhase }, top);
   if (mode !== 'debrief') grid.append(h('div', { class: 'console-view' }, view.viewport));
-  if (mode !== 'flight') grid.append(panel);
+  if (mode === 'design') grid.append(panel);
   root.append(grid);
+  // Debrief (D-036): a full-viewport overlay over the console; "Revise design" goes back to CDR.
+  if (debriefing && view.debrief) {
+    root.append(h('div', { id: 'debrief-overlay', class: 'debrief-overlay', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'current-phase-display' },
+      h('h2', { id: 'current-phase-display', class: 'phase-title' }, phaseTitle(s.currentPhase)),
+      renderDebrief(c, view.debrief, a),
+      renderPreStageQuestion(c, s, a)));
+  }
   if (view.review && mode === 'design') root.append(renderReviewModal(view.review, a));
   // A choice re-renders the panel: keep the player's place in it. A new stage starts at its top.
   if (samePhase) panel.scrollTop = panelScroll;
