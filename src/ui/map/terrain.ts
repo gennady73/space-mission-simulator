@@ -1,5 +1,6 @@
 import type { EngineConstants, LandingSite, MapFeatures } from '../../models/Interfaces';
 import { stackHeight, type RealGrid } from './realTerrain';
+import { ColdClass, type ColdTrapGrid } from './coldTraps';
 
 /**
  * South-polar terrain (pure, no DOM). Where LOLA grids are loaded (setReal, D-106) heights are real;
@@ -50,12 +51,17 @@ export class Terrain {
   readonly bumps: Bump[] = [];
   readonly sites: SiteGeometry[] = [];
   readonly moonR: number;
+  /** Diviner annual-max temperature below which a cell is drawn as a cold trap (constants, D-109). */
+  readonly coldTrapMaxK: number;
   /** LOLA grids, finest first (empty = schematic everywhere). */
   real: RealGrid[] = [];
+  /** Diviner cold traps (null = schematic shadow discs). */
+  coldTraps: ColdTrapGrid | null = null;
 
   constructor(c: EngineConstants) {
     const f: MapFeatures = c.map_features;
     this.moonR = f.moon_radius_km;
+    this.coldTrapMaxK = f.cold_trap_max_temp_k;
     for (const cr of f.craters) {
       const p = toXY(cr.lat_deg, cr.lon_deg, this.moonR);
       this.bowls.push({ x: p.x, y: p.y, r: cr.radius_km, depth: cr.depth_km, psr: cr.permanently_shadowed, name: cr.name });
@@ -102,6 +108,28 @@ export class Terrain {
   }
 
   setReal(grids: RealGrid[]): void { this.real = grids; }
+
+  /**
+   * Use Diviner cold traps. Each site's cold-trap marker keeps the catalog distance (the engine's
+   * number) but turns toward the coldest Diviner point near the site.
+   */
+  setColdTraps(g: ColdTrapGrid): void {
+    this.coldTraps = g;
+    for (const sg of this.sites) {
+      const near = g.sites[sg.site.id];
+      const dist = sg.site.distance_to_cold_trap_km;
+      if (!near || !sg.coldTrap || dist <= 0) continue;
+      const ang = Math.atan2(near.coldest_xy_km[0] - sg.pos.x, near.coldest_xy_km[1] - sg.pos.y);
+      sg.coldTrap = { x: sg.pos.x + dist * Math.sin(ang), y: sg.pos.y + dist * Math.cos(ang) };
+      sg.bearingDeg = ((ang / DEG) + 360) % 360;
+    }
+  }
+
+  /** Cold-trap class at (x, y): Diviner where it has data, schematic shadow discs elsewhere. */
+  coldClass(x: number, y: number): ColdClass {
+    if (this.coldTraps?.covers(x, y)) return this.coldTraps.classify(x, y);
+    return this.isPermanentShadow(x, y) ? ColdClass.Cold : ColdClass.None;
+  }
 
   /** Height in km at (x, y). */
   height(x: number, y: number): number {
@@ -157,7 +185,7 @@ export function rasterize(t: Terrain, view: View, w: number, h: number): Grid {
     for (let i = 0; i < w; i++) {
       const x = view.cx + (i + 0.5 - w / 2) * kmPerPx;
       z[j * w + i] = t.height(x, y);
-      psr[j * w + i] = t.isPermanentShadow(x, y) ? 1 : 0;
+      psr[j * w + i] = t.coldClass(x, y);
     }
   }
   return { w, h, kmPerPx, view, z, psr };
@@ -212,7 +240,8 @@ export function shade(g: Grid, sunAzDeg: number, sunElDeg: number, layers: Shade
       let r = 22 + 214 * v, gg = 24 + 210 * v, b = 32 + 200 * v;
       if (psr[k]) {
         // permanently shadowed floor: keep the relief, tint it (blue when the ice layer is on)
-        const [tr, tg, tb, a] = layers.ice ? [40, 110, 230, 0.55] : [10, 14, 34, 0.35];
+        // with the ice layer on, cells where ice is stable right at the surface glow brighter
+        const [tr, tg, tb, a] = !layers.ice ? [10, 14, 34, 0.35] : psr[k] === ColdClass.SurfaceIce ? [110, 190, 255, 0.8] : [40, 110, 230, 0.55];
         r = r * (1 - a) + tr * a; gg = gg * (1 - a) + tg * a; b = b * (1 - a) + tb * a;
       }
       if (layers.slope) {

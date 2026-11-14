@@ -51,6 +51,7 @@ export function renderMapDemo(app: HTMLElement, c: EngineConstants): void {
   };
   const toggle = (label: string, id: string) => {
     const cb = h('input', { type: 'checkbox' });
+    cb.checked = state.selectedInstruments.includes(id); // the bar is rebuilt on every change
     cb.addEventListener('change', () => set({ selectedInstruments: cb.checked ? [...state.selectedInstruments, id] : state.selectedInstruments.filter((i) => i !== id) }));
     return h('label', {}, cb, ` ${label}`);
   };
