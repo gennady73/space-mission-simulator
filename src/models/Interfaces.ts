@@ -164,6 +164,8 @@ export interface MapFeatures {
   moon_radius_km: number;
   /** Map bearing of the Sun at mission hour 0 (0 = up/0°E, 90 = right). */
   sun_azimuth_at_hour0_deg: number;
+  /** Diviner cells whose annual maximum temperature is below this are drawn as cold traps (display only, D-109). */
+  cold_trap_max_temp_k: number;
   craters: MapCrater[];
   massifs: MapMassif[];
 }

@@ -226,6 +226,7 @@
   "map_features": {
     "moon_radius_km": 1737.4,
     "sun_azimuth_at_hour0_deg": 90,
+    "cold_trap_max_temp_k": 110,
     "craters": [
       {
         "name": "Shackleton",
@@ -988,6 +989,11 @@
       "source": "Spec v2 8.2 quest registry; answers recomputed from each prompt's own inputs (checked by unit test)",
       "tier": "game-rule",
       "note": "quest_pdr_margin uses GSFC-STD-1000 Rule 1.06 (D-021)"
+    },
+    "map_features.cold_trap_max_temp_k": {
+      "source": "Paige et al. 2010, Science 330:479, Diviner Lunar Radiometer observations of cold traps in the Moon's south polar region: water ice is stable at the surface for billions of years where the annual maximum temperature stays below about 110 K",
+      "tier": "literature",
+      "note": "Display only: the map paints Diviner cells colder than this as cold traps (D-109)"
     },
     "map_features": {
       "source": "Approximate crater and massif positions and sizes after the IAU Gazetteer of Planetary Nomenclature; depths and the synthetic height field are schematic",
