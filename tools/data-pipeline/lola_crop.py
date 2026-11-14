@@ -12,7 +12,7 @@ Writes public/data/terrain/<name>.json:
   { "id", "source", "tier", "res_m", "n", "cx_km", "cy_km", "half_km",
     "h_offset_m", "nodata", "heights_b64" }
 
-heights_b64 = n*n little-endian int16, metres relative to h_offset_m, row 0 = north edge (top of
+heights_b64 = n*n little-endian int16; height_m = value * h_scale_m + h_offset_m; row 0 = north edge (top of
 the map, +y), column 0 = west edge (-x). Coordinates are south polar stereographic, the same
 convention as src/ui/map/terrain.ts toXY(): x = rho*sin(lon), y = rho*cos(lon), 0 deg E up.
 Cells outside the source are `nodata`.
@@ -20,13 +20,13 @@ Cells outside the source are `nodata`.
 Examples (run from the repo root):
 
   # region from the 120 m grid, centred on the sites, 512 x 512
-  python3 tools/data-pipeline/lola_crop.py region raw-data/LDEM_75S_120M.LBL --n 512
+  python3 tools/data-pipeline/lola_crop.py region raw-data/lola/gdr-polar-120m/LDEM_75S_120M.LBL --n 512
 
   # one site from a 5 m PGDA tile, 256 x 256 cells over +-6 km around the catalog site
-  python3 tools/data-pipeline/lola_crop.py site raw-data/Site01_final_adj_5mpp_surf.tif --site shackleton_ridge
+  python3 tools/data-pipeline/lola_crop.py site raw-data/lola/pgda78-5m/Site01/Site01_final_adj_5mpp_surf.tif --site shackleton_ridge
 
   # inspect a file without writing anything
-  python3 tools/data-pipeline/lola_crop.py info raw-data/Site23_final_adj_5mpp_surf.tif
+  python3 tools/data-pipeline/lola_crop.py info raw-data/lola/pgda78-5m/Site23/Site23_final_adj_5mpp_surf.tif
 """
 from __future__ import annotations
 
@@ -248,8 +248,11 @@ def write_grid(out_id: str, src: Source, grid: np.ndarray, cx: float, cy: float,
     good = np.isfinite(grid)
     if not good.any():
         raise SystemExit("the crop window does not overlap the data — check --site / --center")
-    off = float(np.round(np.nanmedian(grid)))
-    q = np.where(good, np.clip(np.round(grid - off), -32767, 32767), NODATA).astype("<i2")
+    lo, hi = float(np.nanmin(grid)), float(np.nanmax(grid))
+    off = float(np.round((lo + hi) / 2))
+    # finest step that fits the relief in int16 (0.1 m floor): coarse steps show as terraces under a low sun
+    step = max(0.1, math.ceil((hi - lo) / 64000 * 100) / 100)
+    q = np.where(good, np.clip(np.round((grid - off) / step), -32767, 32767), NODATA).astype("<i2")
     doc = {
         "id": out_id,
         "source": f"{src.name} ({note})",
@@ -260,6 +263,7 @@ def write_grid(out_id: str, src: Source, grid: np.ndarray, cx: float, cy: float,
         "cy_km": round(cy / 1000, 4),
         "half_km": round(half / 1000, 4),
         "h_offset_m": off,
+        "h_scale_m": step,
         "nodata": NODATA,
         "coverage": round(float(good.mean()), 4),
         "heights_b64": base64.b64encode(q.tobytes()).decode("ascii"),
@@ -267,10 +271,24 @@ def write_grid(out_id: str, src: Source, grid: np.ndarray, cx: float, cy: float,
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     p = OUT_DIR / f"{out_id}.json"
     p.write_text(json.dumps(doc, separators=(",", ":")), encoding="utf-8")
+    _update_index(out_id, p.name, doc["res_m"], doc["source"])
     rng = (float(np.nanmin(grid)), float(np.nanmax(grid)))
     print(f"wrote {p.relative_to(REPO)}  {p.stat().st_size / 1024:.0f} KB  n={doc['n']}  "
           f"cell={doc['res_m']} m  coverage={doc['coverage']:.0%}  heights {rng[0]:.0f}..{rng[1]:.0f} m")
     return p
+
+
+def _update_index(out_id: str, file: str, res_m: float, source: str) -> None:
+    """Keep public/data/terrain/index.json listing every grid (the map fetches only what is listed)."""
+    idx_path = OUT_DIR / "index.json"
+    try:
+        idx = json.loads(idx_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        idx = {"grids": []}
+    idx["grids"] = [g for g in idx.get("grids", []) if g.get("id") != out_id]
+    idx["grids"].append({"id": out_id, "file": file, "res_m": res_m, "source": source})
+    idx["grids"].sort(key=lambda g: g["res_m"])
+    idx_path.write_text(json.dumps(idx, indent=1) + "\n", encoding="utf-8")
 
 
 def main() -> None:
