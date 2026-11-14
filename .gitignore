@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+.DS_Store
+*.log
+# raw NASA downloads stay out of git (GBs); only processed JSON in public/data/ is committed
+raw-data/
+*.tif
+*.IMG
+*.tab

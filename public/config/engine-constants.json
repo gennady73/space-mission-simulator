@@ -1,0 +1,839 @@
+{
+  "schema_version": "1.0.0",
+  "system_constants": {
+    "lunar_gravity_m_s2": 1.62,
+    "standard_gravity_g0_m_s2": 9.80665,
+    "solar_flux_w_m2": 1361,
+    "synodic_month_days": 29.530589,
+    "tropical_month_days": 27.321582,
+    "lunar_axial_tilt_deg": 1.54,
+    "stefan_boltzmann_w_m2_k4": 5.670374419e-08,
+    "ice_sublimation_energy_mj_kg": 2.8,
+    "minimum_gsfc_margin_pdr": 0.2,
+    "enable_graphic_placeholders": true
+  },
+  "simulation": {
+    "mission_duration_h": 8760,
+    "time_step_h": 1,
+    "default_seed": 20261114,
+    "solar_elevation_amplitude_deg": 1.54,
+    "earth_libration_amplitude_deg": 6.7,
+    "earth_libration_period_h": 655.7,
+    "min_earth_elevation_for_los_deg": 0.5,
+    "dust_transmission_nominal": 0.95,
+    "dust_transmission_scoured": 0.4,
+    "pdr_reference_base_load_w": 85,
+    "comm_idle_power_w": 10,
+    "max_touchdown_slope_deg": 10.0,
+    "min_earth_visibility_fraction": 0.5,
+    "drill_min_soc_percent": 30,
+    "min_drill_heater_w": 35,
+    "ice_assay_rate_kg_h": 0.5,
+    "ice_score_normaliser_kg": 1000,
+    "dust_event_probability_per_cycle": 0.25,
+    "dust_event_duration_h": 12,
+    "dust_event_beam_transmittance": 0.9
+  },
+  "difficulty_levels": {
+    "cadet": {
+      "label": "Cadet",
+      "budget_usd": 390000000.0,
+      "hints_enabled": true,
+      "random_events_enabled": false,
+      "sensor_gating_strict": false,
+      "description": "Generous budget, hints always on, no random failures. Learn the trade-offs."
+    },
+    "engineer": {
+      "label": "Engineer",
+      "budget_usd": 300000000.0,
+      "hints_enabled": true,
+      "random_events_enabled": true,
+      "sensor_gating_strict": true,
+      "description": "Default. Realistic budget, seeded random events (dust, cable snags, rover wear)."
+    },
+    "flight_director": {
+      "label": "Flight Director",
+      "budget_usd": 255000000.0,
+      "hints_enabled": false,
+      "random_events_enabled": true,
+      "sensor_gating_strict": true,
+      "description": "Tight budget forces real cuts. No hints. Every margin counts."
+    }
+  },
+  "team_roles": {
+    "mission_lead": {
+      "label": "Mission Lead",
+      "segment": "User",
+      "owns_gates": [
+        "MCR",
+        "PLAR"
+      ],
+      "decides": [
+        "mission objective",
+        "landing site",
+        "budget allocation"
+      ],
+      "priority_hint": "Science return per dollar; final sign-off."
+    },
+    "launch_structures": {
+      "label": "Launch & Structures",
+      "segment": "Launch",
+      "owns_gates": [
+        "SRR"
+      ],
+      "decides": [
+        "launch vehicle",
+        "trajectory",
+        "landing pad",
+        "pad standoff distance"
+      ],
+      "priority_hint": "Keep wet mass under launcher capacity with margin."
+    },
+    "power_thermal": {
+      "label": "Power & Thermal",
+      "segment": "Space",
+      "owns_gates": [
+        "PDR",
+        "CDR"
+      ],
+      "decides": [
+        "power mast",
+        "battery",
+        "heater power",
+        "cold-trap logistics",
+        "utility link"
+      ],
+      "priority_hint": "Survive every shadow with at least 20% margin."
+    },
+    "comms_science": {
+      "label": "Comms & Science",
+      "segment": "Ground",
+      "owns_gates": [],
+      "decides": [
+        "communications system",
+        "data storage",
+        "science instruments"
+      ],
+      "priority_hint": "Get every bit of science home without overflowing memory."
+    }
+  },
+  "site_catalog": {
+    "shackleton_ridge": {
+      "id": "shackleton_ridge",
+      "name": "Shackleton Connecting Ridge",
+      "lola_dataset_id": "PGDA-78/Site04",
+      "latitude_deg": -89.45,
+      "longitude_deg": 222.7,
+      "slope_deg": 7.2,
+      "illumination_fraction": 0.924,
+      "max_shadow_h": 54,
+      "solar_elevation_mean_deg": 2.696,
+      "earth_elevation_mean_deg": 2.97,
+      "earth_visibility_fraction": 0.62,
+      "distance_to_cold_trap_km": 2.5,
+      "max_route_slope_deg": 22.0,
+      "ambient_cold_trap_temperature_k": 38.0,
+      "description": "Near-continuous light on the ridge crest, Shackleton's permanently shadowed floor close by. The balanced choice."
+    },
+    "de_gerlache_rim": {
+      "id": "de_gerlache_rim",
+      "name": "de Gerlache Rim",
+      "lola_dataset_id": null,
+      "latitude_deg": -88.5,
+      "longitude_deg": 293.0,
+      "slope_deg": 8.6,
+      "illumination_fraction": 0.887,
+      "max_shadow_h": 80,
+      "solar_elevation_mean_deg": 2.644,
+      "earth_elevation_mean_deg": 1.55,
+      "earth_visibility_fraction": 0.55,
+      "distance_to_cold_trap_km": 3.2,
+      "max_route_slope_deg": 12.0,
+      "ambient_cold_trap_temperature_k": 40.0,
+      "description": "Gentle route into the cold trap that a wheeled rover can drive, but longer shadows and weaker Earth view."
+    },
+    "malapert_massif": {
+      "id": "malapert_massif",
+      "name": "Malapert Massif",
+      "lola_dataset_id": "PGDA-78/Site23",
+      "latitude_deg": -86.0,
+      "longitude_deg": 2.9,
+      "slope_deg": 9.4,
+      "illumination_fraction": 0.831,
+      "max_shadow_h": 120,
+      "solar_elevation_mean_deg": 2.527,
+      "earth_elevation_mean_deg": 6.47,
+      "earth_visibility_fraction": 0.85,
+      "distance_to_cold_trap_km": 6.0,
+      "max_route_slope_deg": 16.0,
+      "ambient_cold_trap_temperature_k": 45.0,
+      "description": "Earth almost always above the horizon (great comms), but long shadows and a cold trap 6 km away."
+    },
+    "haworth_floor": {
+      "id": "haworth_floor",
+      "name": "Haworth Crater Floor",
+      "lola_dataset_id": "PGDA-78/Haworth",
+      "latitude_deg": -87.4,
+      "longitude_deg": 356.0,
+      "slope_deg": 4.1,
+      "illumination_fraction": 0.0,
+      "max_shadow_h": 8760,
+      "solar_elevation_mean_deg": -3.0,
+      "earth_elevation_mean_deg": -4.92,
+      "earth_visibility_fraction": 0.2,
+      "distance_to_cold_trap_km": 0.0,
+      "max_route_slope_deg": 0.0,
+      "ambient_cold_trap_temperature_k": 38.0,
+      "description": "Sit right on the ice. Never sunlit and Earth rarely visible: a deliberate trap for the MCR gate."
+    },
+    "faustini_rim": {
+      "id": "faustini_rim",
+      "name": "Faustini Rim",
+      "lola_dataset_id": null,
+      "latitude_deg": -87.2,
+      "longitude_deg": 77.0,
+      "slope_deg": 12.3,
+      "illumination_fraction": 0.898,
+      "max_shadow_h": 72,
+      "solar_elevation_mean_deg": 2.662,
+      "earth_elevation_mean_deg": 2.17,
+      "earth_visibility_fraction": 0.58,
+      "distance_to_cold_trap_km": 2.0,
+      "max_route_slope_deg": 18.0,
+      "ambient_cold_trap_temperature_k": 41.0,
+      "description": "Close to a large cold trap, but the slope is above the 10 degree touchdown limit."
+    }
+  },
+  "trajectories": {
+    "direct": {
+      "id": "direct",
+      "name": "Direct transfer",
+      "cruise_days": 4.5,
+      "descent_delta_v_m_s": 1850,
+      "extra_cost_usd": 0,
+      "description": "Fast and simple; spec baseline descent delta-v."
+    },
+    "ballistic_lunar_transfer": {
+      "id": "ballistic_lunar_transfer",
+      "name": "Ballistic Lunar Transfer (BLT)",
+      "cruise_days": 100,
+      "descent_delta_v_m_s": 1730,
+      "extra_cost_usd": 3000000.0,
+      "description": "Uses Sun-Earth gravity to arrive slower: less propellant, but ~100 days of cruise operations."
+    }
+  },
+  "hardware_catalog": {
+    "spacecraft_bus": {
+      "lander_bus_standard": {
+        "id": "lander_bus_standard",
+        "name": "Robotic lander bus (structure, avionics, ADCS, propulsion dry)",
+        "dry_mass_kg": 600,
+        "cost_usd": 60000000.0,
+        "avionics_power_w": 40,
+        "isp_s": 320,
+        "diameter_m": 4.0
+      }
+    },
+    "launch_vehicles": {
+      "lv_rideshare_lander": {
+        "id": "lv_rideshare_lander",
+        "name": "Rideshare lander slot",
+        "tli_capacity_kg": 1200,
+        "fairing_diameter_m": 3.0,
+        "cost_usd": 40000000.0,
+        "description": "Cheap, but too small for an outpost: teaches the mass check."
+      },
+      "lv_medium_reusable": {
+        "id": "lv_medium_reusable",
+        "name": "Medium-lift reusable",
+        "tli_capacity_kg": 4500,
+        "fairing_diameter_m": 4.6,
+        "cost_usd": 70000000.0,
+        "description": "Fits a lean outpost with margin."
+      },
+      "lv_heavy": {
+        "id": "lv_heavy",
+        "name": "Heavy-lift",
+        "tli_capacity_kg": 15000,
+        "fairing_diameter_m": 5.0,
+        "cost_usd": 150000000.0,
+        "description": "Fits anything, eats the budget."
+      }
+    },
+    "launchpads": {
+      "pad_natural_bowl": {
+        "id": "pad_natural_bowl",
+        "name": "Natural topographic bowl",
+        "mass_kg": 0,
+        "cost_usd": 1500000.0,
+        "deflection_efficiency": 0.45,
+        "requires_standoff_distance_m": 1800,
+        "construction_power_w": 0,
+        "construction_days": 0,
+        "comm_range_extension_km": 0,
+        "description": "Graded depression. Cheap and massless, but needs the longest standoff."
+      },
+      "pad_sintered": {
+        "id": "pad_sintered",
+        "name": "Autonomous in-situ sintered pad",
+        "mass_kg": 45,
+        "cost_usd": 8000000.0,
+        "deflection_efficiency": 0.8,
+        "requires_standoff_distance_m": 1200,
+        "construction_power_w": 600,
+        "construction_days": 120,
+        "comm_range_extension_km": 0,
+        "description": "Microwave-sintered regolith glass. 120 days of 600 W before first landing."
+      },
+      "pad_elevated_45deg": {
+        "id": "pad_elevated_45deg",
+        "name": "Elevated frame with 0-45 deg deflectors",
+        "mass_kg": 220,
+        "cost_usd": 14000000.0,
+        "deflection_efficiency": 0.92,
+        "requires_standoff_distance_m": 600,
+        "construction_power_w": 0,
+        "construction_days": 0,
+        "comm_range_extension_km": 8.0,
+        "description": "Steers plume upward; integrated 6 m S-band mesh antenna."
+      }
+    },
+    "power_masts": {
+      "mast_3m_fixed": {
+        "id": "mast_3m_fixed",
+        "name": "3 m compact fixed mast",
+        "height_m": 3,
+        "mass_kg": 85,
+        "cost_usd": 9000000.0,
+        "rated_power_w": 2500,
+        "cutoff_elevation_deg": 3.5
+      },
+      "mast_10m_vsat": {
+        "id": "mast_10m_vsat",
+        "name": "10 m telescoping VSAT mast",
+        "height_m": 10,
+        "mass_kg": 320,
+        "cost_usd": 24000000.0,
+        "rated_power_w": 10000,
+        "cutoff_elevation_deg": 1.2
+      },
+      "mast_20m_vsat": {
+        "id": "mast_20m_vsat",
+        "name": "20 m extended VSAT mast",
+        "height_m": 20,
+        "mass_kg": 540,
+        "cost_usd": 38000000.0,
+        "rated_power_w": 12500,
+        "cutoff_elevation_deg": 0.5
+      }
+    },
+    "energy_storage": {
+      "batt_liion_4kwh": {
+        "id": "batt_liion_4kwh",
+        "name": "Li-ion 4 kWh (undersized)",
+        "capacity_kwh": 4,
+        "max_dod": 0.8,
+        "mass_kg": 27,
+        "cost_usd": 3000000.0
+      },
+      "batt_liion_6kwh": {
+        "id": "batt_liion_6kwh",
+        "name": "Li-ion 6 kWh",
+        "capacity_kwh": 6,
+        "max_dod": 0.8,
+        "mass_kg": 40,
+        "cost_usd": 4500000.0
+      },
+      "batt_liion_8kwh": {
+        "id": "batt_liion_8kwh",
+        "name": "Li-ion 8 kWh",
+        "capacity_kwh": 8,
+        "max_dod": 0.8,
+        "mass_kg": 53,
+        "cost_usd": 6000000.0
+      },
+      "batt_liion_12kwh": {
+        "id": "batt_liion_12kwh",
+        "name": "Li-ion 12 kWh",
+        "capacity_kwh": 12,
+        "max_dod": 0.8,
+        "mass_kg": 80,
+        "cost_usd": 9000000.0
+      },
+      "rfc_25kwh": {
+        "id": "rfc_25kwh",
+        "name": "Regenerative fuel cell 25 kWh",
+        "capacity_kwh": 25,
+        "max_dod": 0.9,
+        "mass_kg": 180,
+        "cost_usd": 22000000.0
+      }
+    },
+    "comm_systems": {
+      "dte_xband": {
+        "id": "dte_xband",
+        "name": "Direct-to-Earth X-band",
+        "mass_kg": 25,
+        "cost_usd": 8000000.0,
+        "tx_power_w": 60,
+        "downlink_kbps": 50000,
+        "direct_to_earth": true,
+        "relay_coverage_fraction": null
+      },
+      "dte_sband_lowgain": {
+        "id": "dte_sband_lowgain",
+        "name": "Direct-to-Earth S-band low-gain",
+        "mass_kg": 10,
+        "cost_usd": 3000000.0,
+        "tx_power_w": 20,
+        "downlink_kbps": 2000,
+        "direct_to_earth": true,
+        "relay_coverage_fraction": null
+      },
+      "lunar_relay_service": {
+        "id": "lunar_relay_service",
+        "name": "Lunar relay orbiter service",
+        "mass_kg": 12,
+        "cost_usd": 15000000.0,
+        "tx_power_w": 25,
+        "downlink_kbps": 2000,
+        "direct_to_earth": false,
+        "relay_coverage_fraction": 0.95
+      }
+    },
+    "data_storage": {
+      "ssmm_32gb": {
+        "id": "ssmm_32gb",
+        "name": "SSMM 32 Gbit",
+        "capacity_mb": 32000,
+        "mass_kg": 2,
+        "cost_usd": 1000000.0,
+        "power_w": 5
+      },
+      "ssmm_128gb": {
+        "id": "ssmm_128gb",
+        "name": "SSMM 128 Gbit",
+        "capacity_mb": 128000,
+        "mass_kg": 4,
+        "cost_usd": 2500000.0,
+        "power_w": 8
+      },
+      "ssmm_512gb": {
+        "id": "ssmm_512gb",
+        "name": "SSMM 512 Gbit",
+        "capacity_mb": 512000,
+        "mass_kg": 7,
+        "cost_usd": 5000000.0,
+        "power_w": 12
+      }
+    },
+    "cold_trap_logistics": {
+      "hts_maglev_guideway": {
+        "id": "hts_maglev_guideway",
+        "name": "HTS cryogenic maglev guideway",
+        "per_km": true,
+        "mass_kg": 110,
+        "cost_usd": 4800000.0,
+        "reliability_365d": 0.998,
+        "max_slope_deg": 28.0,
+        "survival_heater_w": 0
+      },
+      "viper_heritage_rover": {
+        "id": "viper_heritage_rover",
+        "name": "Skid-steer rover (VIPER heritage)",
+        "per_km": false,
+        "mass_kg": 430,
+        "cost_usd": 18500000.0,
+        "reliability_365d": 0.84,
+        "max_slope_deg": 14.5,
+        "survival_heater_w": 45
+      }
+    },
+    "utility_links": {
+      "laser_power_beaming": {
+        "id": "laser_power_beaming",
+        "name": "1,064 nm laser power beaming",
+        "per_km": false,
+        "mass_kg": 47,
+        "cost_usd": 19000000.0,
+        "source_power_w": 1000,
+        "efficiency": 0.22,
+        "max_range_km": 3.5,
+        "sever_probability": 0,
+        "attenuated_by_dust": true
+      },
+      "hv_umbilical_cable": {
+        "id": "hv_umbilical_cable",
+        "name": "Deployable HV umbilical cable",
+        "per_km": true,
+        "mass_kg": 72,
+        "cost_usd": 3200000.0,
+        "source_power_w": 1000,
+        "efficiency": 0.97,
+        "max_range_km": null,
+        "sever_probability": 0.12,
+        "attenuated_by_dust": false
+      }
+    },
+    "science_instruments": {
+      "trident_drill": {
+        "id": "trident_drill",
+        "name": "TRIDENT drill + volatile assay",
+        "mass_kg": 25,
+        "cost_usd": 10000000.0,
+        "peak_power_w": 175,
+        "data_rate_kbps": 120,
+        "science_value": 1.0,
+        "enables_layers": [],
+        "extracts_ice": true,
+        "description": "Cores to 1 m and assays water ice. The mission's reason to exist."
+      },
+      "ndl": {
+        "id": "ndl",
+        "name": "Navigation Doppler Lidar",
+        "mass_kg": 15,
+        "cost_usd": 5000000.0,
+        "peak_power_w": 0,
+        "data_rate_kbps": 0,
+        "science_value": 0.1,
+        "enables_layers": [
+          "slope"
+        ],
+        "extracts_ice": false,
+        "description": "Descent sensor. Reveals the slope hazard map before you commit to a site."
+      },
+      "neutron_spec_radiometer": {
+        "id": "neutron_spec_radiometer",
+        "name": "Neutron spectrometer & thermal radiometer",
+        "mass_kg": 14,
+        "cost_usd": 12000000.0,
+        "peak_power_w": 20,
+        "data_rate_kbps": 10,
+        "science_value": 0.3,
+        "enables_layers": [
+          "ice_heatmap"
+        ],
+        "extracts_ice": false,
+        "description": "Maps where the ice is. Unlocks the Diviner cold-trap heatmap."
+      },
+      "mass_spectrometer": {
+        "id": "mass_spectrometer",
+        "name": "Mass spectrometer",
+        "mass_kg": 7,
+        "cost_usd": 6000000.0,
+        "peak_power_w": 25,
+        "data_rate_kbps": 20,
+        "science_value": 0.25,
+        "enables_layers": [],
+        "extracts_ice": false,
+        "description": "Identifies the volatiles the drill releases."
+      }
+    }
+  },
+  "graphic_placeholders": {
+    "IMG-PLACEHOLDER-INTRO": {
+      "id": "IMG-PLACEHOLDER-INTRO",
+      "target_stage": "INTRO",
+      "asset_path": "assets/images/placeholders/intro-hero.svg",
+      "aspect_ratio": "16:9",
+      "title": "2032: Polar Outpost Pioneer",
+      "brief_explanation": "An autonomous cargo lander arrives at the Lunar South Pole; Earth hangs low over sunlit crater rims.",
+      "fallback_badge": "[NARRATIVE BRIEFING: 2032 POLAR OUTPOST PIONEER]"
+    },
+    "IMG-PLACEHOLDER-STAGE-1": {
+      "id": "IMG-PLACEHOLDER-STAGE-1",
+      "target_stage": "MCR",
+      "asset_path": "assets/images/placeholders/stage1-mcr-site.svg",
+      "aspect_ratio": "21:9",
+      "title": "Peaks of light, pits of ice",
+      "brief_explanation": "Sub-2 degree sunlight grazes the rims while crater floors stay dark for billions of years.",
+      "fallback_badge": "[STAGE 1 \u00b7 MCR \u00b7 SITE SELECTION]"
+    },
+    "IMG-PLACEHOLDER-STAGE-2": {
+      "id": "IMG-PLACEHOLDER-STAGE-2",
+      "target_stage": "SRR",
+      "asset_path": "assets/images/placeholders/stage2-srr-plume.svg",
+      "aspect_ratio": "21:9",
+      "title": "The plume problem",
+      "brief_explanation": "Rocket exhaust sandblasts regolith outward; angled deflectors throw it upward instead.",
+      "fallback_badge": "[STAGE 2 \u00b7 SRR \u00b7 PLUME & PAD]"
+    },
+    "IMG-PLACEHOLDER-STAGE-3": {
+      "id": "IMG-PLACEHOLDER-STAGE-3",
+      "target_stage": "PDR",
+      "asset_path": "assets/images/placeholders/stage3-pdr-power.svg",
+      "aspect_ratio": "21:9",
+      "title": "Lighthouses of power",
+      "brief_explanation": "Polar sun sits on the horizon, so panels stand vertical on tall masts; batteries carry the shadows.",
+      "fallback_badge": "[STAGE 3 \u00b7 PDR \u00b7 POWER]"
+    },
+    "IMG-PLACEHOLDER-STAGE-4": {
+      "id": "IMG-PLACEHOLDER-STAGE-4",
+      "target_stage": "CDR",
+      "asset_path": "assets/images/placeholders/stage4-cdr-coldtrap.svg",
+      "aspect_ratio": "21:9",
+      "title": "Into the 40 K dark",
+      "brief_explanation": "A laser beam and a superconducting guideway reach where wheels and grease freeze.",
+      "fallback_badge": "[STAGE 4 \u00b7 CDR \u00b7 COLD TRAP]"
+    },
+    "IMG-PLACEHOLDER-STAGE-5": {
+      "id": "IMG-PLACEHOLDER-STAGE-5",
+      "target_stage": "PLAR",
+      "asset_path": "assets/images/placeholders/stage5-plar-timeline.svg",
+      "aspect_ratio": "21:9",
+      "title": "A year on the rim",
+      "brief_explanation": "Earth nods above and below the horizon; the batteries cycle every lunar day.",
+      "fallback_badge": "[STAGE 5 \u00b7 PLAR \u00b7 365-DAY RUN]"
+    },
+    "IMG-PLACEHOLDER-END": {
+      "id": "IMG-PLACEHOLDER-END",
+      "target_stage": "DEBRIEF",
+      "asset_path": "assets/images/placeholders/debrief-outpost-hero.svg",
+      "aspect_ratio": "16:9",
+      "title": "Mission debrief",
+      "brief_explanation": "The outpost you built, and what it achieved.",
+      "fallback_badge": "[MISSION DEBRIEF]"
+    }
+  },
+  "side_quests": {
+    "quest_battery_sizing": {
+      "id": "quest_battery_sizing",
+      "phase": "PDR",
+      "title": "Battery Storage & Shadow Survival",
+      "prompt": "Your outpost draws a continuous survival load of P = 85 W. The shadow lasts t = 54 hours. Maximum allowed Depth-of-Discharge is 80% (0.80). What is the minimum battery nameplate capacity in Wh (zero margin)?",
+      "formula": "E_min = (P * t) / DoD",
+      "hint": "Multiply power by hours, then divide by 0.80.",
+      "correct_value": 5737.5,
+      "tolerance": 50,
+      "unit": "Wh",
+      "explanation": "85 W x 54 h = 4,590 Wh. Divided by 0.80 = 5,737.5 Wh. That is the bare minimum, with zero margin."
+    },
+    "quest_pdr_margin": {
+      "id": "quest_pdr_margin",
+      "phase": "PDR",
+      "title": "Why 20% Margin?",
+      "prompt": "NASA design rules require 20% spare energy at PDR. Using the same 85 W, 54 h and 80% DoD, what nameplate capacity in Wh gives exactly 20% margin?",
+      "formula": "E_20 = (P * t * 1.20) / DoD",
+      "hint": "Grow the 4,590 Wh need by 20% before dividing by 0.80.",
+      "correct_value": 6885,
+      "tolerance": 50,
+      "unit": "Wh",
+      "explanation": "4,590 Wh x 1.20 = 5,508 Wh usable; / 0.80 = 6,885 Wh. A 6 kWh pack looks big enough but only gives about 4.6% margin, so it fails PDR."
+    },
+    "quest_data_buffer": {
+      "id": "quest_data_buffer",
+      "phase": "PDR",
+      "title": "Solid-State Memory Buffer Sizing",
+      "prompt": "The TRIDENT assay instrument produces 120 kbps. A ridge blocks Earth for exactly 14 hours. How many Megabits of buffer prevent data loss?",
+      "formula": "Buffer_Mb = (BitRate * TimeSeconds) / 1,000,000",
+      "hint": "14 h = 50,400 s.",
+      "correct_value": 6048,
+      "tolerance": 10,
+      "unit": "Mb",
+      "explanation": "120,000 bps x 50,400 s = 6,048 Mb (756 MB). The full-year run has Earth-out periods of up to ~10 days, so the real buffer must be much bigger, or use a relay."
+    },
+    "quest_optical_beaming": {
+      "id": "quest_optical_beaming",
+      "phase": "CDR",
+      "title": "Laser Power Beaming",
+      "prompt": "The ridge laser outputs 1,000 W of optical power. The receiver converts 22% (0.22). Dust attenuates the beam to 0.90 transmittance. What electrical power reaches the drill, in W?",
+      "formula": "P_delivered = P_laser * Efficiency * Transmittance",
+      "hint": "1,000 x 0.22 x 0.90.",
+      "correct_value": 198,
+      "tolerance": 2,
+      "unit": "W",
+      "explanation": "198 W delivered. The TRIDENT drill needs 175 W peak, so the link still works during a dust event."
+    },
+    "quest_plume_deflector": {
+      "id": "quest_plume_deflector",
+      "phase": "SRR",
+      "title": "Plume Deflector Geometry",
+      "prompt": "A flat sintered pad without deflectors needs a 1,200 m keep-out buffer to protect solar cells. An elevated pad with 45 degree deflectors cuts the lateral blast zone by 50%. What is the new standoff in m?",
+      "formula": "D_safe = D_baseline * (1.0 - ReductionFraction)",
+      "hint": "1,200 x (1 - 0.50).",
+      "correct_value": 600,
+      "tolerance": 5,
+      "unit": "m",
+      "explanation": "600 m. Deflectors redirect gas and particles upward, halving the exclusion zone."
+    }
+  },
+  "shortfall_badges": {
+    "SF02": {
+      "id": "SF02",
+      "rank": 1,
+      "title": "Extended Duration Surface Power",
+      "awarded_when": "PDR passed and no brownout in 8,760 h"
+    },
+    "SF03": {
+      "id": "SF03",
+      "rank": 15,
+      "title": "Plume-Surface Interaction Mitigation",
+      "awarded_when": "SRR passed with deflection efficiency >= 0.80"
+    },
+    "SF04": {
+      "id": "SF04",
+      "rank": 16,
+      "title": "Autonomous Lunar Structural Assembly",
+      "awarded_when": "VSAT mast deployed and pad built"
+    },
+    "SF05": {
+      "id": "SF05",
+      "rank": 19,
+      "title": "Lunar Volatile Extraction & Characterization",
+      "awarded_when": ">= 500 kg ice assayed"
+    },
+    "SF16": {
+      "id": "SF16",
+      "rank": 2,
+      "title": "Cryogenic Surface Mobility",
+      "awarded_when": "HTS maglev operated full year"
+    },
+    "SF24": {
+      "id": "SF24",
+      "rank": 8,
+      "title": "Surface PNT & Mesh Networking",
+      "awarded_when": "Elevated pad S-band relay used"
+    }
+  },
+  "provenance": {
+    "system_constants.lunar_gravity_m_s2": {
+      "source": "NASA Moon Fact Sheet (NSSDCA)",
+      "tier": "physical-constant"
+    },
+    "system_constants.standard_gravity_g0_m_s2": {
+      "source": "ISO 80000-3 / CGPM 1901",
+      "tier": "physical-constant"
+    },
+    "system_constants.solar_flux_w_m2": {
+      "source": "Total solar irradiance at 1 AU (Kopp & Lean 2011)",
+      "tier": "physical-constant"
+    },
+    "system_constants.synodic_month_days": {
+      "source": "NASA Moon Fact Sheet",
+      "tier": "physical-constant"
+    },
+    "system_constants.tropical_month_days": {
+      "source": "NASA Moon Fact Sheet",
+      "tier": "physical-constant"
+    },
+    "system_constants.lunar_axial_tilt_deg": {
+      "source": "Moon spin axis to ecliptic normal, NASA Moon Fact Sheet",
+      "tier": "physical-constant"
+    },
+    "system_constants.stefan_boltzmann_w_m2_k4": {
+      "source": "CODATA 2018",
+      "tier": "physical-constant"
+    },
+    "system_constants.ice_sublimation_energy_mj_kg": {
+      "source": "Latent heat of sublimation of water ice (~2.83 MJ/kg)",
+      "tier": "literature"
+    },
+    "system_constants.minimum_gsfc_margin_pdr": {
+      "source": "GSFC-STD-1000 resource margin rules",
+      "tier": "nasa-doc",
+      "note": "VERIFY rule number and PDR value in the standard before quoting on screen (spec says Rule 1.05)"
+    },
+    "simulation.solar_elevation_amplitude_deg": {
+      "source": "Lunar axial tilt 1.54 deg; synthetic sinusoid until JPL Horizons data is processed",
+      "tier": "spec-provisional",
+      "note": "D-003"
+    },
+    "simulation.earth_libration_amplitude_deg": {
+      "source": "Spec v2 3.3 (latitude libration ~6.7 deg)",
+      "tier": "literature"
+    },
+    "simulation.earth_libration_period_h": {
+      "source": "Tropical/draconic month ~27.3 d = 655.7 h",
+      "tier": "physical-constant"
+    },
+    "simulation.pdr_reference_base_load_w": {
+      "source": "Spec v2 8.2 quest_battery_sizing",
+      "tier": "spec-provisional"
+    },
+    "simulation.comm_idle_power_w": {
+      "source": "Team estimate (keeps survival load ~85-95 W, matching spec quest)",
+      "tier": "game-rule"
+    },
+    "simulation.max_touchdown_slope_deg": {
+      "source": "Spec v2 5 (MCR)",
+      "tier": "spec-provisional"
+    },
+    "simulation.min_earth_visibility_fraction": {
+      "source": "Spec v2 5 (MCR)",
+      "tier": "game-rule"
+    },
+    "simulation.drill_min_soc_percent": {
+      "source": "Operations rule",
+      "tier": "game-rule"
+    },
+    "simulation.min_drill_heater_w": {
+      "source": "Spec v2 3.2 / 5 (CDR)",
+      "tier": "spec-provisional"
+    },
+    "simulation.ice_assay_rate_kg_h": {
+      "source": "Spec v2 3.4",
+      "tier": "spec-provisional"
+    },
+    "simulation.dust_event_probability_per_cycle": {
+      "source": "Team estimate",
+      "tier": "game-rule"
+    },
+    "difficulty_levels": {
+      "source": "Budgets are game rules, not NASA figures",
+      "tier": "game-rule"
+    },
+    "site_catalog": {
+      "source": "Positions/slopes provisional; to be replaced from LOLA PGDA product 78 (Barker et al. 2021) and Diviner PRP (Paige)",
+      "tier": "spec-provisional",
+      "note": "Derived fractions computed by tools/gen-constants model, D-003/D-004"
+    },
+    "trajectories": {
+      "source": "Spec v2 3.1 (1,850 m/s); BLT saving is a team estimate",
+      "tier": "spec-provisional"
+    },
+    "hardware_catalog.spacecraft_bus": {
+      "source": "Team estimate for a CLPS-class lander bus",
+      "tier": "game-rule"
+    },
+    "hardware_catalog.launch_vehicles": {
+      "source": "Generic classes; capacities and prices are rounded team estimates",
+      "tier": "game-rule"
+    },
+    "hardware_catalog.launchpads": {
+      "source": "Spec v2 6.1",
+      "tier": "spec-provisional"
+    },
+    "hardware_catalog.power_masts": {
+      "source": "Spec v2 6.2, after NASA TechPort project 116305 (VSAT)",
+      "tier": "spec-provisional"
+    },
+    "hardware_catalog.energy_storage": {
+      "source": "Li-ion ~150 Wh/kg pack level; costs team estimate",
+      "tier": "game-rule"
+    },
+    "hardware_catalog.comm_systems": {
+      "source": "DTE X-band rate from spec v2 3.3; others team estimate",
+      "tier": "spec-provisional"
+    },
+    "hardware_catalog.data_storage": {
+      "source": "Team estimate",
+      "tier": "game-rule"
+    },
+    "hardware_catalog.cold_trap_logistics": {
+      "source": "Spec v2 6.3",
+      "tier": "spec-provisional"
+    },
+    "hardware_catalog.utility_links": {
+      "source": "Spec v2 6.4 and 8.2 quest_optical_beaming",
+      "tier": "spec-provisional"
+    },
+    "hardware_catalog.science_instruments": {
+      "source": "TRIDENT power/data from spec v2; other values team estimate",
+      "tier": "spec-provisional"
+    },
+    "shortfall_badges": {
+      "source": "NASA STMD FY26 Civil Space Shortfall Prioritization (ranks as given in spec v2 9.2; VERIFY against the PDF)",
+      "tier": "nasa-doc"
+    }
+  }
+}

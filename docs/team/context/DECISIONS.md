@@ -1,0 +1,38 @@
+# Decisions Log
+
+Chronological, append-only. Never edit a settled row; add a new row that supersedes it.
+Format: `ID | Timestamp (IST) | Raised by | Finding / Trade decision | System & budget impact | Status`
+
+## Pre-event design trades (from the shared notebook)
+
+| ID | Timestamp | Raised by | Decision | Impact | Status |
+|---|---|---|---|---|---|
+| T-01 | pre-event | Team | Elevated pad with 45° deflectors preferred over natural bowl | Standoff 1,800 m → 600 m; +220 kg, +$12.5M; adds S-band relay (+8 km) | Done |
+| T-02 | pre-event | Team | HTS maglev preferred over wheeled rover for cold-trap access | No lubricant freeze at 38 K; 28° vs 14.5° slopes; no 45 W rover heater | Done |
+| T-03 | pre-event | Team | 1,064 nm laser power beaming for drill power over crater rims | 198 W delivered (dust case) ≥ 175 W drill; 3.5 km range limit | Done |
+
+## Build adaptation — 2026-11-14
+
+| ID | Timestamp | Raised by | Decision | Impact | Status |
+|---|---|---|---|---|---|
+| D-001 | 11-14 16:30 | Lead | Runtime JSON lives in Vite `public/`: `public/config/engine-constants.json`, `public/data/*.json`, `public/assets/{images,models}/`. Spec §1.2 `assets/data/` is superseded | One home for the contract; works offline and on GitHub Pages | Done |
+| D-002 | 11-14 16:30 | Lead | Solar generation = `P_rated·cos α·η_dust` when α ≥ mast cutoff, else 0 (spec's `sin α` gave ≤ 3% of rated) | Masts deliver their rated power in sunlight; eclipses drive the design | Done |
+| D-003 | 11-14 16:30 | Lead | Synthetic solar elevation per site `μ_site + 1.54°·sin(2πt/708.73 h)`; μ chosen so the 10 m mast's longest shadow = site shadow (Shackleton 54 h) | 3 m mast: ~478 h shadows (fails PDR); 20 m mast: never shadowed at Shackleton. **Hardware to recalibrate with Horizons** | Done (provisional) |
+| D-004 | 11-14 16:30 | Lead | Earth elevation `μ_earth,site + 6.7°·sin(2πt/655.7 h)`; LoS ≥ 0.5°. μ chosen to give each site's visibility fraction | Earth-out spells of up to ~10 days; data storage now matters | Done (provisional) |
+| D-005 | 11-14 16:45 | Lead | PDR energy = survival load of *this* design × longest shadow of *this* mast at *this* site; ≥ 20% margin | Rover (+45 W heater), storage, heater choices feed PDR; 6 kWh pack fails at −5% | Done |
+| D-006 | 11-14 16:30 | Lead | Pad standoffs from catalog are authoritative (1,800 / 1,200 / 600 m). Plume quest baseline = sintered pad | Quest, fault tree and gate agree | Done |
+| D-007 | 11-14 16:30 | Lead | E2E: no default pad; test 1 selects sintered pad; test 3 expects real fallback badge | Tests match the product | Done |
+| D-008 | 11-14 16:30 | Lead | Laser link: 1,000 W source × 0.22 × dust 0.90 = 198 W; draws 1,000 W at the mast while drilling | CDR power check computable | Done |
+| D-009 | 11-14 16:30 | Lead | All random events use a seeded PRNG (mulberry32), pre-rolled per run | Same seed + design = same mission; fair team comparisons | Done |
+| D-010 | 11-14 16:30 | Lead | Team mode, no server: 4 seats = 4 NASA segments (Mission Lead/User, Launch & Structures/Launch, Power & Thermal/Space, Comms & Science/Ground). Hot-seat on one screen; each gate needs its owner's sign-off. Async play via share link / JSON | Meets challenge "up to 4 players" without breaking REQ-010 | Open (Architect to build) |
+| D-011 | 11-14 16:30 | Lead | Difficulty: Cadet $390M + hints, no events; Engineer $300M + events; Flight Director $255M, no hints. The 20% margin rule is the same at every level (it is NASA's rule, not a difficulty knob) | Reference design ($242.5M) fits all three; Flight Director leaves little slack | Done |
+| D-012 | 11-14 16:30 | Lead | SRR also checks wet mass ≤ launcher TLI capacity and lander diameter ≤ fairing. CDR also checks route slope and laser range against the site | Challenge "check mass vs launch vehicle"; Malapert needs a heavy launcher | Done |
+| D-013 | 11-14 16:30 | Lead | Data storage is a catalog choice (32/128/512 Gbit); lunar relay service added as comm option | 32 Gbit DTE loses 26% of science; relay fixes it | Done |
+| D-014 | 11-14 16:30 | Lead | Every constant has `provenance` {source, tier}. Tiers: nasa-doc, literature, physical-constant, spec-provisional, game-rule. About & Numbers renders it | Design guide §4 validity rules 1 and 9 | Done |
+| D-015 | 11-14 16:30 | Lead | Collaboration: branches `lead/*`, `arch/*`; PR to `main`. Per-role handover files (`context/handover/<role>.md`). `engine-constants.json` owned by Lead; `Interfaces.ts` by Architect; a change to one updates the other in the same PR | No merge conflicts on shared logs | Done |
+| D-016 | 11-14 16:30 | Lead | Three.js / glTF moved to Could (cut first). 2D Canvas is the map | Saves ~4 h | Done |
+| D-017 | 11-14 16:30 | Lead | Landing propellant sized on (dry + 20% contingency) | Conservative; +~0.16 kg per kg of contingency | Done |
+| D-018 | 11-14 16:30 | Lead | Operations: sunlit = full ops; shadow = survival mode; drill only when sunlit, SoC ≥ 30%, heater ≥ 35 W, logistics alive, link ≥ peak | Defines what the 8,760 h run means | Done |
+| D-019 | 11-14 16:30 | Lead | ICD completed (10 missing types); `boltzmann` → `stefan_boltzmann`; MCR thresholds moved into constants | Compiles; REQ-003 clean | Done |
+| D-020 | 11-14 16:50 | Lead | Sintered-pad construction (600 W, 120 d) only runs in sunlight | Fixes a brownout at h 516 found by the verification run | Done |
+| V-01 | 11-14 16:30 | Lead | **VERIFY** GSFC-STD-1000 rule number + PDR margin value; STMD shortfall IDs and ranks vs the FY26 PDF | Must be correct before any on-screen quote | Open (Lead) |
