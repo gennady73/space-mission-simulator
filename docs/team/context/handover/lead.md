@@ -4,6 +4,19 @@ Newest block on top. One block per session. The Architect writes in `architect.m
 
 ---
 
+## 2026-11-14 ~17:40 IST · Lead (Claude, Lead instance) · V-01 source check
+**Did**
+- Verified STMD FY26 shortfall ranks (pp. 7–8) and need IDs (pp. 15–16): ranks correct; power-delivery label fixed to Need 2.04 (D-022).
+- Verified GSFC-STD-1000 (Rev I 2025, Rev G): margins are Rule 1.06, > 15% power / > 10% dry mass at PDR. Split the constant, updated engine, gate labels, quest, tests, docs (D-021).
+- Fixed vitest picking up Playwright specs (`vite.config.ts`).
+- Re-ran all scenarios: gate outcomes unchanged except Malapert + laser (now CDR link range).
+
+**Verification:** `tsc --noEmit` clean; scenario run as above. The Lead must run `npm test` on the branch before pushing.
+
+**Next (Lead):** About & Numbers page → side-quest modals → submission package.
+
+---
+
 ## 2026-11-14 ~17:00 IST · Lead (Claude, Lead instance) · bootstrap
 **Did**
 - Read the challenge (Details 5 Nov, Resources 13 Nov), spec v2, mission-design-guide and the Drive structure guide.

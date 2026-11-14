@@ -37,8 +37,9 @@ export function validateConstants(raw: unknown): string[] {
     for (const [key, v] of Object.entries(entries)) if (v.id !== key) problems.push(`hardware_catalog.${cat}.${key}.id must equal its key`);
   }
   const sc = c.system_constants as Record<string, unknown> | undefined;
-  if (sc && typeof sc.minimum_gsfc_margin_pdr === 'number' && (sc.minimum_gsfc_margin_pdr < 0 || sc.minimum_gsfc_margin_pdr > 1)) {
-    problems.push('system_constants.minimum_gsfc_margin_pdr must be a fraction 0–1');
+  if (sc) for (const k of ['minimum_power_margin_pdr', 'minimum_mass_margin_pdr']) {
+    const v = sc[k];
+    if (typeof v !== 'number' || v < 0 || v > 1) problems.push(`system_constants.${k} must be a fraction 0–1`);
   }
   const walk = (v: unknown, path: string): void => {
     if (typeof v === 'number' && !Number.isFinite(v)) problems.push(`${path} is not a finite number`);

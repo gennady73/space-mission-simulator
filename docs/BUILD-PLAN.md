@@ -40,7 +40,7 @@ Every correction is logged with an ID in `docs/team/context/DECISIONS.md`.
 | 2 | Solar elevation swings −1.5° to +1.8°, while the 10 m mast cuts off at 1.2° and the 3 m mast at 3.5° | The 3 m mast would never generate. Eclipse length did not follow from the model | Per-site synthetic model `α = μ_site + 1.54°·sin(2πt/T_syn)`, with μ tuned so the 10 m mast's longest shadow equals the site's shadow. Replaced by JPL Horizons data when the pipeline is ready | D-003 |
 | 3 | `θ_Earth = θ_site_latitude + 6.7°·sin(…)` | Latitude is about −89°, so Earth would never be visible | `θ_Earth = μ_earth,site + 6.7°·sin(2πt/655.7 h)`; line of sight when ≥ 0.5° | D-004 |
 | 4 | PDR uses one fixed 54 h shadow and a fixed base load | Ignores the mast choice and the design's own loads. The 3 m mast passed PDR, then browned out on day 16 | PDR uses the longest shadow for the **selected mast at the selected site**, × the design's **own survival load** | D-005 |
-| 5 | E2E comment: "4 kWh … demands 5.74 kWh for 20% margin" | 5.74 kWh is the **zero**-margin minimum. 20% needs 6.885 kWh | New quest `quest_pdr_margin` teaches exactly this. A 6 kWh pack "looks enough" but fails PDR | D-005 |
+| 5 | E2E comment: "4 kWh … demands 5.74 kWh for 20% margin" | 5.74 kWh is the **zero**-margin minimum | New quest `quest_pdr_margin` teaches the margin (15% → 6,598 Wh, see #14). A 6 kWh pack "looks enough" but fails PDR | D-005 |
 | 6 | Plume quest: "bare regolith 1,200 m"; catalog bowl = 1,800 m; fault tree "< 1200 m" | Three different baselines | The catalog is authoritative (bowl 1,800 / sintered 1,200 / elevated 600). Quest baseline = sintered pad. Fault tree reads the pad's own value | D-006 |
 | 7 | E2E test 1 passes SRR at 1,500 m with no pad chosen; test 3 expects "Cislunar Freight Trail" | No default pad; that text appears nowhere else | Test 1 picks the sintered pad; test 3 expects the real fallback badge | D-007 |
 | 8 | Laser "22% DC-to-DC" with no transmitter power | Delivered power cannot be computed | `source_power_w: 1000`, `efficiency: 0.22`, dust transmittance 0.90 → 198 W ≥ 175 W drill | D-008 |
@@ -49,8 +49,10 @@ Every correction is logged with an ID in `docs/team/context/DECISIONS.md`.
 | 11 | Data paths `assets/data/…` vs `public/config/…` (Drive guide) | Two homes for one contract | Vite convention: `public/config/engine-constants.json`, `public/data/*.json`, `public/assets/…` | D-001 |
 | 12 | Buffer quest: 14 h Earth-out | The year-long model has Earth-out spells of ~10 days (libration) | Quest kept as a self-contained exercise; its explanation now says the real buffer must be bigger, or use a relay. Storage is a catalog choice (32/128/512 Gbit) | D-013 |
 | 13 | MCR thresholds hard-coded (10°, 50%) | Breaks REQ-003 | Moved to `simulation.max_touchdown_slope_deg` and `min_earth_visibility_fraction` | D-019 |
+| 14 | PDR margin "GSFC-STD-1000 Rule 1.05", 20% for power and mass | Rule 1.05 is Single Point Failures. Rule 1.06 (Resource Margins) requires > 15% power and > 10% dry mass at PDR; 20% is the SRR value | `minimum_power_margin_pdr` 0.15 and `minimum_mass_margin_pdr` 0.10; gate banner cites Rule 1.06 | D-021 |
+| 15 | "STMD SF02 / Need 2.02 (Surface Utility Transmission)" | Need 2.02 is low-power thermal/actuation | Power delivery cites Need 2.04 (power management & distribution) | D-022 |
 
-**To verify before quoting on screen** (Lead, against the PDFs): the GSFC-STD-1000 rule number (spec says "Rule 1.05") and its PDR power/mass margin, and the STMD shortfall IDs and ranks in spec §9.2. These are flagged `VERIFY` in `provenance`.
+**Verified 2026-11-14 (V-01):** the GSFC-STD-1000 margins (errata #14) and the STMD shortfall IDs, ranks and need numbers (#15) were checked against the documents; `provenance` cites pages.
 
 ## 3. Scope — Must / Should / Could
 
@@ -74,6 +76,8 @@ The event ends Sunday 15 Nov. **Cut line: Sunday 12:00.** After that, nothing ne
 | **Could** | Three.js mast/pad models | Media | — (cut first) |
 
 ## 4. Verified behaviour of the bootstrap constants (Engineer level, seed 20261114)
+
+> Values below were measured with the bootstrap 20% margins. After D-021 (15% power, 10% mass) every gate outcome is the same except Malapert + laser, which now fails CDR on laser range; wet masses are ~290 kg lower (reference 3,170 kg).
 
 | Design (changes vs reference) | First gate failure | Wet mass / LV | Cost | Run | Score |
 |---|---|---|---|---|---|

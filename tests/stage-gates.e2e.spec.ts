@@ -8,18 +8,18 @@ import { expect, test } from '@playwright/test';
  * fixme turn on once the cockpit screens exist.
  */
 test.describe('Space Mission Simulator E2E Verification', () => {
-  test.fixme('PDR gate rejects a battery with < 20% power margin', async ({ page }) => {
+  test.fixme('PDR gate rejects a battery below the 15% power margin', async ({ page }) => {
     await page.goto('/');
     await page.click('button#btn-site-shackleton_ridge');
     await page.click('button#btn-next-phase'); // MCR pass
     await page.click('button#btn-pad-pad_sintered');
     await page.fill('input#input-pad-distance', '1500');
     await page.click('button#btn-next-phase'); // SRR pass
-    await page.click('button#btn-battery-batt_liion_4kwh'); // needs 6.9 kWh-class for 20% margin
+    await page.click('button#btn-battery-batt_liion_4kwh'); // fails GSFC-STD-1000 Rule 1.06 (15% at PDR)
     await page.click('button#btn-next-phase'); // PDR attempt
     const banner = page.locator('.gate-error-banner');
     await expect(banner).toBeVisible();
-    await expect(banner).toContainText('GSFC-STD-1000');
+    await expect(banner).toContainText('GSFC-STD-1000 Rule 1.06');
     await expect(banner).toContainText('ERR_PDR_POWER_MARGIN_VIOLATION');
   });
 

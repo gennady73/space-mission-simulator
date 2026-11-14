@@ -9,7 +9,8 @@
     "lunar_axial_tilt_deg": 1.54,
     "stefan_boltzmann_w_m2_k4": 5.670374419e-08,
     "ice_sublimation_energy_mj_kg": 2.8,
-    "minimum_gsfc_margin_pdr": 0.2,
+    "minimum_power_margin_pdr": 0.15,
+    "minimum_mass_margin_pdr": 0.1,
     "enable_graphic_placeholders": true
   },
   "simulation": {
@@ -103,7 +104,7 @@
         "cold-trap logistics",
         "utility link"
       ],
-      "priority_hint": "Survive every shadow with at least 20% margin."
+      "priority_hint": "Survive every shadow with more than 15% power margin (NASA rule for PDR)."
     },
     "comms_science": {
       "label": "Comms & Science",
@@ -611,14 +612,14 @@
     "quest_pdr_margin": {
       "id": "quest_pdr_margin",
       "phase": "PDR",
-      "title": "Why 20% Margin?",
-      "prompt": "NASA design rules require 20% spare energy at PDR. Using the same 85 W, 54 h and 80% DoD, what nameplate capacity in Wh gives exactly 20% margin?",
-      "formula": "E_20 = (P * t * 1.20) / DoD",
-      "hint": "Grow the 4,590 Wh need by 20% before dividing by 0.80.",
-      "correct_value": 6885,
+      "title": "Why 15% Margin?",
+      "prompt": "NASA's Goddard design rules (GSFC-STD-1000, Rule 1.06) require more than 15% spare power at PDR. Using the same 85 W, 54 h and 80% DoD, what nameplate capacity in Wh gives exactly 15% margin?",
+      "formula": "E_15 = (P * t * 1.15) / DoD",
+      "hint": "Grow the 4,590 Wh need by 15% before dividing by 0.80.",
+      "correct_value": 6598.1,
       "tolerance": 50,
       "unit": "Wh",
-      "explanation": "4,590 Wh x 1.20 = 5,508 Wh usable; / 0.80 = 6,885 Wh. A 6 kWh pack looks big enough but only gives about 4.6% margin, so it fails PDR."
+      "explanation": "4,590 Wh x 1.15 = 5,278.5 Wh usable; / 0.80 = 6,598 Wh. A 6 kWh pack looks big enough but only gives about 4.6% margin, so it fails PDR. Margins shrink as a design matures: 20% at SRR, 15% at PDR, 10% at CDR."
     },
     "quest_data_buffer": {
       "id": "quest_data_buffer",
@@ -661,37 +662,37 @@
     "SF02": {
       "id": "SF02",
       "rank": 1,
-      "title": "Extended Duration Surface Power",
+      "title": "Extended-Duration Lunar Surface Operations",
       "awarded_when": "PDR passed and no brownout in 8,760 h"
     },
     "SF03": {
       "id": "SF03",
       "rank": 15,
-      "title": "Plume-Surface Interaction Mitigation",
+      "title": "Precise Lunar Landing & Plume Mitigation",
       "awarded_when": "SRR passed with deflection efficiency >= 0.80"
     },
     "SF04": {
       "id": "SF04",
       "rank": 16,
-      "title": "Autonomous Lunar Structural Assembly",
+      "title": "Lunar Surface Construction",
       "awarded_when": "VSAT mast deployed and pad built"
     },
     "SF05": {
       "id": "SF05",
       "rank": 19,
-      "title": "Lunar Volatile Extraction & Characterization",
+      "title": "Lunar Resource Utilization",
       "awarded_when": ">= 500 kg ice assayed"
     },
     "SF16": {
       "id": "SF16",
       "rank": 2,
-      "title": "Cryogenic Surface Mobility",
+      "title": "Surface Mobility & Logistics",
       "awarded_when": "HTS maglev operated full year"
     },
     "SF24": {
       "id": "SF24",
       "rank": 8,
-      "title": "Surface PNT & Mesh Networking",
+      "title": "Tracking & Navigation of Assets",
       "awarded_when": "Elevated pad S-band relay used"
     }
   },
@@ -728,10 +729,15 @@
       "source": "Latent heat of sublimation of water ice (~2.83 MJ/kg)",
       "tier": "literature"
     },
-    "system_constants.minimum_gsfc_margin_pdr": {
-      "source": "GSFC-STD-1000 resource margin rules",
+    "system_constants.minimum_power_margin_pdr": {
+      "source": "GSFC-STD-1000 Rev I (approved 2025-08-19), Rule 1.06 Resource Margins, Table 1.06-1: power > 15% of EOL capacity at end of Phase B (PDR); > 20% Phase A, > 10% Phase C",
       "tier": "nasa-doc",
-      "note": "VERIFY rule number and PDR value in the standard before quoting on screen (spec says Rule 1.05)"
+      "note": "Verified 2026-11-14 (V-01). Spec v2 said Rule 1.05 / 20%; Rule 1.05 is Single Point Failures"
+    },
+    "system_constants.minimum_mass_margin_pdr": {
+      "source": "GSFC-STD-1000 Rev I, Rule 1.06 Resource Margins, Table 1.06-1: dry mass > 10% at PDR (vs basic mass)",
+      "tier": "nasa-doc",
+      "note": "Verified 2026-11-14 (V-01). Used as the mass contingency in the launch mass stack"
     },
     "simulation.solar_elevation_amplitude_deg": {
       "source": "Lunar axial tilt 1.54 deg; synthetic sinusoid until JPL Horizons data is processed",
@@ -832,8 +838,9 @@
       "tier": "spec-provisional"
     },
     "shortfall_badges": {
-      "source": "NASA STMD FY26 Civil Space Shortfall Prioritization (ranks as given in spec v2 9.2; VERIFY against the PDF)",
-      "tier": "nasa-doc"
+      "source": "NASA STMD FY26 Civil Space Shortfall Prioritization, Final Shortfall Rankings pp. 7-8; need statements pp. 15-16",
+      "tier": "nasa-doc",
+      "note": "Verified 2026-11-14 (V-01): SF02=1, SF16=2, SF24=8, SF03=15, SF04=16, SF05=19. Badge titles are short labels of the official SF descriptions"
     }
   }
 }

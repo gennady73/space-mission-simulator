@@ -69,7 +69,10 @@ export interface SystemConstants {
   /** Stefan–Boltzmann constant σ. Spec v2 called it "boltzmann_constant"; renamed (D-019). */
   stefan_boltzmann_w_m2_k4: number;
   ice_sublimation_energy_mj_kg: number;
-  minimum_gsfc_margin_pdr: number;
+  /** GSFC-STD-1000 Rule 1.06: power margin required at PDR (0.15). */
+  minimum_power_margin_pdr: number;
+  /** GSFC-STD-1000 Rule 1.06: dry-mass margin at PDR (0.10); used as mass contingency. */
+  minimum_mass_margin_pdr: number;
   enable_graphic_placeholders: boolean;
 }
 

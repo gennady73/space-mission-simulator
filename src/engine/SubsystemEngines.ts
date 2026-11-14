@@ -76,12 +76,12 @@ export function dryMassKg(r: ResolvedDesign): number {
 }
 
 /**
- * m_wet = m_dry + m_cont + m_prop. D-017: propellant is sized on (dry + contingency),
+ * m_wet = m_dry + m_cont + m_prop. D-017/D-021: contingency = GSFC-STD-1000 Rule 1.06 PDR dry-mass margin; propellant is sized on (dry + contingency),
  * the conservative reading of spec §3.1 (the lander must also land the contingency).
  */
 export function massStack(c: EngineConstants, r: ResolvedDesign) {
   const dry = dryMassKg(r);
-  const contingency = dry * c.system_constants.minimum_gsfc_margin_pdr;
+  const contingency = dry * c.system_constants.minimum_mass_margin_pdr;
   const g0 = c.system_constants.standard_gravity_g0_m_s2;
   const ratio = Math.exp(r.trajectory.descent_delta_v_m_s / (r.bus.isp_s * g0));
   const propellant = (dry + contingency) * (ratio - 1);
