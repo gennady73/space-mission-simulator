@@ -2,7 +2,7 @@
 
 Team **eleven-two**, NASA Space Apps 2026, challenge *Space Mission Design Game*.
 Product: **Polar Outpost Pioneer**, a client-only TypeScript/Vite game in which the player designs a robotic Lunar South Pole outpost, passes NASA review gates (MCR → SRR → PDR → CDR) and runs it for 8,760 hours.
-Two humans commit here, each with their own Claude: **Lead** and **Architect**.
+Four humans commit here, each with their own Claude: **Lead**, **Architect**, **Hardware** (mechanic / systems engineer) and **Media** (UX). Roles and ranges: D-107.
 
 ## Core Triad (load first, every session)
 1. `docs/space-mission-simulator-implementation-specification-final-v2.md` — the game design (baseline, do not edit)
@@ -29,8 +29,10 @@ docs/team/context/                    CONTEXT, DECISIONS, MEDIA, handover/<role>
 ## Rules
 - **No numbers in `src/`.** Read them from constants (REQ-003). New constant → Interfaces + JSON + a DECISIONS row, all in one PR.
 - **Engine is pure.** No DOM in `src/engine/`.
-- **Branches:** `lead/<topic>`, `arch/<topic>` → PR to `main`. Small PRs. Pull often.
-- **Logs:** record decisions in `docs/team/context/DECISIONS.md` (append a row; next free ID). At session end, add a block to **your own** `docs/team/context/handover/<role>.md`. Never edit the other role's handover file.
+- **Branches:** `lead/<topic>`, `arch/<topic>`, `hw/<topic>`, `ux/<topic>` → PR to `main`. Small PRs. Pull often. The Lead merges.
+- **Who edits what:** `src/engine` + `src/ui` (except `src/ui/map`) = Architect · `src/ui/map`, `tools/`, `map_features` = Lead · `hardware_catalog`, `site_catalog`, `simulation.*` values + their provenance = Hardware (PR, Lead reviews) · text the player reads (questions, gate messages, debrief wording), `MEDIA.md`, `public/assets/` = Media. Touch someone else's area only by asking in the team chat first.
+- **Decision IDs:** Architect D-032+, Lead D-101+, Hardware D-201+, Media D-301+ (D-102, D-107).
+- **Logs:** record decisions in `docs/team/context/DECISIONS.md` (append a row; next free ID). At session end, add a block to **your own** `docs/team/context/handover/<role>.md`. Never edit another role's handover file.
 - **Facts vs rules:** every constant has `provenance` with a tier. Never present a `game-rule` as a NASA value.
 - **Before pushing:** `npm run typecheck && npm test`.
 - Media lands late. Never block on art.
