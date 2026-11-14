@@ -13,6 +13,11 @@ To add art, drop the file at the path below. No code change is needed. To hide a
 | IMG-PLACEHOLDER-STAGE-5 | PLAR | assets/images/placeholders/stage5-plar-timeline.svg | 21:9 | 1680×720 | Earth bobbing above/below the horizon over a year | [STAGE 5 · PLAR · 365-DAY RUN] | ☐ |
 | IMG-PLACEHOLDER-END | DEBRIEF | assets/images/placeholders/debrief-outpost-hero.svg | 16:9 | 1280×720 | Full outpost panorama; success/failure overlay drawn by code | [MISSION DEBRIEF] | ☐ |
 | TEAM-EMBLEM | README / About | assets/images/eleven-two-emblem.png | 16:9 | — | Team emblem | — | ✅ in repo |
+| HOME-HERO | HOME (landing page) | assets/images/home-hero.jpg | 16:9 | 1920×1080 (current file 512×286) | Moon surface with Earth low on the horizon, bottom 60 % of the hero behind navy fades | caption "AI-generated image" on screen (D-301) | ✅ in repo, sharper file welcome |
+
+**Landing page text** (game name, tagline, cards, narrator line, nav labels, demo video URL, hero path and caption) lives in `public/config/ui-config.json`. Edit the JSON; no code change (D-301). Set `hero_image.path` to `""` to hide the picture.
+
+**Fonts** (self-hosted in `assets/fonts/`, SIL Open Font License, licence files beside them; no Google Fonts at runtime, REQ-010): **Exo 2** (`Exo2-latin-wght.woff2`, variable 100–900) is the landing page's default face. **Doto** (`Doto-latin-wght.woff2`, pixel display face) is registered as `--home-font-special` and reserved; Media will say where it is used. Latin subset only.
 
 Formats: SVG preferred; PNG/WebP accepted (update `asset_path` in constants). Keep each file under 400 KB.
 Rights: only original work, NASA imagery (credit it in About), or licensed art. No real people, no third-party characters or logos.

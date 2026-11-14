@@ -8,8 +8,8 @@ import { expect, test, type Page } from '@playwright/test';
  * #btn-<category>-<catalogId>, #btn-next-phase, #current-phase-display, .gate-error-banner.
  */
 const pick = async (page: Page, ...ids: string[]) => { for (const id of ids) await page.click(`button#${id}`); };
-/** Every fresh load greets the player with the start screen (D-113); begin a normal mission. */
-const start = async (page: Page) => { await page.goto('/'); await page.click('#btn-start-mission'); };
+/** '/' is the landing page (D-301); the console tests enter the cockpit directly at #mission. */
+const start = async (page: Page) => { await page.goto('/#mission'); };
 /** The launch now replays the year in the flight playback (D-105); skip it to reach the debrief. */
 const skipFlight = async (page: Page) => {
   await expect(page.locator('#flight-playback')).toBeVisible();
@@ -118,7 +118,7 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await start(page);
     const intro = page.locator('[data-placeholder-id="IMG-PLACEHOLDER-INTRO"]');
     await expect(intro).toBeVisible();
-    await expect(intro.locator('.fallback-frame .fallback-badge')).toContainText('2032 POLAR OUTPOST PIONEER');
+    await expect(intro.locator('.fallback-frame .fallback-badge')).toContainText('2032 LIGHTHOUSE ON THE TRAIL');
   });
 
   test('Pre-stage question reveals its explanation only after a hypothesis (spec §8.1)', async ({ page }) => {

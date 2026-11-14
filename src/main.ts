@@ -13,6 +13,8 @@ import { renderCockpit, type CockpitActions } from './ui/CockpitHUD';
 import type { Debrief } from './ui/DebriefView';
 import type { ReviewOutcome } from './ui/ReviewModal';
 import { provisionalDesign, submitToReview } from './ui/DesignFlow';
+import { renderHome, type HomeHandle, type StartMode } from './ui/home/HomeView';
+import { loadUiConfig, type UiConfig } from './ui/home/uiConfig';
 
 /** Telemetry rows kept for the charts: one every this many hours. Presentation only. */
 const CHART_SAMPLE_HOURS = 6;
@@ -20,24 +22,44 @@ const CHART_SAMPLE_HOURS = 6;
 async function boot(): Promise<void> {
   const app = document.getElementById('app')!;
   let c: EngineConstants;
+  let ui: UiConfig | null = null;
   try {
-    c = await loadConstants();
+    // Both files load at once. A missing ui-config only skips the landing page; it never blocks the game.
+    [c, ui] = await Promise.all([loadConstants(), loadUiConfig().catch(() => null)]);
   } catch (e) {
     app.innerHTML = '<div class="gate-error-banner"><h2>Could not load engine constants</h2><pre></pre></div>';
     app.querySelector('pre')!.textContent = String(e);
     return;
   }
-  // Lead: About & Numbers page at #about (keep this route when the cockpit replaces the shell).
-  if (location.hash === '#about') { app.replaceChildren(renderAboutNumbers(c)); return; }
   // Lead: map test page at #map (D-104).
   if (location.hash === '#map') { renderMapDemo(app, c); return; }
+  // Cockpit at #mission; share links (#design=…) still land straight in it (D-301).
+  if (location.hash === '#mission' || location.hash.startsWith('#design=')) { startConsole(app, c, 'mission'); return; }
+  // The landing page and the Lead's About & Numbers page (#about) hold no state, so a hash change
+  // just swaps them in place: no reload, and the browser Back button works (D-301).
+  let home: HomeHandle | null = null;
+  const showPage = (): void => {
+    home?.destroy();
+    home = null;
+    if (location.hash === '#about') { app.replaceChildren(renderAboutNumbers(c)); return; }
+    if (!ui) { removeEventListener('hashchange', showPage); startConsole(app, c, 'mission'); return; }
+    home = renderHome(app, ui, (mode) => { removeEventListener('hashchange', showPage); history.replaceState(null, '', '#mission'); startConsole(app, c, mode); });
+  };
+  addEventListener('hashchange', showPage);
+  showPage();
+}
+
+/**
+ * The mission console (cockpit): state store, viewport, actions and the render loop.
+ * Mounted at #mission and for #design= share links, or when the landing page's START is pressed (D-301).
+ */
+function startConsole(app: HTMLElement, c: EngineConstants, mode: StartMode): void {
   const store = new StateStore(initialState(c));
   const shared = StateStore.fromShareHash(location.hash);
   if (shared) store.importDesign(shared);
 
   let banner: GateValidationResult | null = null;
   // Start screen (D-113): shown on a fresh load; a shared design goes straight to the console.
-  let started = !!shared;
   let notice: string | null = null;
   let debrief: Debrief | null = null;
   let review: ReviewOutcome | null = null;
@@ -101,19 +123,6 @@ async function boot(): Promise<void> {
 
   const actions: CockpitActions = {
     update: (patch) => { banner = null; store.update(patch); },
-    startGame: (mode) => {
-      started = true;
-      if (mode === 'watch') { actions.runReference(); return; }
-      if (mode === 'team') { actions.setTeamMode(true); return; }
-      if (mode === 'example') {
-        padDistanceDraft = String(REFERENCE_DESIGN.padDistanceM ?? '');
-        heaterDraft = String(REFERENCE_DESIGN.drillHeaterW);
-        notice = 'The example design is loaded, with every choice already made. Walk the stages with the pills above, read why each choice was made, and submit each review yourself.';
-        store.update({ ...REFERENCE_DESIGN, currentPhase: 'MCR', gateResults: {} });
-        return;
-      }
-      store.update({});
-    },
     setPadDistanceDraft: (v) => { padDistanceDraft = v; },
     // Keeps any gate banner on screen: writing a hypothesis is not a design change.
     recordHypothesis: (phase, text) => store.update({ userHypotheses: { ...store.get().userHypotheses, [phase]: text } }),
@@ -177,7 +186,7 @@ async function boot(): Promise<void> {
       const blob = new Blob([JSON.stringify(store.exportDesign(), null, 2)], { type: 'application/json' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = 'polar-outpost-design.json';
+      link.download = 'lighthouse-on-the-trail-design.json';
       link.click();
       URL.revokeObjectURL(link.href);
     },
@@ -190,8 +199,20 @@ async function boot(): Promise<void> {
 
   store.subscribe((state) => {
     syncViewport(state);
-    renderCockpit(app, { constants: c, state, banner, notice, showStart: !started, padDistanceDraft, heaterDraft, debrief, review, viewport }, actions);
+    renderCockpit(app, { constants: c, state, banner, notice, padDistanceDraft, heaterDraft, debrief, review, viewport }, actions);
   });
+
+  // How the player came in from the landing page (D-301): the example tour, the flown example, or team play.
+  if (mode === 'example') {
+    padDistanceDraft = String(REFERENCE_DESIGN.padDistanceM ?? '');
+    heaterDraft = String(REFERENCE_DESIGN.drillHeaterW);
+    notice = 'The example design is loaded, with every choice already made. Walk the stages with the pills above, read why each choice was made, and submit each review yourself.';
+    store.update({ ...REFERENCE_DESIGN, currentPhase: 'MCR', gateResults: {} });
+  } else if (mode === 'watch') {
+    actions.runReference();
+  } else if (mode === 'team') {
+    actions.setTeamMode(true);
+  }
 }
 
 void boot();

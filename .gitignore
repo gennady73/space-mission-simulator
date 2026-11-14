@@ -11,3 +11,4 @@ raw-data/
 *.IMG
 *.tab
 __pycache__/
+html-things/
