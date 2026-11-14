@@ -64,7 +64,7 @@ The event ends Sunday 15 Nov. **Cut line: Sunday 12:00.** After that, nothing ne
 | **Must** | Cockpit layout: phase tracker, resource bar (6 resources), choice cards per phase, gate result banner, Next Phase | Architect | 4 h |
 | **Must** | Objective + hypothesis screen (Feynman "questions first", §8.1) | Architect / Media | 1 h |
 | **Must** | Run + debrief: telemetry strip charts (SoC, power, buffer), event list, fault-tree text, score, badges | Architect | 3 h |
-| **Must** | "About & Numbers" page: renders `provenance` + data credits + AI-use declaration (design guide §4) | Lead | 1.5 h |
+| **Must** | "About & Numbers" page: renders `provenance` + data credits + AI-use declaration (design guide §4) ✅ *`#about`, D-023* | Lead | 1.5 h |
 | **Must** | GitHub Pages deploy + README + submission text + demo video | Lead | 2 h |
 | **Should** | Side-quest modals (5 quests, inline answer check) | Lead | 1.5 h |
 | **Should** | Team mode: role picker, hot-seat, per-gate sign-off | Architect | 2 h |
