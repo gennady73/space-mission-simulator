@@ -95,6 +95,68 @@ details summary { cursor: pointer; color: var(--muted); }
 .prestage button { justify-self: start; }
 #pre-stage-explanation { border-top: 1px solid var(--line); padding-top: 10px; }
 
-/* Console viewport (BUILD-PLAN §6): the site map or the flight playback fills it. */
-#console-viewport { height: min(62vh, 540px); margin: 16px 0; }
-#console-viewport.is-flight { height: min(82vh, 780px); }
+/* ---- Full-screen mission console (D-033): fixed 100dvh grid, no page scroll ---- */
+#app.console-host { max-width: none; padding: 0; height: 100vh; height: 100dvh; overflow: hidden; }
+.console { height: 100%; display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding: 8px; }
+.console-top { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }
+.console-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+.console-bar h1 { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.console-bar > * { flex: none; }
+.console-bar > h1 { flex: 0 1 auto; }
+.console-view { min-width: 0; min-height: 0; }
+#console-viewport { height: 100%; min-height: 0; }
+.console-panel { min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 12px; padding: 2px 6px 16px 2px; }
+.console-panel > * { flex: none; }
+.console-panel #btn-next-phase { align-self: flex-start; }
+.console--flight .console-view, .console--debrief .console-panel { grid-column: 1 / -1; }
+.console button, .console select, .console input:not([type="checkbox"]), .console summary { min-height: 40px; }
+.console .phase-track { gap: 4px; }
+.console .phase-track li { padding: 0; }
+.console .phase-track button { min-width: 48px; padding: 0 10px; cursor: pointer; }
+.console .phase-track button:disabled { cursor: default; opacity: 1; }
+.console .header-tools { flex-wrap: nowrap; }
+.console .resources { margin: 0; position: relative; }
+.console .resources dl { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.console .resource { padding: 3px 8px; min-width: 0; }
+.console .resource dt { font-size: 10px; }
+.console .resource dd { font-size: 13px; font-weight: 600; }
+.console .resource dd, .console .resource small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.console .resource small { font-size: 11px; }
+.resources-note { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.console .placeholder { height: 132px; max-height: none; aspect-ratio: auto !important; }
+.console .fallback-frame { padding: 8px 16px; }
+.console .fallback-frame > * { margin: 2px 0; }
+.console .prestage { margin: 0; }
+.console .choices { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.menu { position: relative; }
+.menu summary { list-style: none; display: inline-flex; align-items: center; padding: 0 14px; border: 1px solid var(--line); border-radius: 6px; color: var(--text); font-weight: 600; }
+.menu summary::-webkit-details-marker { display: none; }
+.menu-items { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: 260px; display: grid; gap: 8px; padding: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 12px 40px rgb(0 0 0 / .6); }
+.menu-items select { width: 100%; }
+.menu-items a { color: var(--accent); min-height: 40px; display: inline-flex; align-items: center; }
+.menu-items .toggle { min-height: 40px; }
+.objectives { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; display: grid; gap: 6px; }
+.objectives h3 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.objectives ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.objectives li[data-done="true"] { color: var(--ok); }
+.console-panel .panel-submit { position: sticky; bottom: -16px; margin-top: auto; padding: 10px 0 16px; background: linear-gradient(transparent, var(--bg) 30%); display: grid; gap: 6px; z-index: 5; }
+.panel-submit #btn-next-phase { width: 100%; min-height: 44px; }
+.review-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: rgb(3 5 8 / .72); }
+.review { width: min(560px, 100%); max-height: 100%; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-top: 4px solid var(--ok); border-radius: 10px; padding: 20px 24px; display: grid; gap: 12px; box-shadow: 0 12px 40px rgb(0 0 0 / .6); }
+.review.is-fail { border-top-color: var(--fail); }
+.review h2 { margin: 0; font-size: 22px; }
+.review.is-pass h2 { color: var(--ok); }
+.review.is-fail h2 { color: var(--fail); }
+.review-kicker { margin: 0; font: 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.review-gates { display: flex; gap: 6px; flex-wrap: wrap; list-style: none; margin: 0; padding: 0; font: 12px var(--mono); }
+.review-gates li { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; color: var(--fail); }
+.review-gates li[data-passed="true"] { color: var(--ok); }
+.review .actions { margin: 4px 0 0; }
+/* Tablet portrait: the map (45vh) stacked over the panel. */
+@media (max-width: 899px) {
+  .console { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 45vh minmax(0, 1fr); }
+  .console--flight { grid-template-rows: auto minmax(0, 1fr); }
+  .console--debrief { grid-template-rows: auto minmax(0, 1fr); }
+  .console-bar { flex-wrap: wrap; }
+  .console .resources dl { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

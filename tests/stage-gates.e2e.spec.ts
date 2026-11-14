@@ -14,7 +14,13 @@ const skipFlight = async (page: Page) => {
   await page.click('#btn-flight-skip');
   await page.click('#btn-flight-debrief');
 };
-const next = (page: Page) => page.click('button#btn-next-phase');
+/** Submit to the review; when the verdict is a pass, take "Next stage" (or "Launch"). A failed verdict stays open. */
+const next = async (page: Page) => {
+  await page.click('button#btn-next-phase');
+  await expect(page.locator('#review-modal')).toBeVisible();
+  const go = page.locator('#btn-review-next');
+  if (await go.count()) await go.click();
+};
 const phase = (page: Page) => page.locator('#current-phase-display');
 
 async function passMcrAndSrr(page: Page, pad: string, distance: string): Promise<void> {
@@ -85,6 +91,7 @@ test.describe('Space Mission Simulator E2E Verification', () => {
 
   test('Team play: a seat makes only its own decisions and the gate owner signs off', async ({ page }) => {
     await page.goto('/');
+    await page.click('#btn-menu');
     await page.check('#toggle-team-mode');
     await expect(page.locator('#btn-role-mission_lead')).toHaveAttribute('aria-pressed', 'true');
     await pick(page, 'btn-site-shackleton_ridge');
@@ -148,5 +155,58 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await next(page);
     await expect(phase(page)).toHaveText('Phase A: System Requirements Review (SRR)');
     await expect(page.locator('#console-viewport .sitemap')).toBeVisible();
+  });
+
+  test('Objectives checklist ticks off what the review needs (D-034)', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#objectives-status')).toHaveText('1 still to choose before the review.');
+    await pick(page, 'btn-site-shackleton_ridge');
+    await expect(page.locator('#objective-selectedSite')).toHaveAttribute('data-done', 'true');
+    await expect(page.locator('#objectives-status')).toHaveText('Ready for the review.');
+    await next(page);
+    await expect(page.locator('#objectives li')).toHaveCount(3);
+    await expect(page.locator('#objective-padDistanceM')).toHaveAttribute('data-done', 'false');
+    await page.fill('input#input-pad-distance', '800');
+    await expect(page.locator('#objective-padDistanceM')).toHaveAttribute('data-done', 'true');
+  });
+
+  test('Review modal: a failed verdict gives the reason and the fix, a passed one moves on (D-035)', async ({ page }) => {
+    await page.goto('/');
+    await page.click('#btn-next-phase');
+    const modal = page.locator('#review-modal');
+    await expect(modal.locator('#review-verdict')).toHaveText('Verdict: not passed');
+    await expect(modal).toContainText('What to change');
+    await expect(page.locator('#btn-review-next')).toHaveCount(0);
+    await page.click('#btn-review-revise');
+    await expect(modal).toHaveCount(0);
+    // The verdict stays on the panel while the player fixes the design.
+    await expect(page.locator('.console-panel .gate-error-banner')).toBeVisible();
+    await pick(page, 'btn-site-shackleton_ridge');
+    await page.click('#btn-next-phase');
+    await expect(modal.locator('#review-verdict')).toHaveText('Verdict: passed');
+    await expect(phase(page)).toHaveText('Pre-Phase A: Mission Concept Review (MCR)');
+    await page.click('#btn-review-next');
+    await expect(phase(page)).toHaveText('Phase A: System Requirements Review (SRR)');
+  });
+
+  test('Full mission at 1024x768 never scrolls the page (D-033)', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    const noPageScroll = async () =>
+      expect(await page.evaluate(() => document.scrollingElement!.scrollHeight <= window.innerHeight)).toBe(true);
+    await passMcrAndSrr(page, 'btn-pad-pad_elevated_45deg', '800');
+    await noPageScroll();
+    await pick(page, 'btn-mast-mast_10m_vsat', 'btn-battery-batt_liion_8kwh', 'btn-comm-dte_xband', 'btn-storage-ssmm_128gb',
+      'btn-instrument-ndl', 'btn-instrument-neutron_spec_radiometer');
+    await noPageScroll();
+    await next(page);
+    await expect(phase(page)).toHaveText('Phase C: Critical Design Review (CDR)');
+    await pick(page, 'btn-logistics-hts_maglev_guideway', 'btn-link-laser_power_beaming');
+    await noPageScroll();
+    await next(page);
+    await expect(page.locator('#flight-playback')).toBeVisible();
+    await noPageScroll();
+    await skipFlight(page);
+    await expect(page.locator('.gate-pass-banner')).toContainText('Mission successful');
+    await noPageScroll();
   });
 });
