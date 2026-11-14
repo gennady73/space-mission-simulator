@@ -247,7 +247,7 @@ export function shade(g: Grid, sunAzDeg: number, sunElDeg: number, layers: Shade
       if (layers.slope) {
         const sl = slopeAt(g, i, j);
         const [cr, cg, cb] = sl <= 8 ? [40, 200, 90] : sl <= 14 ? [235, 190, 40] : [230, 60, 60];
-        r = r * 0.55 + cr * 0.45; gg = gg * 0.55 + cg * 0.45; b = b * 0.55 + cb * 0.45;
+        r = r * 0.7 + cr * 0.3; gg = gg * 0.7 + cg * 0.3; b = b * 0.7 + cb * 0.3; // light tint: relief stays readable
       }
       out[k * 4] = r; out[k * 4 + 1] = gg; out[k * 4 + 2] = b; out[k * 4 + 3] = 255;
     }
