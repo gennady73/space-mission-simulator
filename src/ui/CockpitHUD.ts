@@ -186,6 +186,16 @@ function resourceBar(view: CockpitView): HTMLElement {
 
 /** Track label per phase: the last stop is the flight itself, with its debrief. */
 const TRACK_LABEL: Record<Phase, string> = { MCR: 'MCR', SRR: 'SRR', PDR: 'PDR', CDR: 'CDR', PLAR: 'FLY' };
+/** Plain word for what the player decides at each stop; the NASA acronym stays beside it (Lead, play-test 11-15). */
+const TRACK_NAME: Record<Phase, string> = { MCR: 'Concept', SRR: 'Landing', PDR: 'Power', CDR: 'Ice', PLAR: 'Flight' };
+/** Hover / long-press hint: what the review is, in one sentence. Wording belongs to Media. */
+const TRACK_HINT: Record<Phase, string> = {
+  MCR: 'Mission Concept Review (MCR): is the idea sound? Choose the goal and the landing site.',
+  SRR: 'System Requirements Review (SRR): can it get there and land safely? Choose the rocket, the route and the landing pad.',
+  PDR: 'Preliminary Design Review (PDR): will it survive the lunar night? Choose power, battery, radio and data storage.',
+  CDR: 'Critical Design Review (CDR): can it reach the ice? Choose how to get into the cold trap and how to power the drill.',
+  PLAR: 'Flight (FLY): the outpost runs for one year, then the Post-Launch Assessment Review (PLAR) scores it.',
+};
 
 /**
  * Full-screen mission console (D-033): a fixed 100dvh grid with no page scroll.
@@ -210,7 +220,8 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
     const reached = PHASES.indexOf(p) <= PHASES.indexOf(s.currentPhase);
     const current = flying ? p === 'PLAR' : p === s.currentPhase;
     const id = `btn-phase-${p === 'PLAR' ? 'FLY' : p}`;
-    const button = h('button', { type: 'button', id, 'data-phase': p, ...(reached && !flying ? {} : { disabled: '' }) }, TRACK_LABEL[p]);
+    const button = h('button', { type: 'button', id, 'data-phase': p, title: TRACK_HINT[p], 'aria-label': `${TRACK_NAME[p]} (${TRACK_LABEL[p]})`, ...(reached && !flying ? {} : { disabled: '' }) },
+      h('span', { class: 'track-name' }, TRACK_NAME[p]), h('span', { class: 'track-code' }, TRACK_LABEL[p]));
     button.addEventListener('click', () => a.goToPhase(p));
     const item = h('li', { class: [current ? 'current' : '', s.gateResults[p]?.passed ? 'passed' : ''].join(' ').trim() }, button);
     if (current) item.setAttribute('aria-current', 'step');
