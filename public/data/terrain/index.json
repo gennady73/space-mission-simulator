@@ -1,6 +1,24 @@
 {
  "grids": [
   {
+   "id": "shackleton_ridge_5m",
+   "file": "shackleton_ridge_5m.json",
+   "res_m": 20.833,
+   "source": "Site01_final_adj_5mpp_surf.tif (PGDA product 78, LOLA 5 m/px, resampled)"
+  },
+  {
+   "id": "de_gerlache_rim_5m",
+   "file": "de_gerlache_rim_5m.json",
+   "res_m": 20.833,
+   "source": "Site11_final_adj_5mpp_surf.tif (PGDA product 78, LOLA 5 m/px, resampled)"
+  },
+  {
+   "id": "malapert_massif_5m",
+   "file": "malapert_massif_5m.json",
+   "res_m": 20.833,
+   "source": "Site23_final_adj_5mpp_surf.tif (PGDA product 78, LOLA 5 m/px, resampled)"
+  },
+  {
    "id": "shackleton_ridge_120m",
    "file": "shackleton_ridge_120m.json",
    "res_m": 62.5,
