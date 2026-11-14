@@ -19,7 +19,7 @@ One folder per source, so each output's provenance names one folder. Keep file n
 |---|---|---|---|
 | 1a LOLA region + site close-ups | `LDEM_75S_120M.IMG` + `.LBL` (LOLA GDR) | `public/data/terrain/region.json` (512², ~350 m cells, 0.7 MB) + `<site>_120m.json` (±8 km, 62.5 m cells, σ 2 cells) | ✅ D-108 |
 | 1b LOLA sites | PGDA-78 `<Tile>_final_adj_5mpp_surf.tif` | `public/data/terrain/<site_id>.json` (256² over ±6 km, ~47 m cells, ~170 KB each) | ☐ script ready: `lola_crop.py site` |
-| 2 Diviner PRP | `dlre_prp_south.tab` | `public/data/diviner-psr-temperature.json` | ☐ |
+| 2 Diviner PRP | `raw-data/diviner/prp-south/dlre_prp_south.tab` | `public/data/diviner/coldtraps.json` (512², Tmax + ice depth, per-site cross-check): `diviner_grid.py` | ✅ D-109 |
 | 3 JPL Horizons | API, 2028-01-01 → 2029-01-01, 1 h | `public/data/ephemeris-{earth-visibility,solar-azimuth}.json` | ☐ → then recalibrate D-003/D-004 |
 
 Checks before deploy are listed in spec §11.7. Each data source gets one check against a published figure.
