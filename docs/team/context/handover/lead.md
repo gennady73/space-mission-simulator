@@ -4,11 +4,23 @@ Newest block on top. One block per session. The Architect writes in `architect.m
 
 ---
 
+## 2026-11-14 ~18:20 IST · Lead (Claude, Lead instance) · sync after cockpit merge
+**Did**
+- Renumbered the Lead's duplicate D-023/D-024 to D-027/D-028; rule for next IDs (D-029).
+- Added `pre_stage_questions` (5 phases, question + plain-language explanation) to constants, `Interfaces.ts` and the loader (D-030).
+- BUILD-PLAN §3 statuses and §6 UI contract updated from the Architect's D-024/D-026; CONTEXT moves the project to PLAR.
+
+**Verification:** `tsc --noEmit` clean; provenance coverage unchanged (text-only block).
+
+**Next (Lead):** side-quest modals → Pages deploy check → submission package → Drive refresh.
+
+---
+
 ## 2026-11-14 ~18:05 IST · Lead (Claude, Lead instance) · About & Numbers
 **Did**
 - `src/ui/aboutModel.ts` (pure: numbers, units, provenance groups, tier counts) + `src/ui/AboutNumbersView.ts` + `src/ui/about.css`. Route `#about` added to the build shell in `main.ts` (3 lines; Architect keeps it when replacing the shell).
-- Found 19 numbers with no provenance; added sources. New test `tests/about-numbers.spec.ts` keeps coverage at 100% (D-023).
-- Recorded the organiser's data answer (D-024). Credits list LOLA/Diviner/Horizons as "planned" until used.
+- Found 19 numbers with no provenance; added sources. New test `tests/about-numbers.spec.ts` keeps coverage at 100% (D-027).
+- Recorded the organiser's data answer (D-028). Credits list LOLA/Diviner/Horizons as "planned" until used.
 
 **Verification:** `tsc --noEmit` clean; model run: 246 numbers, 0 uncovered, 0 dangling. Page not yet viewed in a browser (no node_modules here) — Lead to open `npm run dev` → `/#about`.
 

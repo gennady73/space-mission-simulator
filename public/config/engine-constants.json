@@ -658,6 +658,33 @@
       "explanation": "600 m. Deflectors redirect gas and particles upward, halving the exclusion zone."
     }
   },
+  "pre_stage_questions": {
+    "MCR": {
+      "phase": "MCR",
+      "question": "Why does the Moon's tiny axial tilt create permanently shadowed craters right next to peaks of almost eternal light at the South Pole?",
+      "explanation": "The Moon's spin axis is tilted only about 1.5 degrees, so at the pole the Sun never climbs more than a degree or two above the horizon. High ridges catch that grazing light most of the time, while the floors of deep craters never see the Sun at all. Those floors stay near 40 K, cold enough to trap water ice for billions of years. That is why the best place to land is a sunlit ridge next to a dark crater."
+    },
+    "SRR": {
+      "phase": "SRR",
+      "question": "Why does rocket exhaust in a vacuum sandblast things more than a kilometre away, and how can an angled blast deflector stop it?",
+      "explanation": "On the Moon there is no air to slow the exhaust or the dust it kicks up. Grains are thrown out at hundreds of metres per second and, in low gravity, fly a long way before landing. Anything in that spray, like solar panels, gets scoured. An elevated pad with angled deflectors turns the blast upward, so the dangerous zone around it shrinks and equipment can sit closer."
+    },
+    "PDR": {
+      "phase": "PDR",
+      "question": "Why does grazing polar sunlight need solar panels standing tall and vertical, like lighthouses, instead of lying flat?",
+      "explanation": "When the Sun sits just above the horizon, a flat panel catches almost none of its light, while a vertical panel faces it head-on. Height matters too: a tall mast lifts the panel above nearby hills that would otherwise cast long shadows. When the Sun does dip behind the terrain, the batteries must carry the outpost through the dark with spare margin, because the night is never exactly as predicted."
+    },
+    "CDR": {
+      "phase": "CDR",
+      "question": "Why do ordinary wheeled vehicles struggle inside deep lunar craters, and how can magnetic levitation work there without active cooling?",
+      "explanation": "At around 40 K, greases stiffen, seals crack and moving parts need heater power just to survive. Wheels also slip on steep, loose slopes. Some superconductors work on their own at those temperatures, so a superconducting guideway can levitate a cart with no wheels, bearings or lubricant. Power reaches the crater floor by cable or by a laser beam aimed at a receiver."
+    },
+    "PLAR": {
+      "phase": "PLAR",
+      "question": "Why does Earth rise and set over the horizon at the South Pole, and what must the outpost do while it cannot talk to Earth?",
+      "explanation": "Seen from the pole, Earth does not stay fixed: the Moon's tilted orbit and slight wobble (libration) make Earth bob above and below the horizon over about four weeks. While Earth is hidden, the outpost must keep working on its own and store its science data until the link returns, or relay it through a satellite."
+    }
+  },
   "shortfall_badges": {
     "SF02": {
       "id": "SF02",

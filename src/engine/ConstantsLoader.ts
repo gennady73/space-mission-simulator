@@ -10,7 +10,7 @@ export const CONSTANTS_URL = './config/engine-constants.json';
 const REQUIRED_TOP_LEVEL: Array<keyof EngineConstants> = [
   'schema_version', 'system_constants', 'simulation', 'difficulty_levels', 'team_roles',
   'site_catalog', 'trajectories', 'hardware_catalog', 'graphic_placeholders',
-  'side_quests', 'shortfall_badges', 'provenance',
+  'side_quests', 'pre_stage_questions', 'shortfall_badges', 'provenance',
 ];
 
 const REQUIRED_CATALOGS = [

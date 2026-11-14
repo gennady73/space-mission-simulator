@@ -54,6 +54,8 @@ export interface EngineConstants {
   };
   graphic_placeholders: Record<string, GraphicPlaceholderConfig>;
   side_quests: Record<string, SideQuestConfig>;
+  /** Feynman "questions first" (spec §8.1): asked before each phase; explanation shown after the player's hypothesis. */
+  pre_stage_questions: Record<Phase, PreStageQuestion>;
   shortfall_badges: Record<string, ShortfallBadge>;
   /** JSON-pointer-like path (e.g. "system_constants.lunar_gravity_m_s2") -> provenance. */
   provenance: Record<string, Provenance>;
@@ -281,6 +283,12 @@ export interface SideQuestConfig {
   correct_value: number;
   tolerance: number;
   unit: string;
+  explanation: string;
+}
+
+export interface PreStageQuestion {
+  phase: Phase;
+  question: string;
   explanation: string;
 }
 
