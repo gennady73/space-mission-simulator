@@ -4,6 +4,17 @@ Newest block on top. One block per session. The Architect writes in `architect.m
 
 ---
 
+## 2026-11-15 ~01:45 IST · Lead (Claude, Lead instance) · solo: game shell after the play-test
+**Did**
+- Diviner cold traps (D-109), PGDA-69 site check for Hardware (D-110), 60 m permanent-shadow close-ups (D-111), map gameplay + soft shadows + Sun glyph (D-112), stage pills with plain names (#25), tap-to-place mast (#26).
+- Game shell (D-113): start screen (4 ways in incl. example tour and team explainer), folded Think-first, 45/55 layout, orientation notices, reworked debrief. E2E specs updated for the overlay.
+
+**Verification:** tsc clean; 37 unit tests green (local runner); full flows in headless Chromium at 1366×768 (start → MCR, watch → flight day 0 → debrief → revise notice, example tour notice). `npm run test:e2e` NOT run here — run before merge.
+
+**Next (Lead, solo):** NASA data credits → demo video → site-number provenance → submission.
+
+---
+
 ## 2026-11-14 ~19:45 IST · Lead (Claude, Lead instance) · map and flight playback
 **Did**
 - South-pole map component with stage layers and a `#map` test page (D-104). Terrain is schematic with real crater positions; LOLA 120 m swap pending the download into `raw-data/`.
