@@ -13,9 +13,11 @@ Newest block on top. One block per session. The Lead writes in `lead.md`, never 
 
 **Verification:** `tsc --noEmit` clean · 18 unit tests pass · 8 Playwright tests pass · production build succeeds · PDR failure screen and debrief checked in a browser, no console errors other than the missing placeholder images.
 
+**Added ~17:50 IST: team play (D-024).** Hot-seat for four seats, per-seat decisions, sign-off by the gate owner, one new Playwright test (9 pass in total).
+
 **Not done (BUILD-PLAN §3)**
 - Objective + hypothesis screen: only a mission objective field on MCR. The §8.1 questions are not in the constants yet, so they need a `pre_stage_questions` block (Lead) before the UI can show them without numbers in `src/`.
-- Team mode sign-off, compare two designs, JSON import (export and share link work), side-quest modals, About & Numbers, map.
+- Compare two designs, JSON import (export and share link work), side-quest modals, About & Numbers, map. Comms & Science owns no review, so that seat never signs off.
 - Badges are listed without their rank until V-01 is closed.
 
 **Notes for the Lead**
@@ -24,9 +26,9 @@ Newest block on top. One block per session. The Lead writes in `lead.md`, never 
 - BUILD-PLAN §6 should take the ids listed in D-022. `CONTEXT.md` item 1 (cockpit) can move to Green.
 
 **Next (Architect)**
-1. Team mode: role picker, hot-seat, per-gate sign-off (D-010).
-2. JSON import and compare view.
-3. Hypothesis prompts once the constants carry them.
+1. JSON import and compare view.
+2. Hypothesis prompts once the constants carry them.
+3. Telemetry charts on a failed mission need a marker at the failure hour.
 
 ---
 

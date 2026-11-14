@@ -3,7 +3,7 @@ import { loadConstants } from './engine/ConstantsLoader';
 import { runMission, scoreMission } from './engine/SimulationClock';
 import { runDesignGates, totalCostUSD, validatePLAR } from './engine/StageGateValidators';
 import { initialState, PHASES, REFERENCE_DESIGN, StateStore } from './models/StateStore';
-import type { Difficulty, EngineConstants, GateValidationResult, Phase } from './models/Interfaces';
+import type { Difficulty, EngineConstants, GateValidationResult, Phase, TeamRole } from './models/Interfaces';
 import { renderCockpit, type CockpitActions } from './ui/CockpitHUD';
 import type { Debrief } from './ui/DebriefView';
 import { provisionalDesign, submitToReview } from './ui/DesignFlow';
@@ -60,16 +60,24 @@ async function boot(): Promise<void> {
       const budget = c.difficulty_levels[difficulty].budget_usd;
       store.update({ difficulty, allocatedBudgetUSD: budget, remainingBudgetUSD: budget });
     },
+    setTeamMode: (on) => {
+      const first = Object.keys(c.team_roles)[0] as TeamRole;
+      store.update({ ...draftPatch(), teamMode: on, activeRole: on ? store.get().activeRole ?? first : null });
+    },
+    setActiveRole: (role) => store.update({ ...draftPatch(), activeRole: role }),
     nextPhase: () => {
       const phase = store.get().currentPhase;
       const candidate = { ...store.get(), ...draftPatch() };
       const results = submitToReview(c, candidate, phase);
       const failed = Object.values(results).find((g) => g && !g.passed) ?? null;
       const gateResults = { ...candidate.gateResults, ...results };
+      // D-010: the seat that submits a passed review is recorded as having signed it off.
+      const signer = candidate.teamMode ? candidate.activeRole : null;
+      const roleSignOffs = signer && !failed ? { ...candidate.roleSignOffs, [phase]: [signer] } : candidate.roleSignOffs;
       if (failed) { banner = failed; store.update({ ...draftPatch(), gateResults }); return; }
-      if (phase === 'CDR') { store.update(draftPatch()); fly(results); return; }
+      if (phase === 'CDR') { store.update({ ...draftPatch(), roleSignOffs }); fly(results); return; }
       banner = null;
-      store.update({ ...draftPatch(), gateResults, currentPhase: PHASES[PHASES.indexOf(phase) + 1] });
+      store.update({ ...draftPatch(), gateResults, roleSignOffs, currentPhase: PHASES[PHASES.indexOf(phase) + 1] });
     },
     goToPhase: (phase) => {
       if (phase === 'PLAR' && !debrief) return;

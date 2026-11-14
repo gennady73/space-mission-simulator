@@ -76,6 +76,28 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await expect(page.locator('.gate-error-banner')).toContainText('ERR_CDR_THERMAL_FREEZE_HAZARD');
   });
 
+  test('Team play: a seat makes only its own decisions and the gate owner signs off', async ({ page }) => {
+    await page.goto('/');
+    await page.check('#toggle-team-mode');
+    await expect(page.locator('#btn-role-mission_lead')).toHaveAttribute('aria-pressed', 'true');
+    await pick(page, 'btn-site-shackleton_ridge');
+    await next(page); // Mission Lead owns MCR
+    await expect(phase(page)).toHaveText('Phase A: System Requirements Review (SRR)');
+    // Still the Mission Lead: launch decisions and the SRR sign-off belong to Launch & Structures.
+    await expect(page.locator('#btn-lv-lv_medium_reusable')).toBeDisabled();
+    await expect(page.locator('#btn-next-phase')).toBeDisabled();
+    await expect(page.locator('#signoff-note')).toContainText('Launch & Structures');
+    await pick(page, 'btn-role-launch_structures', 'btn-lv-lv_medium_reusable', 'btn-pad-pad_elevated_45deg');
+    await page.fill('input#input-pad-distance', '800');
+    await next(page);
+    await expect(phase(page)).toHaveText('Phase B: Preliminary Design Review (PDR)');
+    // Power & Thermal owns the battery, Comms & Science owns the instruments.
+    await expect(page.locator('#btn-battery-batt_liion_8kwh')).toBeDisabled();
+    await pick(page, 'btn-role-comms_science');
+    await expect(page.locator('#btn-instrument-ndl')).toBeEnabled();
+    await expect(page.locator('#btn-battery-batt_liion_8kwh')).toBeDisabled();
+  });
+
   test('Intro placeholder renders its text fallback when the image is missing', async ({ page }) => {
     await page.goto('/');
     const intro = page.locator('[data-placeholder-id="IMG-PLACEHOLDER-INTRO"]');

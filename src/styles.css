@@ -81,3 +81,9 @@ select, input { background: var(--bg); color: var(--text); border: 1px solid var
 .strip-cursor { stroke: var(--muted); stroke-width: 1; }
 .strip-dot { fill: var(--accent); stroke: var(--panel); stroke-width: 2; }
 details summary { cursor: pointer; color: var(--muted); }
+
+.toggle { display: inline-flex; align-items: center; gap: 6px; }
+.toggle input { width: 18px; height: 18px; padding: 0; }
+.team { margin-top: 14px; display: grid; gap: 8px; }
+.seats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+.choice-group.locked legend { color: var(--muted); font-weight: 400; }
