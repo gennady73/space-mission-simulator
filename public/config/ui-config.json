@@ -5,7 +5,7 @@
   "home": {
     "kicker": "NASA SPACE APPS 2026 · SPACE MISSION DESIGN GAME",
     "tagline": "Build the first lighthouse at the Moon's south pole.",
-    "subtitle": "In a year, the first crew lands here. Your radio station is how they call home.",
+    "subtitle": "Design a robotic outpost, pass four NASA design reviews on a tight budget, then run it for a year and see what it brings home.",
     "cta_label": "START MISSION",
     "footnote": "15–25 min · no space background needed · best on a laptop or tablet",
     "nav": {
@@ -36,8 +36,8 @@
       },
       {
         "icon": "target",
-        "title": "Bet first, then the Moon answers",
-        "text": "Each role bets on a question before seeing the data. The debrief shows who was right."
+        "title": "Guess first, then the Moon answers",
+        "text": "Before each review you write down your guess to a real engineering question, then see the answer and why."
       }
     ],
     "narrator_line": "> No pressure. It's only the Moon.",
