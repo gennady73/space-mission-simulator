@@ -1,6 +1,12 @@
 /* Side-quest list and dialog. Uses the cockpit tokens from styles.css. */
-.quests { margin: 20px 0; padding: 12px 16px; border: 1px dashed var(--line); border-radius: 8px; }
-.quests h3 { margin: 0 0 4px; font-size: 1rem; }
+.quests { margin: 0; padding: 0; border: 1px dashed var(--line); border-radius: 8px; }
+/* One row (D-303): heading and count; the list opens in a popover. */
+.quests-row { width: 100%; min-height: 40px; display: flex; align-items: center; gap: 10px; padding: 0 12px; background: transparent; color: var(--text); border: 0; border-radius: 8px; text-align: left; font-weight: 600; font-size: 14px; }
+.quests-row:hover { background: var(--panel); }
+.quests-row__count { flex: 1; font-weight: 400; color: var(--muted); }
+.quests-row__chevron { color: var(--muted); }
+.quests-row[aria-expanded="true"] .quests-row__chevron { transform: rotate(90deg); }
+.popover .quests__list { margin: 4px 0 0; }
 .quests__list { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .quest-btn { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
 .quest-btn--done { color: var(--ok); border-color: var(--ok); }
@@ -17,10 +23,9 @@ dialog.quest::backdrop { background: rgb(0 0 0 / 0.6); }
 .quest-row input { flex: 1 1 140px; min-width: 0; padding: 8px 10px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; font: 15px var(--mono); }
 .quest-unit { font: 14px var(--mono); color: var(--muted); }
 .quest-feedback { min-height: 1.4em; margin: 10px 0 4px; }
-.quest-feedback--correct { color: var(--ok); font-weight: 600; }
-.quest-feedback--wrong { color: var(--warn); }
 .quest-feedback--invalid { color: var(--fail); }
 .quest-hint-btn, .quest-reveal { background: transparent; color: var(--accent); border: 1px solid var(--line); margin: 4px 8px 4px 0; }
-.quest-hint, .quest-formula, .quest-explanation { margin: 8px 0; line-height: 1.5; }
-.quest-formula code { font: 13px var(--mono); }
-.quest-explanation { border-left: 3px solid var(--ok); padding-left: 10px; }
+.quest-note { margin: 10px 0 4px; padding: 4px 6px; } /* room for the note tilt (D-304) */
+/* Sticky tab on the row: a small yellow note with the brain icon, inside the 40 px row (D-304). */
+.quests-row__tab { flex: none; width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; background: var(--note-tip); color: var(--note-ink); transform: rotate(-4deg); box-shadow: 0 3px 4px -2px rgb(0 0 0 / .6); }
+.quests-row__tab .sticky__icon svg { height: 15px; }

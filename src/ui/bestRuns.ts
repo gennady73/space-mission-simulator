@@ -30,15 +30,20 @@ export interface BestOutcome {
 /** Minimal storage surface, so tests can pass a Map-backed fake and private windows can fail quietly. */
 export interface KeyValueStore { getItem(key: string): string | null; setItem(key: string, value: string): void }
 
-const key = (d: Difficulty) => `lighthouse-best-v1-${d}`;
+/** The ice prospecting challenge (D-040) is scored against another target, so it keeps its own best. */
+const key = (d: Difficulty, challenge: boolean | string = false) => `lighthouse-best-v1-${d}${challenge === true ? '-ice' : challenge || ''}`;
+
+/** Key suffix for the challenges a design flies (D-040, D-041): each combination keeps its own best. */
+export const challengeKey = (design: MissionDesignExport['design']): string =>
+  [design.iceProspecting ? 'ice' : '', ...[...(design.missionChallenges ?? [])].sort()].filter(Boolean).map((id) => `-${id}`).join('');
 
 const browserStore = (): KeyValueStore | null => {
   try { return globalThis.localStorage ?? null; } catch { return null; }
 };
 
-export function loadBest(difficulty: Difficulty, store: KeyValueStore | null = browserStore()): BestRun | null {
+export function loadBest(difficulty: Difficulty, store: KeyValueStore | null = browserStore(), challenge: boolean | string = false): BestRun | null {
   try {
-    const raw = store?.getItem(key(difficulty));
+    const raw = store?.getItem(key(difficulty, challenge));
     if (!raw) return null;
     const best = JSON.parse(raw) as BestRun;
     return typeof best.score === 'number' && best.design?.format === 'space-mission-simulator/design' ? best : null;
@@ -47,10 +52,11 @@ export function loadBest(difficulty: Difficulty, store: KeyValueStore | null = b
 
 /** Record the run when it beats the stored best (ties go to the newer run's cheaper cost). */
 export function recordRun(difficulty: Difficulty, run: RunSummary, design: MissionDesignExport, store: KeyValueStore | null = browserStore()): BestOutcome {
-  const previous = loadBest(difficulty, store);
+  const challenge = challengeKey(design.design);
+  const previous = loadBest(difficulty, store, challenge);
   const better = !previous || run.score > previous.score || (run.score === previous.score && run.costUSD < previous.costUSD);
   if (better) {
-    try { store?.setItem(key(difficulty), JSON.stringify({ ...run, at: new Date().toISOString(), design })); } catch { /* storage full or blocked: the run still shows */ }
+    try { store?.setItem(key(difficulty, challenge), JSON.stringify({ ...run, at: new Date().toISOString(), design })); } catch { /* storage full or blocked: the run still shows */ }
   }
   return { previous, isNew: better };
 }
@@ -76,6 +82,9 @@ export function designDifferences(c: EngineConstants, mine: MissionDesignExport[
     ['Cold-trap logistics', 'selectedLogistics', named(hw.cold_trap_logistics)],
     ['Power link', 'selectedUtilityLink', named(hw.utility_links)],
     ['Drill heater', 'drillHeaterW', (v) => `${v} W`],
+    ['Fault protection', 'faultProtection', (v) => (v ? 'yes' : 'no')],
+    ['Night power', 'selectedNightPower', (v) => c.mission_challenges.night_survival.night_power_options[typeof v === 'string' ? v : c.mission_challenges.night_survival.default_night_power]?.name ?? String(v)],
+    ['Drill string', 'selectedDrillOption', (v) => c.ice_prospecting.drill_options[typeof v === 'string' ? v : c.ice_prospecting.default_drill_option]?.name ?? String(v)],
   ];
   return rows
     .map(([label, k, show]) => ({ label, mine: show(mine[k]), best: show(best[k]) }))

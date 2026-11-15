@@ -1,6 +1,6 @@
 import type { EngineConstants, GateValidationResult, LandingSite, Phase } from '../models/Interfaces';
 import {
-  drillPeakW, eclipseEnergy, massStack, survivalLoadW, totalCostUSD, utilityLinkPower,
+  drillPeakW, eclipseEnergy, massStack, payloadMassKg, survivalLoadW, totalCostUSD, utilityLinkPower,
   type ResolvedDesign,
 } from './SubsystemEngines';
 
@@ -29,7 +29,8 @@ export const GATE_NAMES: Record<Phase, string> = {
   PLAR: 'Post-Launch Assessment Review (PLAR)',
 };
 
-export function validateMCR(c: EngineConstants, site: LandingSite): GateValidationResult {
+/** D-041: `farSide` skips the Earth-visibility check, because the far-side challenge forbids a direct link anyway (checked at PDR). */
+export function validateMCR(c: EngineConstants, site: LandingSite, farSide = false): GateValidationResult {
   const g = GATE_NAMES.MCR;
   const maxSlope = c.simulation.max_touchdown_slope_deg;
   const minVis = c.simulation.min_earth_visibility_fraction;
@@ -38,7 +39,7 @@ export function validateMCR(c: EngineConstants, site: LandingSite): GateValidati
       `Site slope of ${site.slope_deg}° exceeds the maximum stable lander touchdown limit of ${maxSlope}°.`,
       `Choose a plateau or ridge crest with slope ≤ ${maxSlope}°. A Navigation Doppler Lidar shows slopes before you commit.`);
   }
-  if (site.earth_visibility_fraction < minVis) {
+  if (!farSide && site.earth_visibility_fraction < minVis) {
     return fail(g, 'Mission ConOps — communications', 'ERR_MCR_RADIO_BLACKOUT',
       `Direct-to-Earth visibility (${pct(site.earth_visibility_fraction)}) fails the minimum ${pct(minVis)} threshold.`,
       'Select an elevated rim location with a clearer line of sight to Earth.');
@@ -53,6 +54,35 @@ export function validateSRR(c: EngineConstants, r: ResolvedDesign): GateValidati
     return fail(g, 'STMD SF03 / Need 3.01 (Plume-Surface Interaction)', 'ERR_SRR_PLUME_SCOURING_HAZARD',
       `Separation distance (${r.padDistanceM} m) is below the required ${pad.requires_standoff_distance_m} m buffer for ${pad.name}. Rocket exhaust ejecta (> 300 m/s) would sandblast the solar arrays.`,
       'Increase the standoff distance, or choose an elevated pad with 45° plume deflectors.');
+  }
+  const { clps, crew } = r.challenges;
+  if (crew) {
+    if (pad.deflection_efficiency < crew.min_pad_deflection_efficiency) {
+      return fail(g, 'Artemis crew landing: prepared surface (game rule)', 'ERR_SRR_CREW_PAD',
+        `${pad.name} deflects only ${Math.round(pad.deflection_efficiency * 100)}% of the plume. A crew lander needs a prepared pad with at least ${Math.round(crew.min_pad_deflection_efficiency * 100)}%.`,
+        'Choose the sintered pad or the elevated pad.');
+    }
+    const readyDay = r.trajectory.cruise_days + pad.construction_days;
+    if (readyDay > crew.crew_arrival_days) {
+      return fail(g, 'Artemis crew landing: schedule (game rule)', 'ERR_SRR_CREW_DATE_MISSED',
+        `The pad and beacon are ready on day ${readyDay} (${r.trajectory.cruise_days} days of cruise + ${pad.construction_days} days to build ${pad.name}), but the crew lands on day ${crew.crew_arrival_days}.`,
+        'Take the faster transfer, or a pad that needs no construction time.');
+    }
+  }
+  if (clps) {
+    const payload = payloadMassKg(r);
+    if (payload > clps.payload_capacity_kg) {
+      return fail(g, 'Commercial lander payload limit (game rule)', 'ERR_SRR_CLPS_PAYLOAD_MASS',
+        `Payload ${Math.round(payload)} kg exceeds the commercial lander's ${clps.payload_capacity_kg} kg.`,
+        'Remove mass: a lighter pad, mast, battery or cold-trap logistics.');
+    }
+    const load = survivalLoadW(c, r);
+    if (load > clps.max_survival_power_w) {
+      return fail(g, 'Commercial lander power service (game rule)', 'ERR_SRR_CLPS_POWER',
+        `Survival load ${load.toFixed(0)} W exceeds the ${clps.max_survival_power_w} W the commercial lander can pass to its payload.`,
+        'Lower the heater power, or drop equipment that needs survival heating.');
+    }
+    return pass(g, 'STMD SF03 / Need 3.01', `Plume buffer verified; payload ${Math.round(payload)} kg fits the commercial lander.`);
   }
   const m = massStack(c, r);
   if (m.wet > r.launchVehicle.tli_capacity_kg) {
@@ -71,6 +101,11 @@ export function validateSRR(c: EngineConstants, r: ResolvedDesign): GateValidati
 export function validatePDR(c: EngineConstants, r: ResolvedDesign): GateValidationResult {
   const g = GATE_NAMES.PDR;
   const minMargin = c.system_constants.minimum_power_margin_pdr;
+  if (r.challenges.farSide && r.comm.direct_to_earth) {
+    return fail(g, 'Mission ConOps: communications', 'ERR_PDR_NO_EARTH_LINK',
+      `${r.comm.name} needs Earth above the horizon, and on the far side Earth never rises.`,
+      'Use the relay orbiter service.');
+  }
   const e = eclipseEnergy(c, r);
   if (e.margin < minMargin) {
     const load = survivalLoadW(c, r);
@@ -129,7 +164,7 @@ export function validatePLAR(uptimeHours: number, missionHours: number, totalCos
 /** Pre-launch gates in order; stops at the first failed gate. */
 export function runDesignGates(c: EngineConstants, r: ResolvedDesign): Partial<Record<Phase, GateValidationResult>> {
   const out: Partial<Record<Phase, GateValidationResult>> = {};
-  out.MCR = validateMCR(c, r.site); if (!out.MCR.passed) return out;
+  out.MCR = validateMCR(c, r.site, r.challenges.farSide !== null); if (!out.MCR.passed) return out;
   out.SRR = validateSRR(c, r); if (!out.SRR.passed) return out;
   out.PDR = validatePDR(c, r); if (!out.PDR.passed) return out;
   out.CDR = validateCDR(c, r);

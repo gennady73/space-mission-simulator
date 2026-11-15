@@ -1,5 +1,6 @@
 import type {
-  BatteryConfig, CommConfig, DataStorageConfig, EngineConstants, InstrumentConfig, LandingSite,
+  BatteryConfig, ClpsRideConfig, CommConfig, CrewSupportConfig, DataStorageConfig, DrillOptionConfig, EngineConstants,
+  FarSideTelescopeConfig, NightPowerConfig, NightSurvivalConfig, FaultProtectionConfig, InstrumentConfig, LandingSite,
   LaunchVehicle, LaunchpadConfig, LogisticsConfig, PowerMastConfig, ResourceLedger,
   SimulationState, SpacecraftBusConfig, TrajectoryOption, UtilityLinkConfig,
 } from '../models/Interfaces';
@@ -20,12 +21,28 @@ export interface ResolvedDesign {
   utilityLink: UtilityLinkConfig | null;
   instruments: InstrumentConfig[];
   drillHeaterW: number;
+  /** D-039: onboard fault protection and safing chosen at CDR, or null without it. */
+  faultProtection: FaultProtectionConfig | null;
+  /** D-040: the drill string (the default string when none was chosen). */
+  drillOption: DrillOptionConfig;
+  /** D-040: true when the design flies the ice prospecting challenge (scored against its water target). */
+  iceProspecting: boolean;
+  /** D-041: the mission challenges that are on (null = off). */
+  challenges: {
+    night: NightSurvivalConfig | null;
+    farSide: FarSideTelescopeConfig | null;
+    crew: CrewSupportConfig | null;
+    clps: ClpsRideConfig | null;
+  };
+  /** D-041: the night power source (the default, which adds nothing, unless the night challenge is on and one was chosen). */
+  nightPower: NightPowerConfig;
 }
 
 type Design = Pick<SimulationState,
   'selectedSite' | 'selectedTrajectory' | 'selectedBus' | 'selectedLaunchVehicle' | 'selectedLaunchpad'
   | 'padDistanceM' | 'selectedMast' | 'selectedBattery' | 'selectedComm' | 'selectedStorage'
-  | 'selectedLogistics' | 'selectedUtilityLink' | 'selectedInstruments' | 'drillHeaterW'>;
+  | 'selectedLogistics' | 'selectedUtilityLink' | 'selectedInstruments' | 'drillHeaterW'>
+  & Partial<Pick<SimulationState, 'faultProtection' | 'iceProspecting' | 'selectedDrillOption' | 'missionChallenges' | 'selectedNightPower'>>;
 
 /** Returns the resolved design, or the list of choices still missing. */
 export function resolveDesign(c: EngineConstants, d: Design): ResolvedDesign | { missing: string[] } {
@@ -49,12 +66,26 @@ export function resolveDesign(c: EngineConstants, d: Design): ResolvedDesign | {
   const needsColdTrapAccess = site ? site.distance_to_cold_trap_km > 0 : true;
   const logistics = needsColdTrapAccess ? pick(hw.cold_trap_logistics, d.selectedLogistics, 'cold-trap logistics') ?? null : null;
   const utilityLink = needsColdTrapAccess ? pick(hw.utility_links, d.selectedUtilityLink, 'utility power link') ?? null : null;
+  const ip = c.ice_prospecting;
+  const drillOption = ip.drill_options[d.selectedDrillOption ?? ip.default_drill_option] ?? ip.drill_options[ip.default_drill_option];
+  const mc = c.mission_challenges;
+  const on = (id: keyof typeof mc) => (d.missionChallenges ?? []).includes(id);
+  const challenges = {
+    night: on('night_survival') ? mc.night_survival : null,
+    farSide: on('far_side_telescope') ? mc.far_side_telescope : null,
+    crew: on('crew_support') ? mc.crew_support : null,
+    clps: on('clps_ride') ? mc.clps_ride : null,
+  };
+  const nightOptions = mc.night_survival.night_power_options;
+  const nightPower = (challenges.night && d.selectedNightPower ? nightOptions[d.selectedNightPower] : undefined) ?? nightOptions[mc.night_survival.default_night_power];
   const instruments = d.selectedInstruments.map((id) => hw.science_instruments[id]).filter(Boolean);
+  if (challenges.farSide) instruments.push(challenges.farSide.telescope);
   if (missing.length) return { missing };
   return {
     site: site!, trajectory: trajectory!, bus: bus!, launchVehicle: launchVehicle!, launchpad: launchpad!,
     padDistanceM: d.padDistanceM!, mast: mast!, battery: battery!, comm: comm!, storage: storage!,
-    logistics, utilityLink, instruments, drillHeaterW: d.drillHeaterW,
+    logistics, utilityLink, instruments, drillHeaterW: d.drillHeaterW, faultProtection: d.faultProtection ? c.fault_protection : null,
+    drillOption, iceProspecting: d.iceProspecting === true, challenges, nightPower,
   };
 }
 
@@ -72,7 +103,14 @@ export function dryMassKg(r: ResolvedDesign): number {
     + r.storage.mass_kg
     + (r.logistics ? perKm(r.logistics, r.logistics.mass_kg, km) : 0)
     + (r.utilityLink ? perKm(r.utilityLink, r.utilityLink.mass_kg, km) : 0)
-    + r.instruments.reduce((s, i) => s + i.mass_kg, 0);
+    + r.instruments.reduce((s, i) => s + i.mass_kg, 0)
+    + (r.faultProtection?.mass_kg ?? 0) + r.drillOption.mass_kg
+    + r.nightPower.mass_kg + (r.challenges.crew?.cargo_mass_kg ?? 0);
+}
+
+/** D-041: what rides on the lander, i.e. everything except the lander bus itself. */
+export function payloadMassKg(r: ResolvedDesign): number {
+  return dryMassKg(r) - r.bus.dry_mass_kg;
 }
 
 /**
@@ -90,11 +128,15 @@ export function massStack(c: EngineConstants, r: ResolvedDesign) {
 
 export function totalCostUSD(r: ResolvedDesign): number {
   const km = r.site.distance_to_cold_trap_km;
-  return r.bus.cost_usd + r.launchVehicle.cost_usd + r.trajectory.extra_cost_usd + r.launchpad.cost_usd
+  // D-041: a commercial lander ride is one price in place of the launcher, the lander bus and the trajectory surcharge.
+  const delivery = r.challenges.clps ? r.challenges.clps.delivery_cost_usd : r.bus.cost_usd + r.launchVehicle.cost_usd + r.trajectory.extra_cost_usd;
+  return delivery + r.launchpad.cost_usd
     + r.mast.cost_usd + r.battery.cost_usd + r.comm.cost_usd + r.storage.cost_usd
     + (r.logistics ? perKm(r.logistics, r.logistics.cost_usd, km) : 0)
     + (r.utilityLink ? perKm(r.utilityLink, r.utilityLink.cost_usd, km) : 0)
-    + r.instruments.reduce((s, i) => s + i.cost_usd, 0);
+    + r.instruments.reduce((s, i) => s + i.cost_usd, 0)
+    + (r.faultProtection?.cost_usd ?? 0) + r.drillOption.cost_usd
+    + r.nightPower.cost_usd + (r.challenges.crew?.cargo_cost_usd ?? 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -132,13 +174,24 @@ export function shadowHoursForMast(c: EngineConstants, site: LandingSite, mast: 
 /** D-005: survival ("shadow") load — what must run through every eclipse. */
 export function survivalLoadW(c: EngineConstants, r: ResolvedDesign): number {
   return r.bus.avionics_power_w + r.drillHeaterW + c.simulation.comm_idle_power_w + r.storage.power_w
-    + (r.logistics?.survival_heater_w ?? 0);
+    + (r.logistics?.survival_heater_w ?? 0) + (r.challenges.crew?.beacon_power_w ?? 0);
 }
 
-/** Usable battery energy vs. energy needed for the site's longest shadow. */
+/** D-041 night survival: true in the forced night at the end of each synodic cycle (where the D-003 Sun is lowest). */
+export function isForcedNight(c: EngineConstants, r: ResolvedDesign, hour: number): boolean {
+  if (!r.challenges.night) return false;
+  const T = c.system_constants.synodic_month_days * 24;
+  return hour % T >= T - r.challenges.night.night_h;
+}
+
+/**
+ * Usable battery energy vs. energy needed for the site's longest shadow.
+ * D-041: the night survival challenge sets a floor on the shadow, and a night power source carries part of the load.
+ */
 export function eclipseEnergy(c: EngineConstants, r: ResolvedDesign) {
-  const shadowH = shadowHoursForMast(c, r.site, r.mast);
-  const required = survivalLoadW(c, r) * shadowH;
+  const shadowH = Math.max(shadowHoursForMast(c, r.site, r.mast), r.challenges.night?.night_h ?? 0);
+  const netLoadW = Math.max(0, survivalLoadW(c, r) - r.nightPower.power_w);
+  const required = netLoadW === 0 ? 0 : netLoadW * shadowH;
   const available = r.battery.capacity_kwh * 1000 * r.battery.max_dod;
   const margin = !Number.isFinite(required) ? -Infinity : required > 0 ? (available - required) / required : Infinity;
   return { shadowH, required, available, margin };
@@ -160,6 +213,7 @@ export function earthElevationDeg(c: EngineConstants, site: LandingSite, hour: n
 }
 
 export function hasLink(c: EngineConstants, r: ResolvedDesign, hour: number): boolean {
+  if (r.challenges.farSide && r.comm.direct_to_earth) return false; // D-041: Earth never rises on the far side
   if (!r.comm.direct_to_earth) return (hour % 24) < 24 * (r.comm.relay_coverage_fraction ?? 0);
   return earthElevationDeg(c, r.site, hour) >= c.simulation.min_earth_elevation_for_los_deg;
 }
@@ -176,8 +230,28 @@ export function utilityLinkPower(r: ResolvedDesign, dustTransmittance = 1): { de
   return { deliveredW: l.source_power_w * l.efficiency * t, drawW: l.source_power_w };
 }
 
+/** Peak drill load; the chosen drill string adds its own power when there is a drill at all (D-040). */
 export function drillPeakW(r: ResolvedDesign): number {
-  return r.instruments.filter((i) => i.extracts_ice).reduce((s, i) => s + i.peak_power_w, 0);
+  const base = r.instruments.filter((i) => i.extracts_ice).reduce((s, i) => s + i.peak_power_w, 0);
+  return base > 0 ? base + r.drillOption.extra_peak_power_w : base;
+}
+
+/**
+ * D-040: water ice gained per drilling hour. The drill string scales the assay rate, and heater power
+ * above the survival minimum sublimates ice into the collector: W × s/h ÷ latent heat × efficiency.
+ * With the default string and the minimum heater this is exactly simulation.ice_assay_rate_kg_h.
+ */
+export function iceRateKgPerHour(c: EngineConstants, r: ResolvedDesign): number {
+  const s = c.simulation;
+  const joulesPerKg = c.system_constants.ice_sublimation_energy_mj_kg * 1e6;
+  const extraHeaterW = Math.max(0, r.drillHeaterW - s.min_drill_heater_w);
+  const thermalKgH = ((extraHeaterW * 3600) / joulesPerKg) * c.ice_prospecting.heater_extraction_efficiency;
+  return s.ice_assay_rate_kg_h * r.drillOption.ice_yield_factor + thermalKgH;
+}
+
+/** Ice that earns the full science score: the challenge's water target when it is on, else the assay normaliser. */
+export function iceTargetKg(c: EngineConstants, r: ResolvedDesign): number {
+  return r.iceProspecting ? c.ice_prospecting.water_target_kg : c.simulation.ice_score_normaliser_kg;
 }
 
 // ---------------------------------------------------------------------------
@@ -191,10 +265,14 @@ export function computeLedger(c: EngineConstants, r: ResolvedDesign, budgetUSD: 
   let linkHours = 0;
   const T = Math.round(c.simulation.earth_libration_period_h);
   for (let h = 0; h < T; h++) if (hasLink(c, r, h)) linkHours++;
+  // D-041: on a commercial lander ride the mass that counts is the payload against the lander's capacity.
+  const clps = r.challenges.clps;
+  const massKg = clps ? payloadMassKg(r) : m.wet;
+  const capacityKg = clps ? clps.payload_capacity_kg : r.launchVehicle.tli_capacity_kg;
   return {
-    dryMassKg: m.dry, contingencyMassKg: m.contingency, propellantMassKg: m.propellant, wetMassKg: m.wet,
-    launchCapacityKg: r.launchVehicle.tli_capacity_kg,
-    massMarginFraction: (r.launchVehicle.tli_capacity_kg - m.wet) / r.launchVehicle.tli_capacity_kg,
+    dryMassKg: m.dry, contingencyMassKg: m.contingency, propellantMassKg: m.propellant, wetMassKg: massKg,
+    launchCapacityKg: capacityKg,
+    massMarginFraction: (capacityKg - massKg) / capacityKg,
     totalCostUSD: totalCostUSD(r), budgetUSD,
     eclipseEnergyRequiredWh: e.required, eclipseEnergyAvailableWh: e.available, powerMarginFraction: e.margin,
     dataGeneratedMbPerDay: (dataRateKbps * 86400) / 1000,

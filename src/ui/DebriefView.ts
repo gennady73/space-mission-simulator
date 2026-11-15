@@ -4,6 +4,7 @@ import { designDifferences, type BestOutcome, type RunSummary } from './bestRuns
 import { h, usdM } from './dom';
 import { renderPlaceholder } from './GraphicPlaceholderView';
 import { DESIGN_PHASES } from './DesignFlow';
+import { renderStickyNote } from './StickyNote';
 
 export interface Debrief {
   result: SimulationResult;
@@ -12,6 +13,8 @@ export interface Debrief {
   gates: Partial<Record<Phase, GateValidationResult>>;
   costUSD: number;
   budgetUSD: number;
+  /** Water target when the run flew the ice prospecting challenge (D-040); absent otherwise. */
+  waterTargetKg?: number;
   /** Personal best at this difficulty; absent for the reference mission. */
   best?: BestOutcome & { run: RunSummary; mine: MissionDesignExport; difficultyLabel: string };
 }
@@ -23,13 +26,22 @@ export interface DebriefActions {
   loadDesign(design: MissionDesignExport, where: Phase): void;
 }
 
-export function renderGateBanner(g: GateValidationResult): HTMLElement {
-  return h('div', { class: g.passed ? 'gate-pass-banner' : 'gate-error-banner', role: g.passed ? 'status' : 'alert' },
-    h('strong', {}, g.passed ? `${g.gateName}: passed` : `${g.gateName}: not passed`),
-    h('p', {}, g.diagnosticExplanation),
-    !g.passed && h('p', {}, `What to change: ${g.remediationAction}`),
-    h('small', {}, `${g.governingStandard} · ${g.reasonCode}`),
-  );
+/**
+ * A review verdict as a sticky note (Media, D-304): a failed gate is a mistake note (title, what went
+ * wrong, then the fix after the divider), a passed gate a success note. The wording is the validators'.
+ * The classes gate-error-banner / gate-pass-banner and the reason code stay for the e2e contract.
+ * `onClose` makes the note dismissable where it sits on the panel; the review modal passes none.
+ */
+export function renderGateBanner(g: GateValidationResult, onClose?: () => void): HTMLElement {
+  const standard = h('small', {}, `${g.governingStandard} · ${g.reasonCode}`);
+  return renderStickyNote({
+    kind: g.passed ? 'success' : 'mistake',
+    class: g.passed ? 'gate-pass-banner' : 'gate-error-banner',
+    title: g.passed ? `${g.gateName}: passed` : `${g.gateName}: not passed`,
+    body: g.diagnosticExplanation,
+    footer: g.passed ? standard : h('div', {}, h('p', {}, `What to change: ${g.remediationAction}`), standard),
+    ...(onClose ? { onClose } : {}),
+  });
 }
 
 /** One line per step from the first review to the end of the flight year. */
@@ -77,7 +89,7 @@ export function renderDebrief(c: EngineConstants, d: Debrief, actions: DebriefAc
     renderGateBanner(d.plar),
     h('dl', { class: 'tiles' },
       tile('Reviews passed', `${score.gatesPassed} of 5`),
-      tile('Water ice assayed', `${Math.round(r.iceKg).toLocaleString('en-US')} kg`),
+      tile(d.waterTargetKg ? 'Water against the challenge target' : 'Water ice assayed', `${Math.round(r.iceKg).toLocaleString('en-US')} kg${d.waterTargetKg ? ` of ${d.waterTargetKg.toLocaleString('en-US')} kg` : ''}`),
       tile('Operating time', `${r.uptimeHours} of ${hours} h`),
       tile('Science data delivered', `${(score.dataCompleteness * 100).toFixed(0)}%`),
       tile('Lowest battery charge', `${r.minSoCPercent.toFixed(0)}%`),

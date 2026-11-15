@@ -610,6 +610,129 @@
       }
     }
   },
+  "fault_protection": {
+    "name": "Autonomous fault protection",
+    "description": "Onboard software and a watchdog that detect a failed ice-delivery system, put it in a safe state and keep it alive until the ground team can work on it. Without it, that failure is permanent.",
+    "mass_kg": 3,
+    "cost_usd": 2000000.0,
+    "recovery_link_hours": 72,
+    "recovery_probability": 0.6
+  },
+  "ice_prospecting": {
+    "name": "Ice prospecting challenge",
+    "description": "Turn the outpost into a water prospector. The year is scored against a water target, so the plain drill is no longer enough: reach deeper with a heavier drill string, or spend heater power to sublimate more ice, and pay for it in mass, money, link power and battery.",
+    "objective": "Produce at least 6,000 kg of water from the cold trap in one year",
+    "water_target_kg": 6000,
+    "heater_extraction_efficiency": 0.8,
+    "default_drill_option": "string_1m",
+    "drill_options": {
+      "string_1m": {
+        "id": "string_1m",
+        "name": "1 m drill string (standard)",
+        "depth_m": 1,
+        "mass_kg": 0,
+        "cost_usd": 0,
+        "extra_peak_power_w": 0,
+        "ice_yield_factor": 1.0,
+        "description": "The drill as delivered. Samples the top metre, where part of the ice has been lost to space."
+      },
+      "string_2m": {
+        "id": "string_2m",
+        "name": "2 m extended drill string",
+        "depth_m": 2,
+        "mass_kg": 15,
+        "cost_usd": 3000000.0,
+        "extra_peak_power_w": 20,
+        "ice_yield_factor": 1.3,
+        "description": "A second segment reaches below the dry top layer. The laser link can still power it, with little to spare."
+      },
+      "string_3m": {
+        "id": "string_3m",
+        "name": "3 m deep auger",
+        "depth_m": 3,
+        "mass_kg": 40,
+        "cost_usd": 8000000.0,
+        "extra_peak_power_w": 75,
+        "ice_yield_factor": 1.7,
+        "description": "Reaches the best-preserved ice, and needs more power than a laser beam can deliver through dust."
+      }
+    }
+  },
+  "mission_challenges": {
+    "night_survival": {
+      "id": "night_survival",
+      "name": "Lunar night survival",
+      "description": "The outpost stands where the Sun sets for 14 days in every month. No battery in the catalog carries it through alone: add a power source that works in the dark, and size the battery for what is left.",
+      "night_h": 336,
+      "default_night_power": "none",
+      "night_power_options": {
+        "none": {
+          "id": "none",
+          "name": "No night power source",
+          "mass_kg": 0,
+          "cost_usd": 0,
+          "power_w": 0,
+          "runs_operations": false,
+          "description": "Batteries only."
+        },
+        "rtg_110w": {
+          "id": "rtg_110w",
+          "name": "Radioisotope generator, 110 W",
+          "mass_kg": 45,
+          "cost_usd": 30000000.0,
+          "power_w": 110,
+          "runs_operations": false,
+          "description": "Steady power from plutonium decay heat. Enough to keep a lean outpost alive through the night, not to work."
+        },
+        "fsp_1kw": {
+          "id": "fsp_1kw",
+          "name": "Small fission reactor, 1 kW",
+          "mass_kg": 400,
+          "cost_usd": 55000000.0,
+          "power_w": 1000,
+          "runs_operations": true,
+          "description": "A kilowatt day and night: instruments, downlink and the drill keep working in the dark. Heavy and expensive."
+        }
+      }
+    },
+    "far_side_telescope": {
+      "id": "far_side_telescope",
+      "name": "Far-side radio telescope",
+      "description": "The outpost carries a low-frequency radio telescope to a place where Earth never rises, shielded from Earth's radio noise. Direct links are impossible, so every bit goes through the relay orbiter, and the telescope produces a lot of bits.",
+      "telescope": {
+        "id": "low_freq_radio_telescope",
+        "name": "Low-frequency radio telescope",
+        "mass_kg": 60,
+        "cost_usd": 18000000.0,
+        "peak_power_w": 40,
+        "data_rate_kbps": 1800,
+        "science_value": 0.6,
+        "enables_layers": [],
+        "extracts_ice": false,
+        "description": "Listens to the early universe below 50 MHz, where Earth's own radio noise drowns the signal everywhere else."
+      }
+    },
+    "crew_support": {
+      "id": "crew_support",
+      "name": "Artemis crew support",
+      "description": "Astronauts land near the outpost on a fixed date. Supplies and a landing beacon must be waiting on a prepared pad before they arrive, so a slow transfer or a slow pad can miss the date.",
+      "crew_arrival_days": 130,
+      "cargo_mass_kg": 262,
+      "cargo_cost_usd": 10000000.0,
+      "beacon_power_w": 15,
+      "min_pad_deflection_efficiency": 0.8
+    },
+    "clps_ride": {
+      "id": "clps_ride",
+      "name": "Commercial lander ride",
+      "description": "Buy a delivery on a commercial lander instead of a launcher and a lander of your own. Much cheaper, but the lander carries less, passes little survival power to its payload, and may arrive late.",
+      "payload_capacity_kg": 900,
+      "delivery_cost_usd": 115000000.0,
+      "max_survival_power_w": 120,
+      "delay_probability": 0.3,
+      "delay_days": 45
+    }
+  },
   "graphic_placeholders": {
     "IMG-PLACEHOLDER-INTRO": {
       "id": "IMG-PLACEHOLDER-INTRO",
@@ -735,6 +858,18 @@
       "tolerance": 5,
       "unit": "m",
       "explanation": "600 m. Deflectors redirect gas and particles upward, halving the exclusion zone."
+    },
+    "quest_light_time": {
+      "id": "quest_light_time",
+      "phase": "CDR",
+      "title": "Signal Delay to the Moon",
+      "prompt": "Radio travels at the speed of light, about c = 300,000 km/s. The Moon is about d = 384,400 km from Earth. How many seconds pass between the ground team sending a command and seeing the outpost's reply (the round trip)?",
+      "formula": "t = 2 * d / c",
+      "hint": "Double the distance, then divide by 300,000 km/s.",
+      "correct_value": 2.56,
+      "tolerance": 0.1,
+      "unit": "s",
+      "explanation": "2 x 384,400 km / 300,000 km/s = 2.56 s, so a lunar outpost can almost be driven live from Earth. Mars is 55 to 400 million km away: a round trip takes about 6 to 44 minutes, so Mars rovers must look after themselves. Even on the Moon, nobody can answer while Earth is below the horizon, which is why onboard fault protection matters."
     }
   },
   "pre_stage_questions": {
@@ -888,6 +1023,26 @@
       "source": "Game rule (spec v2 3.4). TRIDENT is a sampling drill (1 m core per site); no published continuous harvest rate.",
       "tier": "game-rule",
       "note": "Hardware D-208."
+    },
+    "ice_prospecting": {
+      "source": "Concept: NASA in-situ resource utilisation and the TRIDENT 1 m drill (PRIME-1, VIPER). Water in permanently shadowed regolith: LCROSS measured 5.6 +/- 2.9 wt% at Cabeus (Colaprete et al. 2010, Science 330:463). Thermal extraction uses the latent heat of sublimation in system_constants. The water target, drill-string depths, masses, costs, power, yield factors and the heater efficiency are game rules (D-040); Hardware to review.",
+      "tier": "game-rule"
+    },
+    "mission_challenges.night_survival": {
+      "source": "Concept: NASA Fission Surface Power project and the Kilopower/KRUSTY 1 kWe reactor test (2018); the Multi-Mission Radioisotope Thermoelectric Generator gives about 110 W and weighs about 45 kg (NASA Radioisotope Power Systems). A lunar night away from the polar ridges lasts about 14 Earth days. The reactor mass, all costs and the rule that 1 kW runs operations are game rules (D-041); Hardware to review.",
+      "tier": "game-rule"
+    },
+    "mission_challenges.far_side_telescope": {
+      "source": "Concept: NASA/DOE LuSEE-Night and the FARSIDE concept (low-frequency radio astronomy from the radio-quiet lunar far side, reached only through a relay). The telescope's mass, cost, power, data rate and science value are game rules (D-041); Hardware to review. The game keeps its south-pole map for this challenge.",
+      "tier": "game-rule"
+    },
+    "mission_challenges.crew_support": {
+      "source": "Concept: NASA Artemis surface missions with pre-positioned cargo. The crew date, cargo mass and cost, beacon power and pad requirement are game rules (D-041); Hardware to review.",
+      "tier": "game-rule"
+    },
+    "mission_challenges.clps_ride": {
+      "source": "Concept: NASA Commercial Lunar Payload Services (CLPS), fixed-price deliveries on commercial landers. Payload capacity, price, power service, delay chance and delay length are game rules (D-041); Hardware to review.",
+      "tier": "game-rule"
     },
     "simulation.dust_event_probability_per_cycle": {
       "source": "Team estimate",
@@ -1147,6 +1302,14 @@
       "source": "Team estimate. No lunar maglev system has been built or long-duration tested; no published reliability figure exists for FLOAT or any equivalent concept. 0.998 annual reliability (~1–2 failures per year on a large network) is an aspirational game-rule target used for the scoring model.",
       "tier": "game-rule",
       "note": "Hardware D-219. No value change."
+    },
+    "fault_protection": {
+      "source": "Concept from NASA JPL 'Basics of Space Flight', ch. 11 (Fault Protection and Safing): https://science.nasa.gov/learn/basics-of-space-flight/chapter11-1/. Mass, cost, recovery hours and probability are game rules (Architect, D-039); Hardware to review.",
+      "tier": "game-rule"
+    },
+    "side_quests.quest_light_time": {
+      "source": "NASA JPL 'Basics of Space Flight', ch. 1 (Light Time: Earth-Moon round trip about 3 s): https://science.nasa.gov/learn/basics-of-space-flight/chapter1-1/. Earth-Moon mean distance: NASA Moon Fact Sheet.",
+      "tier": "literature"
     }
   }
 }

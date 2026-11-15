@@ -10,7 +10,8 @@ import { createFlightPlayback, type FlightPlaybackHandle } from './ui/map/Flight
 import type { Difficulty, EngineConstants, GateValidationResult, MissionDesignExport, Phase, SimulationState, TeamRole } from './models/Interfaces';
 import { recordRun } from './ui/bestRuns';
 import { h } from './ui/dom';
-import { renderCockpit, type CockpitActions } from './ui/CockpitHUD';
+import { lockFor, renderCockpit, type CockpitActions } from './ui/CockpitHUD';
+import { renderStickyShowcase } from './ui/StickyNoteShowcase';
 import type { Debrief } from './ui/DebriefView';
 import type { ReviewOutcome } from './ui/ReviewModal';
 import { provisionalDesign, submitToReview } from './ui/DesignFlow';
@@ -34,6 +35,8 @@ async function boot(): Promise<void> {
   }
   // Lead: map test page at #map (D-104).
   if (location.hash === '#map') { renderMapDemo(app, c); return; }
+  // Media: sticky-note design check page at #notes (D-304), like #map.
+  if (location.hash === '#notes') { renderStickyShowcase(app); return; }
   // Cockpit at #mission; share links (#design=…) still land straight in it (D-301).
   if (location.hash === '#mission' || location.hash.startsWith('#design=')) { startConsole(app, c, 'mission'); return; }
   // The landing page and the Lead's About & Numbers page (#about) hold no state, so a hash change
@@ -95,7 +98,10 @@ function startConsole(app: HTMLElement, c: EngineConstants, mode: StartMode): vo
     const costUSD = totalCostUSD(design);
     const plar = validatePLAR(result.uptimeHours, c.simulation.mission_duration_h, costUSD, s.allocatedBudgetUSD);
     const score = scoreMission(c, design, result, passed, s.allocatedBudgetUSD);
-    debrief = { result: { ...result, telemetry: sampled }, score, plar, gates, costUSD, budgetUSD: s.allocatedBudgetUSD };
+    debrief = {
+      result: { ...result, telemetry: sampled }, score, plar, gates, costUSD, budgetUSD: s.allocatedBudgetUSD,
+      ...(design.iceProspecting ? { waterTargetKg: c.ice_prospecting.water_target_kg } : {}),
+    };
     // Personal best per difficulty (UI review items 5 and 7). The reference mission is not the player's run.
     if (playerRun) {
       const mine = store.exportDesign();
@@ -126,7 +132,8 @@ function startConsole(app: HTMLElement, c: EngineConstants, mode: StartMode): vo
     if (map) map.update(state, { stage });
     else map = renderSiteMap(viewport, c, state, {
       stage,
-      onSelectSite: (id) => actions.update({ selectedSite: id }),
+      // A locked seat cannot change the site from the map either (team play, D-303).
+      onSelectSite: (id) => { if (lockFor(c, store.get(), 'landing site')) return; actions.update({ selectedSite: id }); },
       // Lead: tapping the SRR map places the solar mast; the distance is the same value as the typed field.
       onPlaceMast: (distanceM) => { padDistanceDraft = String(distanceM); actions.update({ padDistanceM: distanceM }); },
     });
@@ -134,6 +141,7 @@ function startConsole(app: HTMLElement, c: EngineConstants, mode: StartMode): vo
 
   const actions: CockpitActions = {
     update: (patch) => { banner = null; store.update(patch); },
+    dismissBanner: () => { banner = null; store.update({}); }, // the note's close (D-304); the next failed review brings a new note
     setPadDistanceDraft: (v) => { padDistanceDraft = v; },
     // Keeps any gate banner on screen: writing a hypothesis is not a design change.
     recordHypothesis: (phase, text) => store.update({ userHypotheses: { ...store.get().userHypotheses, [phase]: text } }),
