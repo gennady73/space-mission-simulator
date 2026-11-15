@@ -125,7 +125,7 @@ details summary { cursor: pointer; color: var(--muted); }
 .console .phase-track button:disabled { cursor: default; opacity: 1; }
 .console .phase-track button { display: inline-flex; align-items: center; gap: 6px; }
 .phase-track .track-name { font: 600 13px var(--font); }
-.phase-track .track-code { font: 12px var(--term-font); color: var(--nasa-term); text-transform: uppercase; }
+.phase-track .track-code { font: 11px var(--term-font); color: var(--nasa-term); text-transform: uppercase; }
 .console .phase-track li:not(.current):not(.passed) { opacity: .6; } /* locked stop: the whole pill dims, the code stays orange (D-302) */
 @media (max-width: 1100px) { .phase-track .track-code { display: none; } }
 .console .header-tools { flex-wrap: nowrap; }
