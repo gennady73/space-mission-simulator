@@ -144,6 +144,34 @@ export class Terrain {
     return this.isPermanentShadow(x, y) ? ColdClass.Cold : ColdClass.None;
   }
 
+  /**
+   * Cold-trap tint for one raster cell, packed in a byte (D-118): bit 7 = ice stable at the
+   * surface, bits 0-6 = strength 0-127. Strength = the mask's soft edge times a temperature ramp
+   * (Diviner annual maximum: the colder, the stronger), so outlines fade instead of stepping and
+   * the deep traps read colder than the marginal ones. Display only.
+   */
+  coldByte(x: number, y: number): number {
+    let edge: number | null = null;
+    for (const g of this.psr) {
+      const f = g.fraction(x, y);
+      if (f !== null) { edge = f; break; }
+    }
+    let ice = false;
+    let ramp = 0.7; // no temperature data: a middle tone
+    if (this.coldTraps?.covers(x, y)) {
+      const cls = this.coldTraps.classify(x, y);
+      ice = cls === ColdClass.SurfaceIce;
+      if (edge === null) edge = cls === ColdClass.None ? 0 : 1;
+      const t = this.coldTraps.tmaxAt(x, y);
+      if (t !== null) ramp = Math.max(0, Math.min(1, (this.coldTrapMaxK - t) / (this.coldTrapMaxK - COLD_FLOOR_K)));
+    } else if (edge === null) {
+      edge = this.isPermanentShadow(x, y) ? 1 : 0;
+    }
+    const strength = edge * (0.35 + 0.65 * ramp);
+    if (strength <= 0.02) return 0;
+    return Math.round(strength * 127) | (ice ? 128 : 0);
+  }
+
   /** Height in km at (x, y). */
   height(x: number, y: number): number {
     if (this.real.length) {
@@ -198,7 +226,7 @@ export function rasterize(t: Terrain, view: View, w: number, h: number): Grid {
     for (let i = 0; i < w; i++) {
       const x = view.cx + (i + 0.5 - w / 2) * kmPerPx;
       z[j * w + i] = t.height(x, y);
-      psr[j * w + i] = t.coldClass(x, y);
+      psr[j * w + i] = t.coldByte(x, y);
     }
   }
   return { w, h, kmPerPx, view, z, psr };
@@ -210,13 +238,15 @@ export interface ShadeLayers { slope: boolean; ice: boolean }
 const PENUMBRA = Math.tan(0.53 * DEG);
 /** How strongly the sub-resolution regolith speckle modulates brightness (display only, D-117). */
 const GRAIN_STRENGTH = 0.38;
+/** Diviner annual maximum at which the cold-trap tint saturates (display only, D-118). */
+const COLD_FLOOR_K = 30;
 
-/** Slope in degrees at grid cell (i, j). */
+/** Slope in degrees at grid cell (i, j), over a two-cell baseline so the overlay stays calm (D-118). */
 export function slopeAt(g: Grid, i: number, j: number): number {
   const { w, h, z, kmPerPx } = g;
-  const xl = z[j * w + Math.max(0, i - 1)], xr = z[j * w + Math.min(w - 1, i + 1)];
-  const yu = z[Math.max(0, j - 1) * w + i], yd = z[Math.min(h - 1, j + 1) * w + i];
-  const dzdx = (xr - xl) / (2 * kmPerPx), dzdy = (yu - yd) / (2 * kmPerPx);
+  const xl = z[j * w + Math.max(0, i - 2)], xr = z[j * w + Math.min(w - 1, i + 2)];
+  const yu = z[Math.max(0, j - 2) * w + i], yd = z[Math.min(h - 1, j + 2) * w + i];
+  const dzdx = (xr - xl) / (4 * kmPerPx), dzdy = (yu - yd) / (4 * kmPerPx);
   return Math.atan(Math.hypot(dzdx, dzdy)) / DEG;
 }
 
@@ -269,14 +299,29 @@ export function shade(g: Grid, sunAzDeg: number, sunElDeg: number, layers: Shade
       const v = Math.min(1, (amb + lit * 3.2) * grain);
       let r = 22 + 214 * v, gg = 24 + 210 * v, b = 32 + 200 * v;
       if (psr[k]) {
-        // permanently shadowed floor: keep the relief, tint it (blue when the ice layer is on)
-        // with the ice layer on, cells where ice is stable right at the surface glow brighter
-        const [tr, tg, tb, a] = !layers.ice ? [10, 14, 34, 0.35] : psr[k] === ColdClass.SurfaceIce ? [110, 190, 255, 0.8] : [40, 110, 230, 0.55];
+        // Permanently shadowed floor (D-118): the byte carries soft edge x cold ramp, so the tint
+        // fades at the rim and deepens with cold. With the ice layer on, the hue runs navy -> ice
+        // blue, brighter where ice is stable right at the surface.
+        const strength = (psr[k] & 127) / 127;
+        const ice = (psr[k] & 128) !== 0;
+        let tr: number, tg: number, tb: number, a: number;
+        if (!layers.ice) { tr = 10; tg = 14; tb = 34; a = 0.38 * strength; }
+        else {
+          const m = ice ? 1 : strength;
+          tr = 24 + (ice ? 116 : 52) * m; tg = 44 + (ice ? 156 : 96) * m; tb = 100 + (ice ? 155 : 140) * m;
+          a = (0.28 + 0.42 * strength) * (ice ? 1.1 : 1);
+          if (a > 0.8) a = 0.8;
+        }
         r = r * (1 - a) + tr * a; gg = gg * (1 - a) + tg * a; b = b * (1 - a) + tb * a;
       }
       if (layers.slope) {
+        // Continuous ramp instead of three bands (D-118): green -> yellow across 6-10 degrees,
+        // yellow -> red across 12-18, so the overlay grades like a real slope map.
         const sl = slopeAt(g, i, j);
-        const [cr, cg, cb] = sl <= 8 ? [40, 200, 90] : sl <= 14 ? [235, 190, 40] : [230, 60, 60];
+        const t1 = Math.max(0, Math.min(1, (sl - 6) / 4));
+        const t2 = Math.max(0, Math.min(1, (sl - 12) / 6));
+        let cr = 40 + (235 - 40) * t1, cg = 200 + (190 - 200) * t1, cb = 90 + (40 - 90) * t1;
+        cr += (230 - cr) * t2; cg += (60 - cg) * t2; cb += (60 - cb) * t2;
         r = r * 0.7 + cr * 0.3; gg = gg * 0.7 + cg * 0.3; b = b * 0.7 + cb * 0.3; // light tint: relief stays readable
       }
       out[k * 4] = r; out[k * 4 + 1] = gg; out[k * 4 + 2] = b; out[k * 4 + 3] = 255;
