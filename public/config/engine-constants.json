@@ -627,7 +627,7 @@
       "aspect_ratio": "21:9",
       "title": "Peaks of light, pits of ice",
       "brief_explanation": "Sub-2 degree sunlight grazes the rims while crater floors stay dark for billions of years.",
-      "fallback_badge": "[STAGE 1 \u00b7 MCR \u00b7 SITE SELECTION]"
+      "fallback_badge": "[STAGE 1 · MCR · SITE SELECTION]"
     },
     "IMG-PLACEHOLDER-STAGE-2": {
       "id": "IMG-PLACEHOLDER-STAGE-2",
@@ -636,7 +636,7 @@
       "aspect_ratio": "21:9",
       "title": "The plume problem",
       "brief_explanation": "Rocket exhaust sandblasts regolith outward; angled deflectors throw it upward instead.",
-      "fallback_badge": "[STAGE 2 \u00b7 SRR \u00b7 PLUME & PAD]"
+      "fallback_badge": "[STAGE 2 · SRR · PLUME & PAD]"
     },
     "IMG-PLACEHOLDER-STAGE-3": {
       "id": "IMG-PLACEHOLDER-STAGE-3",
@@ -645,7 +645,7 @@
       "aspect_ratio": "21:9",
       "title": "Lighthouses of power",
       "brief_explanation": "Polar sun sits on the horizon, so panels stand vertical on tall masts; batteries carry the shadows.",
-      "fallback_badge": "[STAGE 3 \u00b7 PDR \u00b7 POWER]"
+      "fallback_badge": "[STAGE 3 · PDR · POWER]"
     },
     "IMG-PLACEHOLDER-STAGE-4": {
       "id": "IMG-PLACEHOLDER-STAGE-4",
@@ -654,7 +654,7 @@
       "aspect_ratio": "21:9",
       "title": "Into the 40 K dark",
       "brief_explanation": "A laser beam and a superconducting guideway reach where wheels and grease freeze.",
-      "fallback_badge": "[STAGE 4 \u00b7 CDR \u00b7 COLD TRAP]"
+      "fallback_badge": "[STAGE 4 · CDR · COLD TRAP]"
     },
     "IMG-PLACEHOLDER-STAGE-5": {
       "id": "IMG-PLACEHOLDER-STAGE-5",
@@ -663,7 +663,7 @@
       "aspect_ratio": "21:9",
       "title": "A year on the rim",
       "brief_explanation": "Earth nods above and below the horizon; the batteries cycle every lunar day.",
-      "fallback_badge": "[STAGE 5 \u00b7 PLAR \u00b7 365-DAY RUN]"
+      "fallback_badge": "[STAGE 5 · PLAR · 365-DAY RUN]"
     },
     "IMG-PLACEHOLDER-END": {
       "id": "IMG-PLACEHOLDER-END",
@@ -950,7 +950,7 @@
       "tier": "game-rule"
     },
     "hardware_catalog.cold_trap_logistics": {
-      "source": "Spec v2 6.3",
+      "source": "Spec v2 §6.3 (section structure). VIPER heritage rover values: nasa-doc D-210. HTS maglev guideway values: team estimates inspired by NASA NIAC FLOAT concept; see fine-grained provenance D-219.",
       "tier": "spec-provisional"
     },
     "hardware_catalog.utility_links": {
@@ -1097,6 +1097,56 @@
       "source": "Team estimate. Bluethmann, 'VIPER Rover Overview and Mobility and Hardware', NASA, LSIC Tech Infusion Panel, 14 Nov 2024, NTRS 20240013903, slide 2, gives 50 h survival in low-power mode on a 5,420 Wh battery but no heater wattage.",
       "tier": "spec-provisional",
       "note": "Hardware D-210."
+    },
+    "hardware_catalog.comm_systems.dte_xband.downlink_kbps": {
+      "source": "Spec v2 §3.3 (50 Mbps). Physically achievable with a 60 W X-band transmitter and a ~0.5 m high-gain antenna supported by a DSN 70 m station (comparable to LRO's 100 Mbps X-band HGA DTE in orbit with a 0.6 m dish). VIPER's planned X-band direct-to-Earth link tops out at ~8 Mbps with smaller hardware (HW-REVIEW §3). No open CLPS-class document gives 50 Mbps DTE for a small landed system; the game value is at the high end of what 60 W + HGA can achieve with ideal DSN support.",
+      "tier": "spec-provisional",
+      "note": "Hardware D-215. No value change."
+    },
+    "hardware_catalog.comm_systems.dte_sband_lowgain.downlink_kbps": {
+      "source": "Team estimate. 2 Mbps direct-to-Earth S-band via a low-gain (omnidirectional) antenna from the lunar surface to Earth is optimistic — typical DTE S-band omni rates range from ~10 kbps (Lunar Flashlight heritage) to ~100 kbps. Achieving 2 Mbps DTE would in practice require at least a medium-gain antenna. No open document gives this rate for a true low-gain DTE lunar S-band link; the game value is a simplified 'backup-link' estimate.",
+      "tier": "game-rule",
+      "note": "Hardware D-215. No value change."
+    },
+    "hardware_catalog.power_masts.mast_10m_vsat.mass_kg": {
+      "source": "Team estimate. NASA TechPort project 116305 (VSAT, Langley reference design) gives a 10 kW delivered-power goal (provenance already nasa-doc for rated_power_w, D-208) but does not state a system mass. 320 kg is a rounded team estimate for a 10 m telescoping mast carrying the solar array, deployment mechanism, control electronics, and cabling needed to supply 10 kW at the South Pole. No open document gives this value.",
+      "tier": "game-rule",
+      "note": "Hardware D-216. No value change."
+    },
+    "hardware_catalog.science_instruments.ndl.mass_kg": {
+      "source": "Team estimate. NASA LaRC's Navigation Doppler Lidar (NDL): the miniaturized TRL-6/7 sensor head developed for Artemis is on the order of 2–4 kg per LaRC development work; the earlier ALHAT-era NDL was ~25 kg. The game value of 15 kg represents a notional full GNC navigation package (sensor head + electronics box + mounting) at a mid-TRL scale. No open document gives 15 kg for the NDL or any variant.",
+      "tier": "game-rule",
+      "note": "Hardware D-217. No value change."
+    },
+    "hardware_catalog.science_instruments.neutron_spec_radiometer.mass_kg": {
+      "source": "Team estimate. VIPER's Neutron Spectrometer System (NSNS) is ~1.6 kg (survey grade); LRO's LEND orbital neutron detector is ~7 kg. A combined neutron spectrometer + thermal radiometer instrument at landed surface-science fidelity is plausibly 10–20 kg. No open source gives 14 kg for this combination.",
+      "tier": "game-rule",
+      "note": "Hardware D-217. No value change."
+    },
+    "hardware_catalog.science_instruments.mass_spectrometer.mass_kg": {
+      "source": "Team estimate. VIPER's MSolo (mass spectrometer observing lunar operations) is ~2.5 kg; Europa Clipper MASPEX (magnetic-sector mass spectrometer, more capable) is ~8.1 kg (Brockwell et al. 2016). The game value of 7 kg falls in the mid-capability published range (2.5–8 kg) but is not taken from any specific lunar volatile mass spectrometer document.",
+      "tier": "game-rule",
+      "note": "Hardware D-217. No value change."
+    },
+    "hardware_catalog.launch_vehicles.lv_heavy.tli_capacity_kg": {
+      "source": "Team estimate, rounded to nearest 5,000 kg. Consistent with published Falcon Heavy (fully expendable) TLI capacity of ~13,200–16,800 kg depending on trajectory; no specific vehicle is modelled. Section-level provenance already notes these are rounded estimates.",
+      "tier": "game-rule",
+      "note": "Hardware D-218. No value change; section-level coverage confirmed adequate."
+    },
+    "hardware_catalog.cold_trap_logistics.hts_maglev_guideway.mass_kg": {
+      "source": "Team estimate inspired by NASA NIAC Phase I 2021 FLOAT concept (PI: Ethan Schaler, JPL). The FLOAT overview (nasa.gov/general/float-flexible-levitation-on-a-track/) gives payload capacity up to 33 kg/m² and system throughput but no published mass-per-km figure. 110 kg/km is a team estimate for a narrow multi-layer flexible-film guideway (pyrolytic graphite + EM propulsion + optional thin-film solar); no open NIAC Phase I or II report accessible to this review gives this value explicitly.",
+      "tier": "game-rule",
+      "note": "Hardware D-219. No value change."
+    },
+    "hardware_catalog.cold_trap_logistics.hts_maglev_guideway.max_slope_deg": {
+      "source": "Team estimate based on FLOAT concept design intent. No published FLOAT document gives a slope specification accessible to this review. 28° is an aspirational design target consistent with steep Shackleton crater-rim terrain; achievable slope depends on the balance between gravity component and diamagnetic levitation restoring force in lunar gravity (1.62 m/s²).",
+      "tier": "game-rule",
+      "note": "Hardware D-219. No value change."
+    },
+    "hardware_catalog.cold_trap_logistics.hts_maglev_guideway.reliability_365d": {
+      "source": "Team estimate. No lunar maglev system has been built or long-duration tested; no published reliability figure exists for FLOAT or any equivalent concept. 0.998 annual reliability (~1–2 failures per year on a large network) is an aspirational game-rule target used for the scoring model.",
+      "tier": "game-rule",
+      "note": "Hardware D-219. No value change."
     }
   }
 }
