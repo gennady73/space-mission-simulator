@@ -21,6 +21,7 @@ const DOCUMENT_CREDITS: Credit[] = [
   { title: 'FY26 Civil Space Shortfall Prioritization (NASA STMD)', href: 'https://www.nasa.gov/wp-content/uploads/2026/05/fy26-civil-space-shortfall-prioritization.pdf', detail: 'Shortfall IDs, ranks and need statements behind gate messages and badges.', status: 'used' },
   { title: 'Vertical Solar Array Technology (NASA TechPort project 116305)', href: 'https://www.nasa.gov/technology/nasa-industry-to-mature-vertical-solar-array-technologies-for-lunar-surface/', detail: 'The idea of tall vertical solar masts for polar sunlight.', status: 'used' },
   { title: 'NASA Systems Engineering Handbook (SP-2016-6105 Rev 2) and NPR 7120.5', href: 'https://www.nasa.gov/reference/systems-engineering-handbook/', detail: 'Life-cycle phases and review gates (MCR, SRR, PDR, CDR, PLAR).', status: 'used' },
+  { title: 'Basics of Space Flight (NASA JPL)', href: 'https://science.nasa.gov/learn/basics-of-space-flight/', detail: 'Fault protection and safing (ch. 11) behind the optional fault-protection choice; light time (ch. 1) behind the signal-delay question.', status: 'used' },
   { title: 'CubeSat 101 (NASA CSLI)', href: 'https://www.nasa.gov/wp-content/uploads/2017/03/nasa_csli_cubesat_101_508.pdf', detail: 'Plain-language mission concepts and subsystem lists.', status: 'used' },
 ];
 

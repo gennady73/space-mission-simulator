@@ -231,4 +231,65 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await note.locator('.sticky__close').click();
     await expect(page.locator('.console-panel .gate-error-banner')).toHaveCount(0);
   });
+
+  test('Hovering a choice previews its effect on the resource tiles, and leaving clears it', async ({ page }) => {
+    await passMcrAndSrr(page, 'btn-pad-pad_elevated_45deg', '800');
+    await page.click('#group-battery'); // one group open at a time (D-303): open the battery group
+    await pick(page, 'btn-battery-batt_liion_4kwh');
+    await page.click('#group-battery'); // the pick moved on to the next group; come back to hover a sibling
+    await page.hover('button#btn-battery-batt_liion_8kwh');
+    // A bigger pack: heavier and dearer, more shadow margin.
+    await expect(page.locator('#res-mass .delta.down')).toContainText('+');
+    await expect(page.locator('#res-power .delta.up')).toContainText('pts');
+    await expect(page.locator('#res-budget .delta.down')).toContainText('+$');
+    await page.mouse.move(0, 0);
+    await expect(page.locator('#res-mass .delta')).toHaveText('');
+  });
+
+  test('Your best: the first flight sets the score to beat, the next one is compared with it', async ({ page }) => {
+    await passMcrAndSrr(page, 'btn-pad-pad_elevated_45deg', '800');
+    await pick(page, 'btn-mast-mast_10m_vsat', 'btn-battery-batt_liion_8kwh', 'btn-comm-dte_xband', 'btn-storage-ssmm_128gb', 'btn-instrument-ndl');
+    await next(page);
+    await pick(page, 'btn-logistics-hts_maglev_guideway', 'btn-link-laser_power_beaming');
+    await next(page);
+    await skipFlight(page);
+    await expect(page.locator('#best-headline')).toContainText('score to beat');
+    await page.click('#btn-revise-design');
+    await expect(phase(page)).toHaveText('Phase C: Critical Design Review (CDR)');
+    await next(page);
+    await skipFlight(page);
+    await expect(page.locator('#debrief-best table.compare').first()).toContainText('Score');
+    await page.click('#btn-load-best');
+    await expect(phase(page)).toHaveText('Phase C: Critical Design Review (CDR)');
+    await expect(page.locator('#console-notice')).toContainText('best design is loaded');
+  });
+
+  test('A design saved as a file opens again from the menu', async ({ page }) => {
+    await start(page);
+    const file = {
+      format: 'space-mission-simulator/design', version: 1, createdAt: '2026-11-15T00:00:00Z', difficulty: 'engineer', seed: 1,
+      design: { selectedSite: 'shackleton_ridge', selectedLaunchVehicle: 'lv_medium_reusable', selectedInstruments: [] },
+    };
+    await page.click('#btn-menu');
+    await page.setInputFiles('#input-import-design', { name: 'design.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
+    await expect(page.locator('#console-notice')).toContainText('Design loaded');
+    await expect(page.locator('#select-site')).toHaveValue('shackleton_ridge'); // the site card's list (D-303)
+  });
+
+  test('Fault protection is an optional CDR choice that adds its mass, with a light-time quest beside it (D-039)', async ({ page }) => {
+    await passMcrAndSrr(page, 'btn-pad-pad_elevated_45deg', '800');
+    await pick(page, 'btn-mast-mast_10m_vsat', 'btn-battery-batt_liion_8kwh', 'btn-comm-dte_xband', 'btn-storage-ssmm_128gb');
+    await next(page);
+    await expect(phase(page)).toHaveText('Phase C: Critical Design Review (CDR)');
+    await page.click('#btn-quests'); // the quest list opens from its one-line row (D-303)
+    await expect(page.locator('button#btn-quest-quest_light_time')).toBeVisible();
+    await page.keyboard.press('Escape');
+    const mass = page.locator('#res-mass dd');
+    const before = await mass.innerText();
+    await page.check('#toggle-fault-protection');
+    await expect(mass).not.toHaveText(before);
+    await pick(page, 'btn-logistics-hts_maglev_guideway', 'btn-link-laser_power_beaming');
+    await next(page);
+    await expect(page.locator('#flight-playback')).toBeVisible();
+  });
 });

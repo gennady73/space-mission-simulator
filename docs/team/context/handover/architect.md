@@ -4,6 +4,35 @@ Newest block on top. One block per session. The Lead writes in `lead.md`, never 
 
 ---
 
+## 2026-11-15 ~15:40 IST · Architect (Claude, project thread for Andronis) · four more mission challenges (D-041)
+**Did**
+- Night survival, far-side radio telescope, Artemis crew support and commercial lander ride, as optional toggles on the Concept panel. Rules, values and measured scores: D-041.
+- Engine: `ResolvedDesign.challenges` and `.nightPower`, `isForcedNight`, `payloadMassKg`, new SRR and PDR reason codes, `SimulationResult.delayHours`. With every toggle off nothing changes (reference 816).
+
+**Verification:** `tsc --noEmit` clean · 80 unit tests pass (23 new in `tests/mission-challenges.spec.ts`) · build succeeds · played night + far side + crew together in Chromium from the toggles to the debrief, no page errors. The Playwright suite was not run.
+
+**For others**
+- Hardware: review every value in `mission_challenges` (all game rules).
+- Media: review the challenge texts in the constants.
+- Lead: new ids `#toggle-challenge-<id>`, `#btn-nightpower-<id>` for BUILD-PLAN section 6. The commercial lander delay has no effect on the score unless ice prospecting is also on. The far-side telescope's data fits the relay, so storage is not yet a hard choice there.
+
+---
+
+## 2026-11-15 ~15:25 IST · Architect (Claude, project thread for Andronis) · ice prospecting challenge (D-040)
+**Did**
+- Optional mission challenge on the Concept panel: the year is scored against a 6,000 kg water target. At CDR it opens a drill-string choice (1 m, 2 m, 3 m) and makes heater power above the minimum produce water. Details and measured scores: D-040.
+- Engine: `iceRateKgPerHour`, `iceTargetKg`, `ResolvedDesign.drillOption` and `.iceProspecting`; the drill string adds mass, cost and peak drill power. Constants: new `ice_prospecting` block with one provenance entry (game rule).
+- With the challenge off nothing changes (reference 816).
+
+**Verification:** `tsc --noEmit` clean · 57 unit tests pass (9 new in `tests/ice-prospecting.spec.ts`) · played in Chromium from the toggle to the debrief (3 m auger on the cable: 820, 6,894 kg of 6,000 kg), no page errors. The Playwright suite was not run.
+
+**For others**
+- Hardware: review every value in `ice_prospecting` (all game rules).
+- Media: review the challenge and drill-string texts in the constants and the two labels in `CockpitHUD.ts`.
+- Lead: BUILD-PLAN section 6 ids `#toggle-ice-prospecting`, `#btn-drill-<id>`, `#hint-thermal-extraction`. The 3 m auger on the cable currently beats every other challenge design at Shackleton; the cable's 12% snag risk is its only cost there, so the cable price or the auger's mass may want tuning.
+
+---
+
 ## 2026-11-15 ~00:30 IST · Architect (Claude, Architect instance) · full-screen mission console
 **Did** (four PRs: shell #14, panel #15, review modal #16, debrief overlay)
 - D-033 shell: `#app.console-host`, fixed 100dvh grid, no page scroll; top bar (title, MCR→FLY track, six compact resource tiles, Reference mission, menu with team/difficulty/export/share/About); viewport left ~60%, panel right ~40% and the only scroller; under 900 px the map (45vh) stacks over the panel; controls ≥ 40 px. New e2e: full mission at 1024×768 asserting `scrollHeight <= innerHeight` at every beat.

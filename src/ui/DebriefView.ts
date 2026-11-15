@@ -1,5 +1,6 @@
 import type { SimulationResult } from '../engine/SimulationClock';
-import type { EngineConstants, GateValidationResult, MissionScore, Phase } from '../models/Interfaces';
+import type { EngineConstants, GateValidationResult, MissionDesignExport, MissionScore, Phase } from '../models/Interfaces';
+import { designDifferences, type BestOutcome, type RunSummary } from './bestRuns';
 import { h, usdM } from './dom';
 import { renderPlaceholder } from './GraphicPlaceholderView';
 import { DESIGN_PHASES } from './DesignFlow';
@@ -12,12 +13,17 @@ export interface Debrief {
   gates: Partial<Record<Phase, GateValidationResult>>;
   costUSD: number;
   budgetUSD: number;
+  /** Water target when the run flew the ice prospecting challenge (D-040); absent otherwise. */
+  waterTargetKg?: number;
+  /** Personal best at this difficulty; absent for the reference mission. */
+  best?: BestOutcome & { run: RunSummary; mine: MissionDesignExport; difficultyLabel: string };
 }
 
 export interface DebriefActions {
   revise(): void;
   exportJson(): void;
   copyShareLink(): void;
+  loadDesign(design: MissionDesignExport, where: Phase): void;
 }
 
 /**
@@ -83,7 +89,7 @@ export function renderDebrief(c: EngineConstants, d: Debrief, actions: DebriefAc
     renderGateBanner(d.plar),
     h('dl', { class: 'tiles' },
       tile('Reviews passed', `${score.gatesPassed} of 5`),
-      tile('Water ice assayed', `${Math.round(r.iceKg).toLocaleString('en-US')} kg`),
+      tile(d.waterTargetKg ? 'Water against the challenge target' : 'Water ice assayed', `${Math.round(r.iceKg).toLocaleString('en-US')} kg${d.waterTargetKg ? ` of ${d.waterTargetKg.toLocaleString('en-US')} kg` : ''}`),
       tile('Operating time', `${r.uptimeHours} of ${hours} h`),
       tile('Science data delivered', `${(score.dataCompleteness * 100).toFixed(0)}%`),
       tile('Lowest battery charge', `${r.minSoCPercent.toFixed(0)}%`),
@@ -111,6 +117,59 @@ export function renderDebrief(c: EngineConstants, d: Debrief, actions: DebriefAc
     h('details', {}, h('summary', {}, 'Raw result'), raw),
   );
 
+  const compare = bestPanel(c, d, actions);
+  if (compare) flight.prepend(compare);
   box.append(summary, flight);
+  return box;
+}
+
+/**
+ * "Your best" (UI review items 5 and 7): this run against the best one flown at this difficulty
+ * in this browser, side by side, with the design choices that differ. A first flight sets the target.
+ */
+function bestPanel(c: EngineConstants, d: Debrief, actions: DebriefActions): HTMLElement | null {
+  const b = d.best;
+  if (!b) return null;
+  const box = h('section', { id: 'debrief-best', class: 'debrief-best', 'aria-label': 'Compare with your best' });
+  const level = b.difficultyLabel;
+  if (!b.previous) {
+    box.append(h('h3', {}, `Your best on ${level}`),
+      h('p', { id: 'best-headline' }, `First flight on ${level}: ${b.run.score} is the score to beat. Improve the design and fly again.`));
+    return box;
+  }
+  const p = b.previous;
+  const diffs = designDifferences(c, b.mine.design, p.design.design);
+  box.append(h('h3', {}, b.isNew ? `New best on ${level}!` : `Your best on ${level}`),
+    h('p', { id: 'best-headline' }, b.isNew
+      ? `${b.run.score}, up from ${p.score}. Here is what changed against your previous best.`
+      : b.run.score === p.score ? `You matched your best of ${p.score}. Change a choice and try to beat it.`
+        : `Your best is ${p.score}; this run scored ${b.run.score}. Here is how they differ.`));
+  const other = b.isNew ? 'Previous best' : 'Your best';
+  const row = (label: string, mine: string, theirs: string, better: boolean | null) =>
+    h('tr', { class: better === null ? '' : better ? 'better' : 'worse' }, h('th', { scope: 'row' }, label), h('td', {}, mine), h('td', {}, theirs));
+  const cmp = (a: number, z: number, higherIsBetter: boolean) => (a === z ? null : (a > z) === higherIsBetter);
+  const kgText = (v: number) => `${Math.round(v).toLocaleString('en-US')} kg`;
+  const pctText = (v: number) => `${(v * 100).toFixed(0)}%`;
+  const fate = (r: RunSummary) => (r.lostDay == null ? 'whole year' : `lost on day ${r.lostDay}`);
+  box.append(h('table', { class: 'compare' },
+    h('thead', {}, h('tr', {}, h('th', {}, ''), h('th', { scope: 'col' }, 'This run'), h('th', { scope: 'col' }, other))),
+    h('tbody', {},
+      row('Score', String(b.run.score), String(p.score), cmp(b.run.score, p.score, true)),
+      row('Outpost', fate(b.run), fate(p), cmp(b.run.uptimeHours, p.uptimeHours, true)),
+      row('Water ice', kgText(b.run.iceKg), kgText(p.iceKg), cmp(Math.round(b.run.iceKg), Math.round(p.iceKg), true)),
+      row('Data delivered', pctText(b.run.dataCompleteness), pctText(p.dataCompleteness), cmp(Math.round(b.run.dataCompleteness * 100), Math.round(p.dataCompleteness * 100), true)),
+      row('Lowest battery', `${b.run.minSoCPercent.toFixed(0)}%`, `${p.minSoCPercent.toFixed(0)}%`, cmp(Math.round(b.run.minSoCPercent), Math.round(p.minSoCPercent), true)),
+      row('Cost', usdM(b.run.costUSD), usdM(p.costUSD), cmp(b.run.costUSD, p.costUSD, false)),
+    )));
+  box.append(diffs.length
+    ? h('table', { class: 'compare compare-design', id: 'best-differences' },
+      h('thead', {}, h('tr', {}, h('th', {}, 'Choice'), h('th', { scope: 'col' }, 'This run'), h('th', { scope: 'col' }, other))),
+      h('tbody', {}, ...diffs.map((x) => h('tr', {}, h('th', { scope: 'row' }, x.label), h('td', {}, x.mine), h('td', {}, x.best)))))
+    : h('p', { class: 'hint' }, b.run.score === p.score ? 'Same design choices as your best.' : 'Same design choices; the difference comes from the year\u2019s random events.'));
+  if (!b.isNew) {
+    const load = h('button', { id: 'btn-load-best', type: 'button', class: 'secondary' }, 'Load your best design');
+    load.addEventListener('click', () => actions.loadDesign(p.design, 'CDR'));
+    box.append(load);
+  }
   return box;
 }
