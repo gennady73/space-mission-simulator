@@ -194,15 +194,15 @@
       "latitude_deg": -86.6,
       "longitude_deg": 77.0,
       "slope_deg": 12.3,
-      "illumination_fraction": 0.898,
+      "illumination_fraction": 0.4,
       "max_shadow_h": 72,
       "solar_elevation_mean_deg": 2.662,
       "earth_elevation_mean_deg": 2.17,
-      "earth_visibility_fraction": 0.58,
+      "earth_visibility_fraction": 0.48,
       "distance_to_cold_trap_km": 2.0,
       "max_route_slope_deg": 18.0,
       "ambient_cold_trap_temperature_k": 41.0,
-      "description": "Close to a large cold trap, but the slope is above the 10 degree touchdown limit."
+      "description": "Close to a large cold trap, but the rim is steep (above the 10 degree touchdown limit) and sunlit only about 40% of the time: the measured values, and a deliberate hard no for the Concept review."
     }
   },
   "trajectories": {
@@ -895,7 +895,7 @@
       "tier": "game-rule"
     },
     "site_catalog": {
-      "source": "Game-rule site set, checked against NASA data on 2026-11-15: PGDA product 69 average illumination and Earth visibility (Mazarico et al. 2011, 60 m) and the Diviner polar resource product (Paige, UCLA). The measured values at and near each catalog point are tabulated in docs/team/context/ILLUMINATION-CHECK.md. Where the game value differs (notably faustini_rim illumination 0.90 vs <=0.40 measured nearby; de_gerlache_rim 0.89 vs 0.75; haworth_floor earth_visibility 0.20 vs 0.00; cold-trap temperatures of 38-45 K match Diviner annual averages inside the large PSRs, not the warmer near-site maxima), the game keeps a simplified, balanced value on purpose",
+      "source": "Game-rule site set, checked against NASA data on 2026-11-15: PGDA product 69 average illumination and Earth visibility (Mazarico et al. 2011, 60 m) and the Diviner polar resource product (Paige, UCLA). The measured values at and near each catalog point are tabulated in docs/team/context/ILLUMINATION-CHECK.md. Where the game value differs (notably faustini_rim illumination 0.90 vs <=0.40 measured nearby; de_gerlache_rim 0.89 vs 0.75; haworth_floor earth_visibility 0.20 vs 0.00; cold-trap temperatures of 38-45 K match Diviner annual averages inside the large PSRs, not the warmer near-site maxima), the game keeps a simplified, balanced value on purpose. Exception: faustini_rim now carries the measured values at its point (sunlit 0.40, Earth visible 0.48, PGDA-69, D-119) because the Concept review rejects it for slope either way. shackleton_ridge solar_elevation_mean_deg 2.696 is an effective elevation over the visible horizon of a ridge about 1.9 km above the datum (a smooth sphere at 89.45 S allows 2.09 deg; the ridge lowers the horizon by up to about 2.7 deg), tuned so the model gives the documented ~54 h of darkness; to be recalibrated from JPL Horizons",
       "tier": "game-rule",
       "note": "Kept playable rather than strictly measured (D-114). The map, by contrast, draws the measured NASA data; lat/lon are approximate site positions (D-104)"
     },
