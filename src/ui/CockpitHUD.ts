@@ -77,24 +77,59 @@ let advanceFrom: string | null = null;
 /** Element to focus after the next render: the header of a group that was just opened, for keyboard players. */
 let pendingFocusId: string | null = null;
 
-interface Group { category: string; title: string; selected: string | string[] | null; build: (open: boolean) => HTMLElement }
+/** `optional` groups (challenges, fault protection) never open by themselves: the player opens them. */
+interface Group { category: string; title: string; selected: string | string[] | null; optional?: boolean; build: (open: boolean) => HTMLElement }
 const hasChoice = (g: Group): boolean => (Array.isArray(g.selected) ? g.selected.length > 0 : g.selected !== null);
+const needsChoice = (g: Group): boolean => !g.optional && !hasChoice(g);
 
 /**
- * One decision group open at a time (D-303). When a stage opens, the first group without a choice is open
- * (all collapsed when every group has one). After a pick, the next group after it that still needs a choice
- * opens, else the next one in order; a multi-choice group stays open. Nothing here touches the state.
+ * One decision group open at a time (D-303). When a stage opens, the first required group without a choice
+ * is open (all collapsed when every one has a choice). After a pick, the next required group after it that
+ * still needs a choice opens, else the next required one in order; a multi-choice group stays open.
+ * Nothing here touches the state.
  */
 function renderGroups(phase: Phase, groups: Group[]): HTMLElement[] {
   if (!openGroup || openGroup.phase !== phase) {
-    openGroup = { phase, category: groups.find((g) => !hasChoice(g))?.category ?? null };
+    openGroup = { phase, category: groups.find(needsChoice)?.category ?? null };
   } else if (advanceFrom) {
     const after = groups.slice(groups.findIndex((g) => g.category === advanceFrom) + 1);
-    const next = after.find((g) => !hasChoice(g)) ?? after[0];
+    const next = after.find(needsChoice) ?? after.find((g) => !g.optional);
     if (next) { openGroup = { phase, category: next.category }; pendingFocusId = `group-${next.category}`; }
   }
   advanceFrom = null;
   return groups.map((g) => g.build(openGroup?.category === g.category));
+}
+
+/**
+ * Collapsible group shell (D-303): a header button (aria-expanded, aria-controls) with the title, the chosen
+ * names or "not chosen", and a chevron; the body is hidden when closed but stays in the DOM. The header always
+ * works, even for a locked seat, because reading is always allowed.
+ */
+function collapsible(title: string, category: string, chosen: string[], lock: string | null, open: boolean, body: HTMLElement): HTMLElement {
+  const headId = `group-${category}`;
+  body.id = `group-${category}-body`;
+  body.hidden = !open;
+  const head = h('button', { type: 'button', id: headId, class: 'group-head', 'aria-expanded': String(open), 'aria-controls': body.id },
+    h('span', { class: 'group-title' }, lock ? `${title} · decided by ${lock}` : title),
+    h('span', { class: chosen.length ? 'group-choice' : 'group-choice group-choice--none' }, chosen.length ? chosen.join(', ') : 'not chosen'),
+    h('span', { class: 'group-chevron', 'aria-hidden': 'true' }));
+  const section = h('section', { class: `choice-group choice-group--collapsible${lock ? ' locked' : ''}`, role: 'group', 'aria-labelledby': headId }, head, body);
+  head.addEventListener('click', () => {
+    const willOpen = head.getAttribute('aria-expanded') !== 'true';
+    for (const g of document.querySelectorAll<HTMLElement>('.console-panel .choice-group--collapsible')) {
+      const on = willOpen && g === section;
+      g.querySelector('.group-head')?.setAttribute('aria-expanded', String(on));
+      const rows = g.querySelector<HTMLElement>('.choices');
+      if (rows) rows.hidden = !on;
+    }
+    if (openGroup) openGroup = { ...openGroup, category: willOpen ? category : null };
+  });
+  return section;
+}
+
+/** A checkbox option as one row (D-303): the box and its name in a label, the "i" beside it. The box keeps its id. */
+function toggleRow(box: HTMLInputElement, name: string, info: HTMLElement): HTMLElement {
+  return h('div', { class: 'choice-row' }, h('label', { class: 'choice choice--toggle' }, box, h('span', { class: 'choice-name' }, name)), info);
 }
 
 function group<T extends Entry>(
@@ -122,13 +157,7 @@ function choices<T extends Entry>(
   const picked = (id: string) => (Array.isArray(selected) ? selected.includes(id) : selected === id);
   const items = Object.values(table);
   const chosen = items.filter((i) => picked(i.id)).map((i) => i.name);
-  const headId = `group-${category}`;
-  const bodyId = `group-${category}-body`;
-  const head = h('button', { type: 'button', id: headId, class: 'group-head', 'aria-expanded': String(open), 'aria-controls': bodyId },
-    h('span', { class: 'group-title' }, lock ? `${title} · decided by ${lock}` : title),
-    h('span', { class: chosen.length ? 'group-choice' : 'group-choice group-choice--none' }, chosen.length ? chosen.join(', ') : 'not chosen'),
-    h('span', { class: 'group-chevron', 'aria-hidden': 'true' }));
-  const body = h('div', { id: bodyId, class: 'choices', ...(open ? {} : { hidden: '' }) });
+  const body = h('div', { class: 'choices' });
   for (const item of items) {
     const select = h('button', { id: `btn-${category}-${item.id}`, type: 'button', class: 'choice', 'aria-pressed': String(picked(item.id)), ...(lock ? { disabled: '' } : {}) },
       h('span', { class: 'choice-name' }, item.name));
@@ -142,18 +171,7 @@ function choices<T extends Entry>(
     const info = infoButton(item.name, () => [h('strong', {}, item.name), h('span', { class: 'stats' }, detail(item)), item.description && h('p', {}, item.description)]);
     body.append(h('div', { class: 'choice-row' }, select, info));
   }
-  const section = h('section', { class: `choice-group choice-group--collapsible${lock ? ' locked' : ''}`, role: 'group', 'aria-labelledby': headId }, head, body);
-  head.addEventListener('click', () => {
-    const willOpen = head.getAttribute('aria-expanded') !== 'true';
-    for (const g of document.querySelectorAll<HTMLElement>('.console-panel .choice-group--collapsible')) {
-      const on = willOpen && g === section;
-      g.querySelector('.group-head')?.setAttribute('aria-expanded', String(on));
-      const rows = g.querySelector<HTMLElement>('.choices');
-      if (rows) rows.hidden = !on;
-    }
-    if (openGroup) openGroup = { ...openGroup, category: willOpen ? category : null };
-  });
-  return section;
+  return collapsible(title, category, chosen, lock, open, body);
 }
 
 function numberField(id: string, label: string, value: string, step: string, onInput: (v: string) => void, lock: string | null = null): HTMLElement {
@@ -217,9 +235,10 @@ function phasePanel(view: CockpitView, a: CockpitActions): HTMLElement {
     objective.addEventListener('change', () => a.update({ missionObjective: objective.value || null }));
     box.append(
       h('label', { class: 'field wide' }, 'Mission objective: what must this outpost achieve? ', objective),
-      iceProspectingToggle(c, s, a, lock('mission objective')),
       // The site is picked on the map (D-303); the hover preview (D-037) has no card to sit on here.
       siteCard(c, s, a, lock('landing site')),
+      // Optional challenges (D-040, D-041) as one collapsed group: rows with an "i", never open by themselves.
+      ...renderGroups('MCR', [challengeGroup(c, s, a, lock('mission objective'))]),
     );
   } else if (s.currentPhase === 'SRR') {
     box.append(
@@ -287,28 +306,36 @@ function phasePanel(view: CockpitView, a: CockpitActions): HTMLElement {
 }
 
 /**
- * D-040: optional mission challenge. The same outpost is scored against a water target, which opens the
- * drill-string choice at CDR and makes heater power above the minimum worth its battery.
+ * Optional mission challenges as one collapsible group (D-303 on D-040 / D-041): ice prospecting (scored
+ * against a water target, opens the drill-string choice at CDR) and the further challenges, each of which
+ * changes one rule of the same outpost; they can be combined. One row per challenge, its description behind
+ * the "i". The checkboxes keep their ids: #toggle-ice-prospecting, #toggle-challenge-<id>.
  */
-function iceProspectingToggle(c: EngineConstants, s: SimulationState, a: CockpitActions, lock: string | null): HTMLElement {
+function challengeGroup(c: EngineConstants, s: SimulationState, a: CockpitActions, lock: string | null): Group {
   const ip = c.ice_prospecting;
-  const box = h('input', { id: 'toggle-ice-prospecting', type: 'checkbox', ...(s.iceProspecting ? { checked: '' } : {}), ...(lock ? { disabled: '' } : {}) });
-  box.addEventListener('change', () => a.update(box.checked
-    ? { iceProspecting: true, missionObjective: ip.objective }
-    : { iceProspecting: false, selectedDrillOption: null, ...(s.missionObjective === ip.objective ? { missionObjective: null } : {}) }));
-  return h('fieldset', { class: lock ? 'choice-group locked' : 'choice-group' },
-    h('legend', {}, lock ? `Mission challenge (optional) · decided by ${lock}` : 'Mission challenge (optional)'),
-    h('label', { class: 'toggle' }, box, ` ${ip.name} · target ${kg(ip.water_target_kg)} of water`),
-    h('p', { class: 'hint' }, ip.description),
-    ...Object.values(c.mission_challenges).flatMap((ch) => {
-      // D-041: further challenges; each changes one rule of the same outpost, and they can be combined.
-      const t = h('input', { id: `toggle-challenge-${ch.id}`, type: 'checkbox', ...(s.missionChallenges.includes(ch.id) ? { checked: '' } : {}), ...(lock ? { disabled: '' } : {}) });
-      t.addEventListener('change', () => a.update({
-        missionChallenges: toggle(s.missionChallenges, ch.id) as MissionChallengeId[],
-        ...(ch.id === 'night_survival' && !t.checked ? { selectedNightPower: null } : {}),
-      }));
-      return [h('label', { class: 'toggle' }, t, ` ${ch.name}`), h('p', { class: 'hint' }, ch.description)];
-    }));
+  const challenges = Object.values(c.mission_challenges);
+  const chosen = [...(s.iceProspecting ? [ip.name] : []), ...challenges.filter((ch) => s.missionChallenges.includes(ch.id)).map((ch) => ch.name)];
+  const checkbox = (id: string, checked: boolean) => h('input', { id, type: 'checkbox', ...(checked ? { checked: '' } : {}), ...(lock ? { disabled: '' } : {}) });
+  return {
+    category: 'challenge', title: 'Mission challenge (optional)', selected: chosen, optional: true,
+    build: (open) => {
+      const body = h('div', { class: 'choices' });
+      const ice = checkbox('toggle-ice-prospecting', s.iceProspecting);
+      ice.addEventListener('change', () => a.update(ice.checked
+        ? { iceProspecting: true, missionObjective: ip.objective }
+        : { iceProspecting: false, selectedDrillOption: null, ...(s.missionObjective === ip.objective ? { missionObjective: null } : {}) }));
+      body.append(toggleRow(ice, ip.name, infoButton(ip.name, () => [h('strong', {}, ip.name), h('span', { class: 'stats' }, `Target ${kg(ip.water_target_kg)} of water`), h('p', {}, ip.description)])));
+      for (const ch of challenges) {
+        const t = checkbox(`toggle-challenge-${ch.id}`, s.missionChallenges.includes(ch.id));
+        t.addEventListener('change', () => a.update({
+          missionChallenges: toggle(s.missionChallenges, ch.id) as MissionChallengeId[],
+          ...(ch.id === 'night_survival' && !t.checked ? { selectedNightPower: null } : {}),
+        }));
+        body.append(toggleRow(t, ch.name, infoButton(ch.name, () => [h('strong', {}, ch.name), h('p', {}, ch.description)])));
+      }
+      return collapsible('Mission challenge', 'challenge', chosen, lock, open, body);
+    },
+  };
 }
 
 /**
@@ -319,10 +346,12 @@ function faultProtectionToggle(c: EngineConstants, s: SimulationState, a: Cockpi
   const fp = c.fault_protection;
   const box = h('input', { id: 'toggle-fault-protection', type: 'checkbox', ...(s.faultProtection ? { checked: '' } : {}), ...(lock ? { disabled: '' } : {}) });
   box.addEventListener('change', () => a.update({ faultProtection: box.checked }));
+  // One row with an "i" (D-303): the stats stay on the row, the explanation opens on demand.
+  const info = infoButton(fp.name, () => [h('strong', {}, fp.name), h('span', { class: 'stats' }, `${kg(fp.mass_kg)} · ${usdM(fp.cost_usd)}`),
+    h('p', {}, `${fp.description} Recovery needs ${fp.recovery_link_hours} hours of Earth contact and works ${pct(fp.recovery_probability)} of the time.`)]);
   return h('fieldset', { class: lock ? 'choice-group locked' : 'choice-group' },
     h('legend', {}, lock ? `Fault protection (optional) · decided by ${lock}` : 'Fault protection (optional)'),
-    h('label', { class: 'toggle' }, box, ` ${fp.name} · ${kg(fp.mass_kg)} · ${usdM(fp.cost_usd)}`),
-    h('p', { class: 'hint' }, `${fp.description} Recovery needs ${fp.recovery_link_hours} hours of Earth contact and works ${pct(fp.recovery_probability)} of the time.`));
+    h('div', { class: 'choices choices--single' }, toggleRow(box, `${fp.name} · ${kg(fp.mass_kg)} · ${usdM(fp.cost_usd)}`, info)));
 }
 
 const isNumber = (text: string): boolean => Number.isFinite(Number.parseFloat(text));
