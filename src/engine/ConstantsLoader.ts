@@ -10,7 +10,7 @@ export const CONSTANTS_URL = './config/engine-constants.json';
 const REQUIRED_TOP_LEVEL: Array<keyof EngineConstants> = [
   'schema_version', 'system_constants', 'simulation', 'difficulty_levels', 'team_roles',
   'site_catalog', 'trajectories', 'hardware_catalog', 'graphic_placeholders',
-  'side_quests', 'pre_stage_questions', 'shortfall_badges', 'provenance',
+  'side_quests', 'pre_stage_questions', 'shortfall_badges', 'provenance', 'ice_prospecting',
 ];
 
 const REQUIRED_CATALOGS = [
@@ -35,6 +35,11 @@ export function validateConstants(raw: unknown): string[] {
     const entries = hw[cat] as Record<string, { id?: string }> | undefined;
     if (!entries || Object.keys(entries).length === 0) { problems.push(`hardware_catalog.${cat} is empty`); continue; }
     for (const [key, v] of Object.entries(entries)) if (v.id !== key) problems.push(`hardware_catalog.${cat}.${key}.id must equal its key`);
+  }
+  const ip = c.ice_prospecting as { default_drill_option?: string; drill_options?: Record<string, { id?: string }> } | undefined;
+  if (ip) {
+    for (const [key, v] of Object.entries(ip.drill_options ?? {})) if (v.id !== key) problems.push(`ice_prospecting.drill_options.${key}.id must equal its key`);
+    if (!ip.default_drill_option || !ip.drill_options?.[ip.default_drill_option]) problems.push('ice_prospecting.default_drill_option must name one of its drill_options');
   }
   const sc = c.system_constants as Record<string, unknown> | undefined;
   if (sc) for (const k of ['minimum_power_margin_pdr', 'minimum_mass_margin_pdr']) {

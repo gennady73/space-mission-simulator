@@ -95,7 +95,10 @@ function startConsole(app: HTMLElement, c: EngineConstants, mode: StartMode): vo
     const costUSD = totalCostUSD(design);
     const plar = validatePLAR(result.uptimeHours, c.simulation.mission_duration_h, costUSD, s.allocatedBudgetUSD);
     const score = scoreMission(c, design, result, passed, s.allocatedBudgetUSD);
-    debrief = { result: { ...result, telemetry: sampled }, score, plar, gates, costUSD, budgetUSD: s.allocatedBudgetUSD };
+    debrief = {
+      result: { ...result, telemetry: sampled }, score, plar, gates, costUSD, budgetUSD: s.allocatedBudgetUSD,
+      ...(design.iceProspecting ? { waterTargetKg: c.ice_prospecting.water_target_kg } : {}),
+    };
     // Personal best per difficulty (UI review items 5 and 7). The reference mission is not the player's run.
     if (playerRun) {
       const mine = store.exportDesign();

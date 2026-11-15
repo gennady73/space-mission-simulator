@@ -17,6 +17,7 @@ export function initialState(c: EngineConstants, difficulty: Difficulty = 'engin
     selectedLaunchVehicle: null, selectedLaunchpad: null, padDistanceM: null, selectedMast: null,
     selectedBattery: null, selectedComm: null, selectedStorage: null, selectedLogistics: null,
     selectedUtilityLink: null, drillHeaterW: c.simulation.min_drill_heater_w, selectedInstruments: ['trident_drill'], faultProtection: false,
+    iceProspecting: false, selectedDrillOption: null,
     allocatedBudgetUSD: budget, remainingBudgetUSD: budget, totalWetMassKg: 0,
     telemetryLog: [], gateResults: {}, userHypotheses: {}, completedQuests: [],
   };
@@ -30,6 +31,7 @@ export const REFERENCE_DESIGN: MissionDesignExport['design'] = {
   selectedMast: 'mast_10m_vsat', selectedBattery: 'batt_liion_8kwh', selectedComm: 'dte_xband',
   selectedStorage: 'ssmm_128gb', selectedLogistics: 'hts_maglev_guideway', selectedUtilityLink: 'laser_power_beaming',
   drillHeaterW: 35, selectedInstruments: ['trident_drill', 'ndl', 'neutron_spec_radiometer'], userHypotheses: {},
+  iceProspecting: false, selectedDrillOption: null,
 };
 
 export type Listener = (s: SimulationState) => void;
@@ -61,6 +63,7 @@ export class StateStore {
         padDistanceM: s.padDistanceM, selectedMast: s.selectedMast, selectedBattery: s.selectedBattery,
         selectedComm: s.selectedComm, selectedStorage: s.selectedStorage, selectedLogistics: s.selectedLogistics,
         selectedUtilityLink: s.selectedUtilityLink, drillHeaterW: s.drillHeaterW, faultProtection: s.faultProtection,
+        iceProspecting: s.iceProspecting, selectedDrillOption: s.selectedDrillOption,
         selectedInstruments: [...s.selectedInstruments], userHypotheses: { ...s.userHypotheses },
       },
     };
@@ -70,7 +73,7 @@ export class StateStore {
   importDesign(blob: unknown): void {
     const b = blob as Partial<MissionDesignExport>;
     if (b?.format !== 'space-mission-simulator/design' || b.version !== 1 || !b.design) throw new Error('Not a mission design file (v1).');
-    this.update({ ...b.design, difficulty: b.difficulty ?? this.state.difficulty, seed: b.seed ?? this.state.seed, gateResults: {}, telemetryLog: [] });
+    this.update({ iceProspecting: false, selectedDrillOption: null, ...b.design, difficulty: b.difficulty ?? this.state.difficulty, seed: b.seed ?? this.state.seed, gateResults: {}, telemetryLog: [] });
   }
 
   /** Share via URL hash (async team play / compare). */

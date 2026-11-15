@@ -1,7 +1,7 @@
 import type { EngineConstants, MissionScore, SubsystemTelemetry } from '../models/Interfaces';
 import { createPrng } from './Prng';
 import {
-  drillPeakW, hasLink, solarElevationDeg, solarPowerW, survivalLoadW,
+  drillPeakW, hasLink, iceRateKgPerHour, iceTargetKg, solarElevationDeg, solarPowerW, survivalLoadW,
   totalCostUSD, utilityLinkPower, type ResolvedDesign,
 } from './SubsystemEngines';
 import { validatePLAR } from './StageGateValidators';
@@ -16,6 +16,8 @@ import { validatePLAR } from './StageGateValidators';
  *  - Drill runs only when sunlit, battery ≥ drill_min_soc_percent, logistics alive, link delivers peak,
  *    and the drill heater is ≥ min_drill_heater_w (otherwise it is frozen).
  *  - Battery at 0 Wh => terminal brownout (mission ends).
+ *  - D-040: each drilling hour yields iceRateKgPerHour (drill string × assay rate + thermal extraction from heater
+ *    power above the minimum); the default string at the minimum heater gives exactly ice_assay_rate_kg_h.
  *  - D-039: a logistics failure is permanent, unless the design has fault protection: then it is safed, and
  *    after recovery_link_hours of Earth contact the ground team recovers it with recovery_probability.
  */
@@ -59,6 +61,7 @@ export function runMission(c: EngineConstants, r: ResolvedDesign, opt: Simulatio
   const drillKbps = r.instruments.filter((i) => i.extracts_ice).reduce((a, i) => a + i.data_rate_kbps, 0);
   const otherKbps = r.instruments.filter((i) => !i.extracts_ice).reduce((a, i) => a + i.data_rate_kbps, 0);
   const heaterOk = r.drillHeaterW >= s.min_drill_heater_w;
+  const iceRate = iceRateKgPerHour(c, r);
   const baseDust = opt.arraysScoured ? s.dust_transmission_scoured : s.dust_transmission_nominal;
   const synodicH = c.system_constants.synodic_month_days * 24;
   const constructionH = r.launchpad.construction_days * 24;
@@ -168,7 +171,7 @@ export function runMission(c: EngineConstants, r: ResolvedDesign, opt: Simulatio
     if (bufMb > bufCapMb) { droppedMb = bufMb - bufCapMb; dropMb += droppedMb; bufMb = bufCapMb; }
 
     // User segment
-    if (drilling) { ice += s.ice_assay_rate_kg_h; drillHours++; }
+    if (drilling) { ice += iceRate; drillHours++; }
 
     const soc = (eWh / capWh) * 100;
     minSoC = Math.min(minSoC, soc);
@@ -201,7 +204,7 @@ export function scoreMission(c: EngineConstants, r: ResolvedDesign, res: Simulat
   const s = c.simulation;
   const H = s.mission_duration_h;
   const completeness = res.dataGeneratedMb > 0 ? 1 - res.dataDroppedMb / res.dataGeneratedMb : 0;
-  const sScore = (res.iceKg / s.ice_score_normaliser_kg) * (res.uptimeHours / H) * completeness;
+  const sScore = (res.iceKg / iceTargetKg(c, r)) * (res.uptimeHours / H) * completeness;
   const maxSci = Object.values(c.hardware_catalog.science_instruments).reduce((a, i) => a + i.science_value, 0);
   const sciFactor = r.instruments.reduce((a, i) => a + i.science_value, 0) / maxSci;
   const cost = totalCostUSD(r);

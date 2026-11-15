@@ -12,6 +12,8 @@ export interface Debrief {
   gates: Partial<Record<Phase, GateValidationResult>>;
   costUSD: number;
   budgetUSD: number;
+  /** Water target when the run flew the ice prospecting challenge (D-040); absent otherwise. */
+  waterTargetKg?: number;
   /** Personal best at this difficulty; absent for the reference mission. */
   best?: BestOutcome & { run: RunSummary; mine: MissionDesignExport; difficultyLabel: string };
 }
@@ -77,7 +79,7 @@ export function renderDebrief(c: EngineConstants, d: Debrief, actions: DebriefAc
     renderGateBanner(d.plar),
     h('dl', { class: 'tiles' },
       tile('Reviews passed', `${score.gatesPassed} of 5`),
-      tile('Water ice assayed', `${Math.round(r.iceKg).toLocaleString('en-US')} kg`),
+      tile(d.waterTargetKg ? 'Water against the challenge target' : 'Water ice assayed', `${Math.round(r.iceKg).toLocaleString('en-US')} kg${d.waterTargetKg ? ` of ${d.waterTargetKg.toLocaleString('en-US')} kg` : ''}`),
       tile('Operating time', `${r.uptimeHours} of ${hours} h`),
       tile('Science data delivered', `${(score.dataCompleteness * 100).toFixed(0)}%`),
       tile('Lowest battery charge', `${r.minSoCPercent.toFixed(0)}%`),

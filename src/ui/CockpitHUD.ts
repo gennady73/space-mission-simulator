@@ -97,6 +97,7 @@ function phasePanel(view: CockpitView, a: CockpitActions): HTMLElement {
     objective.addEventListener('change', () => a.update({ missionObjective: objective.value || null }));
     box.append(
       h('label', { class: 'field wide' }, 'Mission objective: what must this outpost achieve? ', objective),
+      iceProspectingToggle(c, s, a, lock('mission objective')),
       choices('Landing site', 'site', c.site_catalog, s.selectedSite,
         (x) => `Slope ${x.slope_deg}° · Earth in view ${pct(x.earth_visibility_fraction)} of the time · sunlit ${pct(x.illumination_fraction)} · cold trap ${x.distance_to_cold_trap_km} km away`,
         (id) => a.update({ selectedSite: id }), lock('landing site'), pv('selectedSite')),
@@ -146,11 +147,32 @@ function phasePanel(view: CockpitView, a: CockpitActions): HTMLElement {
       choices('Power link to the drill', 'link', hw.utility_links, s.selectedUtilityLink,
         (x) => `Delivers ${pct(x.efficiency)} of ${x.source_power_w} W · ${x.max_range_km === null ? 'any distance' : `reaches ${x.max_range_km} km`} · ${pct(x.sever_probability)} chance of a break · ${kg(x.mass_kg)}${per(x.per_km)} · ${usdM(x.cost_usd)}${per(x.per_km)}`,
         (id) => a.update({ selectedUtilityLink: id }), lock('utility link'), pv('selectedUtilityLink')),
+      ...(s.iceProspecting ? [choices('Drill string (ice prospecting challenge)', 'drill', c.ice_prospecting.drill_options, s.selectedDrillOption ?? c.ice_prospecting.default_drill_option,
+        (x) => `Reaches ${x.depth_m} m · ${x.ice_yield_factor}× the ice per drilling hour · +${x.extra_peak_power_w} W at the drill · +${kg(x.mass_kg)} · +${usdM(x.cost_usd)}`,
+        (id) => a.update({ selectedDrillOption: id }), lock('heater power'), pv('selectedDrillOption'))] : []),
       numberField('input-drill-heater', 'Drill survival heater power (W)', view.heaterDraft, '5', a.setHeaterDraft, lock('heater power')),
+      ...(s.iceProspecting ? [h('p', { class: 'hint', id: 'hint-thermal-extraction' },
+        `Every watt above the ${c.simulation.min_drill_heater_w} W minimum sublimates more ice into the collector (${pct(c.ice_prospecting.heater_extraction_efficiency)} of it is used), but the heater also runs through every shadow, so it needs battery.`)] : []),
       faultProtectionToggle(c, s, a, lock('heater power')),
     );
   }
   return box;
+}
+
+/**
+ * D-040: optional mission challenge. The same outpost is scored against a water target, which opens the
+ * drill-string choice at CDR and makes heater power above the minimum worth its battery.
+ */
+function iceProspectingToggle(c: EngineConstants, s: SimulationState, a: CockpitActions, lock: string | null): HTMLElement {
+  const ip = c.ice_prospecting;
+  const box = h('input', { id: 'toggle-ice-prospecting', type: 'checkbox', ...(s.iceProspecting ? { checked: '' } : {}), ...(lock ? { disabled: '' } : {}) });
+  box.addEventListener('change', () => a.update(box.checked
+    ? { iceProspecting: true, missionObjective: ip.objective }
+    : { iceProspecting: false, selectedDrillOption: null, ...(s.missionObjective === ip.objective ? { missionObjective: null } : {}) }));
+  return h('fieldset', { class: lock ? 'choice-group locked' : 'choice-group' },
+    h('legend', {}, lock ? `Mission challenge (optional) · decided by ${lock}` : 'Mission challenge (optional)'),
+    h('label', { class: 'toggle' }, box, ` ${ip.name} · target ${kg(ip.water_target_kg)} of water`),
+    h('p', { class: 'hint' }, ip.description));
 }
 
 /**
