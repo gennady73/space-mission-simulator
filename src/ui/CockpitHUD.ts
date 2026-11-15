@@ -172,6 +172,24 @@ function objectives(view: CockpitView): HTMLElement {
 
 const formatShadow = (hours: number): string => (!Number.isFinite(hours) ? 'permanent' : hours > 0 ? `${Math.round(hours)} h` : 'none');
 
+/**
+ * Comms as a share of what the instruments make, not a raw rate: "sends all the data, 900× headroom"
+ * reads as a trade-off, while "2,680,244 Mb per day" did not (UI review 11-15).
+ */
+function commsCell(
+  cell: (name: string, value: string, note: string, ok: boolean) => HTMLElement,
+  downlinkMbPerDay: number,
+  generatedMbPerDay: number,
+): HTMLElement {
+  if (generatedMbPerDay <= 0) return cell('Comms', 'nothing to send', 'add an instrument to make data', true);
+  const ratio = downlinkMbPerDay / generatedMbPerDay;
+  if (ratio >= 1) {
+    const headroom = ratio >= 10 ? `${Math.round(ratio).toLocaleString('en-US')}×` : `${ratio.toFixed(1)}×`;
+    return cell('Comms', 'sends all the data', `link has ${headroom} the daily data`, true);
+  }
+  return cell('Comms', `sends ${pct(ratio)} of the data`, 'the rest waits in storage or is lost', false);
+}
+
 function resourceBar(view: CockpitView): HTMLElement {
   const { constants: c, state: s } = view;
   const { design } = provisionalDesign(c, s);
@@ -186,23 +204,23 @@ function resourceBar(view: CockpitView): HTMLElement {
     cell('Power', `${pct(l.powerMarginFraction)} shadow margin`, `review needs ${pct(minMargin)}`, l.powerMarginFraction >= minMargin),
     cell('Budget', `${usdM(l.totalCostUSD)} of ${usdM(l.budgetUSD)}`, `${usdM(l.budgetUSD - l.totalCostUSD)} left`, l.totalCostUSD <= l.budgetUSD),
     cell('Data', `${Math.round(l.dataGeneratedMbPerDay).toLocaleString('en-US')} Mb per day`, 'made by the instruments', true),
-    cell('Comms', `${Math.round(l.downlinkMbPerDay).toLocaleString('en-US')} Mb per day`, 'can be sent home on average', l.downlinkMbPerDay >= l.dataGeneratedMbPerDay),
+    commsCell(cell, l.downlinkMbPerDay, l.dataGeneratedMbPerDay),
     cell('Time', `${Math.round(l.missionDurationDays)} days`, 'cruise plus one year of operations', true),
   ));
   return bar;
 }
 
 /** Track label per phase: the last stop is the flight itself, with its debrief. */
-const TRACK_LABEL: Record<Phase, string> = { MCR: 'MCR', SRR: 'SRR', PDR: 'PDR', CDR: 'CDR', PLAR: 'FLY' };
+const TRACK_LABEL: Record<Phase, string> = { MCR: 'MCR', SRR: 'SRR', PDR: 'PDR', CDR: 'CDR', PLAR: 'OPS' };
 /** Plain word for what the player decides at each stop; the NASA acronym stays beside it (Lead, play-test 11-15). */
-const TRACK_NAME: Record<Phase, string> = { MCR: 'Concept', SRR: 'Landing', PDR: 'Power', CDR: 'Ice', PLAR: 'Flight' };
+const TRACK_NAME: Record<Phase, string> = { MCR: 'Concept', SRR: 'Landing', PDR: 'Power', CDR: 'Ice', PLAR: 'Operations' };
 /** Hover / long-press hint: what the review is, in one sentence. Wording belongs to Media. */
 const TRACK_HINT: Record<Phase, string> = {
   MCR: 'Mission Concept Review (MCR): is the idea sound? Choose the goal and the landing site.',
   SRR: 'System Requirements Review (SRR): can it get there and land safely? Choose the rocket, the route and the landing pad.',
   PDR: 'Preliminary Design Review (PDR): will it survive the lunar night? Choose power, battery, radio and data storage.',
   CDR: 'Critical Design Review (CDR): can it reach the ice? Choose how to get into the cold trap and how to power the drill.',
-  PLAR: 'Flight (FLY): the outpost runs for one year, then the Post-Launch Assessment Review (PLAR) scores it.',
+  PLAR: 'Operations (OPS): the outpost works for one year on the Moon, then the Post-Launch Assessment Review (PLAR) scores it.',
 };
 
 /**

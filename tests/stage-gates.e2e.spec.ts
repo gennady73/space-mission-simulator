@@ -13,6 +13,8 @@ const start = async (page: Page) => { await page.goto('/#mission'); };
 /** The launch now replays the year in the flight playback (D-105); skip it to reach the debrief. */
 const skipFlight = async (page: Page) => {
   await expect(page.locator('#flight-playback')).toBeVisible();
+  // The year's charts draw in the replay itself (D-120).
+  await expect(page.locator('#flight-playback .fchart')).toHaveCount(5);
   await page.click('#btn-flight-skip');
   await page.click('#btn-flight-debrief');
 };
@@ -76,7 +78,6 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await skipFlight(page);
     await expect(phase(page)).toHaveText('Phase D/E: Post-Launch Assessment Review (PLAR)');
     await expect(page.locator('.gate-pass-banner')).toContainText('Mission successful');
-    await expect(page.locator('.strip-chart')).toHaveCount(4);
     // Same design as the reference button, so it must reach the same result.
     await expect(page.locator('#reference-output')).toContainText('"uptimeHours": 8760');
   });

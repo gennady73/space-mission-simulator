@@ -5,6 +5,7 @@ import { runMission } from '../src/engine/SimulationClock';
 import { provisionalDesign } from '../src/ui/DesignFlow';
 import { initialState, REFERENCE_DESIGN } from '../src/models/StateStore';
 import { playbackEndHour, playbackEvents, rowAt } from '../src/ui/map/flightModel';
+import { nightSpans } from '../src/ui/map/flightCharts';
 
 const c = parseConstants(JSON.parse(readFileSync('public/config/engine-constants.json', 'utf8')));
 
@@ -34,5 +35,23 @@ describe('flight playback model (D-105)', () => {
   it('stops the replay at the failure hour', () => {
     const fake = { failureHour: 1234, events: [], telemetry: [] } as never;
     expect(playbackEndHour(c, fake)).toBe(1234);
+  });
+});
+
+describe('live year charts (D-120)', () => {
+  it('groups eclipse hours into night bands, one per lunar night of the reference year', () => {
+    const state = { ...initialState(c), ...REFERENCE_DESIGN };
+    const { design } = provisionalDesign(c, state);
+    const r = runMission(c, design!, { seed: state.seed, randomEvents: false, logEveryHours: 1 });
+    const spans = nightSpans(r.telemetry);
+    expect(spans.length).toBeGreaterThan(0);
+    const eclipseHours = r.telemetry.filter((t) => t.isEclipse).length;
+    expect(spans.reduce((a, [from, to]) => a + (to - from), 0)).toBe(eclipseHours);
+    for (const [from, to] of spans) expect(to).toBeGreaterThan(from);
+  });
+
+  it('closes a night that is still running when the telemetry ends', () => {
+    const rows = [{ hour: 0, isEclipse: false }, { hour: 1, isEclipse: true }, { hour: 2, isEclipse: true }] as never;
+    expect(nightSpans(rows)).toEqual([[1, 3]]);
   });
 });

@@ -153,7 +153,7 @@ export class Terrain {
   coldByte(x: number, y: number): number {
     let edge: number | null = null;
     for (const g of this.psr) {
-      const f = g.fraction(x, y);
+      const f = g.soft(x, y);
       if (f !== null) { edge = f; break; }
     }
     let ice = false;
@@ -240,6 +240,10 @@ const PENUMBRA = Math.tan(0.53 * DEG);
 const GRAIN_STRENGTH = 0.38;
 /** Diviner annual maximum at which the cold-trap tint saturates (display only, D-118). */
 const COLD_FLOOR_K = 30;
+/** Cold-trap strength (0-127) at which sunlight is fully gone: the weakest full-coverage strength, 0.35 x 127. */
+const SHADOW_FULL_AT = 44;
+/** Extra soft-light relief contrast on permanently shadowed ground (display only, D-120). */
+const SHADOW_RELIEF_LIFT = 1.6;
 
 /** Slope in degrees at grid cell (i, j), over a two-cell baseline so the overlay stays calm (D-118). */
 export function slopeAt(g: Grid, i: number, j: number): number {
@@ -271,7 +275,9 @@ export function shade(g: Grid, sunAzDeg: number, sunElDeg: number, layers: Shade
       const dzdx = (xr - xl) / (2 * kmPerPx), dzdy = (yu - yd) / (2 * kmPerPx);
       const nl = Math.hypot(dzdx, dzdy, 1);
       const nx = -dzdx / nl, ny = -dzdy / nl, nz = 1 / nl;
-      let lit = sunUp && !psr[k] ? Math.max(0, nx * sx + ny * sy + nz * sz) : 0;
+      // Permanent shadow fades in across its feathered rim instead of switching off at one cell (D-120).
+      const dark = psr[k] ? Math.min(1, (psr[k] & 127) / SHADOW_FULL_AT) : 0;
+      let lit = sunUp && dark < 1 ? Math.max(0, nx * sx + ny * sy + nz * sz) * (1 - dark) : 0;
       if (lit > 0) {
         // March toward the sun. The Sun is a disc, not a point: terrain that only grazes the ray
         // gives a partial shadow (penumbra), which also hides the pixel grid along shadow edges.
@@ -290,7 +296,8 @@ export function shade(g: Grid, sunAzDeg: number, sunElDeg: number, layers: Shade
       }
       // earthshine-like ambient from the top (Earth side) keeps shadowed relief readable
       const relief = Math.max(0, 0.5 + 0.5 * (ny * 0.7 - nx * 0.3) * 4); // fixed soft light so dark relief still reads
-      const amb = 0.035 + 0.07 * Math.min(1, relief);
+      // inside permanent shadow the soft light is all there is, so it is lifted to keep the floor's relief legible (D-120)
+      const amb = 0.035 + 0.07 * Math.min(1, relief) * (1 + SHADOW_RELIEF_LIFT * dark);
       // Sub-resolution regolith texture as brightness, not height (D-117): height bumps under a
       // 2-3 degree sun cast hundred-metre streaks, albedo speckle does not.
       const wx = g.view.cx + (i + 0.5 - w / 2) * kmPerPx;
