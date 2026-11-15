@@ -108,14 +108,19 @@ export class PsrGrid {
    * interpolated and cut at one half, so shadow pockets have smooth outlines instead of 60 m blocks.
    */
   at(x: number, y: number): boolean | null {
+    const f = this.fraction(x, y);
+    return f === null ? null : f >= 0.5;
+  }
+
+  /** Bilinear mask value in [0, 1] (soft shadow edge), or null outside the mask (D-118). */
+  fraction(x: number, y: number): number | null {
     const fc = (x - this.x0) / this.cell - 0.5, fr = (this.y0 - y) / this.cell - 0.5;
     if (fc < -0.5 || fr < -0.5 || fc > this.n - 0.5 || fr > this.n - 0.5) return null;
     const n = this.n, m = this.mask;
     const c0 = Math.max(0, Math.min(n - 2, Math.floor(fc))), r0 = Math.max(0, Math.min(n - 2, Math.floor(fr)));
     const tc = Math.max(0, Math.min(1, fc - c0)), tr = Math.max(0, Math.min(1, fr - r0));
-    const v = (m[r0 * n + c0] * (1 - tc) + m[r0 * n + c0 + 1] * tc) * (1 - tr)
+    return (m[r0 * n + c0] * (1 - tc) + m[r0 * n + c0 + 1] * tc) * (1 - tr)
       + (m[(r0 + 1) * n + c0] * (1 - tc) + m[(r0 + 1) * n + c0 + 1] * tc) * tr;
-    return v >= 0.5;
   }
 }
 
