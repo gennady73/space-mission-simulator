@@ -1,5 +1,5 @@
 import type {
-  BatteryConfig, CommConfig, DataStorageConfig, EngineConstants, FaultProtectionConfig, InstrumentConfig, LandingSite,
+  BatteryConfig, CommConfig, DataStorageConfig, DrillOptionConfig, EngineConstants, FaultProtectionConfig, InstrumentConfig, LandingSite,
   LaunchVehicle, LaunchpadConfig, LogisticsConfig, PowerMastConfig, ResourceLedger,
   SimulationState, SpacecraftBusConfig, TrajectoryOption, UtilityLinkConfig,
 } from '../models/Interfaces';
@@ -22,13 +22,17 @@ export interface ResolvedDesign {
   drillHeaterW: number;
   /** D-039: onboard fault protection and safing chosen at CDR, or null without it. */
   faultProtection: FaultProtectionConfig | null;
+  /** D-040: the drill string (the default string when none was chosen). */
+  drillOption: DrillOptionConfig;
+  /** D-040: true when the design flies the ice prospecting challenge (scored against its water target). */
+  iceProspecting: boolean;
 }
 
 type Design = Pick<SimulationState,
   'selectedSite' | 'selectedTrajectory' | 'selectedBus' | 'selectedLaunchVehicle' | 'selectedLaunchpad'
   | 'padDistanceM' | 'selectedMast' | 'selectedBattery' | 'selectedComm' | 'selectedStorage'
   | 'selectedLogistics' | 'selectedUtilityLink' | 'selectedInstruments' | 'drillHeaterW'>
-  & Partial<Pick<SimulationState, 'faultProtection'>>;
+  & Partial<Pick<SimulationState, 'faultProtection' | 'iceProspecting' | 'selectedDrillOption'>>;
 
 /** Returns the resolved design, or the list of choices still missing. */
 export function resolveDesign(c: EngineConstants, d: Design): ResolvedDesign | { missing: string[] } {
@@ -52,12 +56,15 @@ export function resolveDesign(c: EngineConstants, d: Design): ResolvedDesign | {
   const needsColdTrapAccess = site ? site.distance_to_cold_trap_km > 0 : true;
   const logistics = needsColdTrapAccess ? pick(hw.cold_trap_logistics, d.selectedLogistics, 'cold-trap logistics') ?? null : null;
   const utilityLink = needsColdTrapAccess ? pick(hw.utility_links, d.selectedUtilityLink, 'utility power link') ?? null : null;
+  const ip = c.ice_prospecting;
+  const drillOption = ip.drill_options[d.selectedDrillOption ?? ip.default_drill_option] ?? ip.drill_options[ip.default_drill_option];
   const instruments = d.selectedInstruments.map((id) => hw.science_instruments[id]).filter(Boolean);
   if (missing.length) return { missing };
   return {
     site: site!, trajectory: trajectory!, bus: bus!, launchVehicle: launchVehicle!, launchpad: launchpad!,
     padDistanceM: d.padDistanceM!, mast: mast!, battery: battery!, comm: comm!, storage: storage!,
     logistics, utilityLink, instruments, drillHeaterW: d.drillHeaterW, faultProtection: d.faultProtection ? c.fault_protection : null,
+    drillOption, iceProspecting: d.iceProspecting === true,
   };
 }
 
@@ -76,7 +83,7 @@ export function dryMassKg(r: ResolvedDesign): number {
     + (r.logistics ? perKm(r.logistics, r.logistics.mass_kg, km) : 0)
     + (r.utilityLink ? perKm(r.utilityLink, r.utilityLink.mass_kg, km) : 0)
     + r.instruments.reduce((s, i) => s + i.mass_kg, 0)
-    + (r.faultProtection?.mass_kg ?? 0);
+    + (r.faultProtection?.mass_kg ?? 0) + r.drillOption.mass_kg;
 }
 
 /**
@@ -99,7 +106,7 @@ export function totalCostUSD(r: ResolvedDesign): number {
     + (r.logistics ? perKm(r.logistics, r.logistics.cost_usd, km) : 0)
     + (r.utilityLink ? perKm(r.utilityLink, r.utilityLink.cost_usd, km) : 0)
     + r.instruments.reduce((s, i) => s + i.cost_usd, 0)
-    + (r.faultProtection?.cost_usd ?? 0);
+    + (r.faultProtection?.cost_usd ?? 0) + r.drillOption.cost_usd;
 }
 
 // ---------------------------------------------------------------------------
@@ -181,8 +188,28 @@ export function utilityLinkPower(r: ResolvedDesign, dustTransmittance = 1): { de
   return { deliveredW: l.source_power_w * l.efficiency * t, drawW: l.source_power_w };
 }
 
+/** Peak drill load; the chosen drill string adds its own power when there is a drill at all (D-040). */
 export function drillPeakW(r: ResolvedDesign): number {
-  return r.instruments.filter((i) => i.extracts_ice).reduce((s, i) => s + i.peak_power_w, 0);
+  const base = r.instruments.filter((i) => i.extracts_ice).reduce((s, i) => s + i.peak_power_w, 0);
+  return base > 0 ? base + r.drillOption.extra_peak_power_w : base;
+}
+
+/**
+ * D-040: water ice gained per drilling hour. The drill string scales the assay rate, and heater power
+ * above the survival minimum sublimates ice into the collector: W × s/h ÷ latent heat × efficiency.
+ * With the default string and the minimum heater this is exactly simulation.ice_assay_rate_kg_h.
+ */
+export function iceRateKgPerHour(c: EngineConstants, r: ResolvedDesign): number {
+  const s = c.simulation;
+  const joulesPerKg = c.system_constants.ice_sublimation_energy_mj_kg * 1e6;
+  const extraHeaterW = Math.max(0, r.drillHeaterW - s.min_drill_heater_w);
+  const thermalKgH = ((extraHeaterW * 3600) / joulesPerKg) * c.ice_prospecting.heater_extraction_efficiency;
+  return s.ice_assay_rate_kg_h * r.drillOption.ice_yield_factor + thermalKgH;
+}
+
+/** Ice that earns the full science score: the challenge's water target when it is on, else the assay normaliser. */
+export function iceTargetKg(c: EngineConstants, r: ResolvedDesign): number {
+  return r.iceProspecting ? c.ice_prospecting.water_target_kg : c.simulation.ice_score_normaliser_kg;
 }
 
 // ---------------------------------------------------------------------------

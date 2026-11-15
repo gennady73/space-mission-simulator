@@ -44,6 +44,8 @@ export interface EngineConstants {
   map_features: MapFeatures;
   /** Optional CDR choice: onboard fault protection and safing (D-039). */
   fault_protection: FaultProtectionConfig;
+  /** Optional mission challenge: ice prospecting with a water target, drill strings and thermal extraction (D-040). */
+  ice_prospecting: IceProspectingConfig;
   hardware_catalog: {
     spacecraft_bus: Record<string, SpacecraftBusConfig>;
     launch_vehicles: Record<string, LaunchVehicle>;
@@ -333,6 +335,39 @@ export interface FaultProtectionConfig {
   recovery_probability: number;
 }
 
+/** One drill string for the ice prospecting challenge (D-040). Mass, cost and power are added to the drill instrument. */
+export interface DrillOptionConfig {
+  id: string;
+  name: string;
+  depth_m: number;
+  mass_kg: number;
+  cost_usd: number;
+  /** Added to the drill's peak power, so it must also fit through the power link. */
+  extra_peak_power_w: number;
+  /** Multiplier on simulation.ice_assay_rate_kg_h: deeper strings reach better-preserved ice. */
+  ice_yield_factor: number;
+  description: string;
+}
+
+/**
+ * Ice prospecting challenge (D-040): the same outpost, flown against a water target instead of the
+ * assay normaliser. Water comes from the drill string (mass, cost, power) and from heater power above
+ * the survival minimum, which sublimates ice into the collector but must also run through every shadow.
+ */
+export interface IceProspectingConfig {
+  name: string;
+  description: string;
+  /** Mission objective text set when the player takes the challenge. */
+  objective: string;
+  /** Water that earns the full science score when the challenge is on. */
+  water_target_kg: number;
+  /** Share of heater power above simulation.min_drill_heater_w that ends up sublimating collected ice. */
+  heater_extraction_efficiency: number;
+  /** The drill string used when the player has not chosen one (must reproduce the plain drill). */
+  default_drill_option: string;
+  drill_options: Record<string, DrillOptionConfig>;
+}
+
 export interface PreStageQuestion {
   phase: Phase;
   question: string;
@@ -378,6 +413,10 @@ export interface SimulationState {
   selectedInstruments: string[];
   /** CDR option: onboard fault protection and safing (D-039). */
   faultProtection: boolean;
+  /** MCR option: fly the ice prospecting challenge, scored against its water target (D-040). */
+  iceProspecting: boolean;
+  /** CDR choice in the ice prospecting challenge: which drill string (D-040). Null = the default string. */
+  selectedDrillOption: string | null;
 
   allocatedBudgetUSD: number;
   remainingBudgetUSD: number;
@@ -456,7 +495,7 @@ export interface MissionDesignExport {
     | 'selectedLaunchVehicle' | 'selectedLaunchpad' | 'padDistanceM' | 'selectedMast'
     | 'selectedBattery' | 'selectedComm' | 'selectedStorage' | 'selectedLogistics'
     | 'selectedUtilityLink' | 'drillHeaterW' | 'selectedInstruments' | 'userHypotheses'
-  > & Partial<Pick<SimulationState, 'faultProtection'>>;
+  > & Partial<Pick<SimulationState, 'faultProtection' | 'iceProspecting' | 'selectedDrillOption'>>;
   /** Optional override of constants (REQ-007 difficulty / physics import). */
   constantsOverride?: Partial<EngineConstants>;
 }
