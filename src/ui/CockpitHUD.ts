@@ -167,6 +167,24 @@ function objectives(view: CockpitView): HTMLElement {
 
 const formatShadow = (hours: number): string => (!Number.isFinite(hours) ? 'permanent' : hours > 0 ? `${Math.round(hours)} h` : 'none');
 
+/**
+ * Comms as a share of what the instruments make, not a raw rate: "sends all the data, 900× headroom"
+ * reads as a trade-off, while "2,680,244 Mb per day" did not (UI review 11-15).
+ */
+function commsCell(
+  cell: (name: string, value: string, note: string, ok: boolean) => HTMLElement,
+  downlinkMbPerDay: number,
+  generatedMbPerDay: number,
+): HTMLElement {
+  if (generatedMbPerDay <= 0) return cell('Comms', 'nothing to send', 'add an instrument to make data', true);
+  const ratio = downlinkMbPerDay / generatedMbPerDay;
+  if (ratio >= 1) {
+    const headroom = ratio >= 10 ? `${Math.round(ratio).toLocaleString('en-US')}×` : `${ratio.toFixed(1)}×`;
+    return cell('Comms', 'sends all the data', `link has ${headroom} the daily data`, true);
+  }
+  return cell('Comms', `sends ${pct(ratio)} of the data`, 'the rest waits in storage or is lost', false);
+}
+
 function resourceBar(view: CockpitView): HTMLElement {
   const { constants: c, state: s } = view;
   const { design } = provisionalDesign(c, s);
@@ -181,7 +199,7 @@ function resourceBar(view: CockpitView): HTMLElement {
     cell('Power', `${pct(l.powerMarginFraction)} shadow margin`, `review needs ${pct(minMargin)}`, l.powerMarginFraction >= minMargin),
     cell('Budget', `${usdM(l.totalCostUSD)} of ${usdM(l.budgetUSD)}`, `${usdM(l.budgetUSD - l.totalCostUSD)} left`, l.totalCostUSD <= l.budgetUSD),
     cell('Data', `${Math.round(l.dataGeneratedMbPerDay).toLocaleString('en-US')} Mb per day`, 'made by the instruments', true),
-    cell('Comms', `${Math.round(l.downlinkMbPerDay).toLocaleString('en-US')} Mb per day`, 'can be sent home on average', l.downlinkMbPerDay >= l.dataGeneratedMbPerDay),
+    commsCell(cell, l.downlinkMbPerDay, l.dataGeneratedMbPerDay),
     cell('Time', `${Math.round(l.missionDurationDays)} days`, 'cruise plus one year of operations', true),
   ));
   return bar;
