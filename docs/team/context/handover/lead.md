@@ -4,6 +4,19 @@ Newest block on top. One block per session. The Architect writes in `architect.m
 
 ---
 
+## 2026-11-15 ~12:55 IST · Lead (Claude, Lead instance) · Sunday morning: name, landing page, map quality, Operations stage
+**Did**
+- Renamed the product to *Lighthouse on the Trail*; reviewed and merged Media's landing page (#30 via #31) with fonts, false-claim and double-start fixes.
+- Map quality: viewport-sized rasters, soft shadows, albedo grain (D-117); continuous slope and cold-trap gradients (D-118); smooth permanent-shadow outlines instead of 60 m squares (D-120).
+- Hardware's pendings decided with the Lead (D-119): Faustini takes measured values; laser budget unchanged; Shackleton Sun elevation kept and explained. Replay speeds 1x / 2x / 4x, default 1x.
+- Last stage rebuilt and renamed **Operations (OPS)** (D-120): square map plus five live year charts with night bands; charts left the debrief. DOM ids unchanged.
+
+**Verification:** `tsc --noEmit` clean; 39 unit tests pass in Claude's runner; a scripted play-through at 1024x768 (landing → four reviews → operations → debrief → revise) ran without page errors. **Playwright e2e not run by Claude** — the Lead runs it before merging.
+
+**Next (Lead):** see CONTEXT "Open / blocking": gameplay for Power and Ice stages until the 16:00 freeze, then demo re-record, slides, rehearsal; pitch 17:00; final submission by 22:00.
+
+---
+
 ## 2026-11-15 ~01:45 IST · Lead (Claude, Lead instance) · solo: game shell after the play-test
 **Did**
 - Diviner cold traps (D-109), PGDA-69 site check for Hardware (D-110), 60 m permanent-shadow close-ups (D-111), map gameplay + soft shadows + Sun glyph (D-112), stage pills with plain names (#25), tap-to-place mast (#26).

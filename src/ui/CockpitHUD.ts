@@ -188,16 +188,16 @@ function resourceBar(view: CockpitView): HTMLElement {
 }
 
 /** Track label per phase: the last stop is the flight itself, with its debrief. */
-const TRACK_LABEL: Record<Phase, string> = { MCR: 'MCR', SRR: 'SRR', PDR: 'PDR', CDR: 'CDR', PLAR: 'FLY' };
+const TRACK_LABEL: Record<Phase, string> = { MCR: 'MCR', SRR: 'SRR', PDR: 'PDR', CDR: 'CDR', PLAR: 'OPS' };
 /** Plain word for what the player decides at each stop; the NASA acronym stays beside it (Lead, play-test 11-15). */
-const TRACK_NAME: Record<Phase, string> = { MCR: 'Concept', SRR: 'Landing', PDR: 'Power', CDR: 'Ice', PLAR: 'Flight' };
+const TRACK_NAME: Record<Phase, string> = { MCR: 'Concept', SRR: 'Landing', PDR: 'Power', CDR: 'Ice', PLAR: 'Operations' };
 /** Hover / long-press hint: what the review is, in one sentence. Wording belongs to Media. */
 const TRACK_HINT: Record<Phase, string> = {
   MCR: 'Mission Concept Review (MCR): is the idea sound? Choose the goal and the landing site.',
   SRR: 'System Requirements Review (SRR): can it get there and land safely? Choose the rocket, the route and the landing pad.',
   PDR: 'Preliminary Design Review (PDR): will it survive the lunar night? Choose power, battery, radio and data storage.',
   CDR: 'Critical Design Review (CDR): can it reach the ice? Choose how to get into the cold trap and how to power the drill.',
-  PLAR: 'Flight (FLY): the outpost runs for one year, then the Post-Launch Assessment Review (PLAR) scores it.',
+  PLAR: 'Operations (OPS): the outpost works for one year on the Moon, then the Post-Launch Assessment Review (PLAR) scores it.',
 };
 
 /**
