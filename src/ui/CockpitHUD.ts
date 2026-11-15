@@ -58,25 +58,81 @@ function infoButton(name: string, build: () => Child[]): HTMLElement {
   return button;
 }
 
+/** Which decision group is open: presentation only, one per stage, recomputed when the stage changes (D-303). */
+let openGroup: { phase: Phase; category: string | null } | null = null;
+/** Category just picked in a single-choice group: the next render opens the next group that still needs a choice. */
+let advanceFrom: string | null = null;
+/** Element to focus after the next render: the header of a group that was just opened, for keyboard players. */
+let pendingFocusId: string | null = null;
+
+interface Group { category: string; title: string; selected: string | string[] | null; build: (open: boolean) => HTMLElement }
+const hasChoice = (g: Group): boolean => (Array.isArray(g.selected) ? g.selected.length > 0 : g.selected !== null);
+
+/**
+ * One decision group open at a time (D-303). When a stage opens, the first group without a choice is open
+ * (all collapsed when every group has one). After a pick, the next group after it that still needs a choice
+ * opens, else the next one in order; a multi-choice group stays open. Nothing here touches the state.
+ */
+function renderGroups(phase: Phase, groups: Group[]): HTMLElement[] {
+  if (!openGroup || openGroup.phase !== phase) {
+    openGroup = { phase, category: groups.find((g) => !hasChoice(g))?.category ?? null };
+  } else if (advanceFrom) {
+    const after = groups.slice(groups.findIndex((g) => g.category === advanceFrom) + 1);
+    const next = after.find((g) => !hasChoice(g)) ?? after[0];
+    if (next) { openGroup = { phase, category: next.category }; pendingFocusId = `group-${next.category}`; }
+  }
+  advanceFrom = null;
+  return groups.map((g) => g.build(openGroup?.category === g.category));
+}
+
+function group<T extends Entry>(
+  title: string, category: string, table: Record<string, T>, selected: string | string[] | null,
+  detail: (item: T) => string, onPick: (id: string) => void, lock: string | null = null,
+): Group {
+  return { category, title, selected, build: (open) => choices(title, category, table, selected, detail, onPick, lock, open) };
+}
+
 /**
  * One option = one row (D-303): the name on one line, and an "i" button whose popover holds the name,
  * the stats line and the description. Two sibling buttons in a row wrapper, never a button in a button.
  * The select button keeps its id `btn-<category>-<id>`, its handler and aria-pressed (the e2e contract).
+ * The group is collapsible: its header is a button with aria-expanded; the header always works, even when
+ * the seat is locked, because reading is always allowed. Collapsed rows stay in the DOM, hidden.
  */
 function choices<T extends Entry>(
   title: string, category: string, table: Record<string, T>, selected: string | string[] | null,
-  detail: (item: T) => string, onPick: (id: string) => void, lock: string | null = null,
+  detail: (item: T) => string, onPick: (id: string) => void, lock: string | null, open: boolean,
 ): HTMLElement {
+  const multi = Array.isArray(selected);
   const picked = (id: string) => (Array.isArray(selected) ? selected.includes(id) : selected === id);
-  const grid = h('div', { class: 'choices' });
-  for (const item of Object.values(table)) {
+  const items = Object.values(table);
+  const chosen = items.filter((i) => picked(i.id)).map((i) => i.name);
+  const headId = `group-${category}`;
+  const bodyId = `group-${category}-body`;
+  const head = h('button', { type: 'button', id: headId, class: 'group-head', 'aria-expanded': String(open), 'aria-controls': bodyId },
+    h('span', { class: 'group-title' }, lock ? `${title} · decided by ${lock}` : title),
+    h('span', { class: chosen.length ? 'group-choice' : 'group-choice group-choice--none' }, chosen.length ? chosen.join(', ') : 'not chosen'),
+    h('span', { class: 'group-chevron', 'aria-hidden': 'true' }));
+  const body = h('div', { id: bodyId, class: 'choices', ...(open ? {} : { hidden: '' }) });
+  for (const item of items) {
     const select = h('button', { id: `btn-${category}-${item.id}`, type: 'button', class: 'choice', 'aria-pressed': String(picked(item.id)), ...(lock ? { disabled: '' } : {}) },
       h('span', { class: 'choice-name' }, item.name));
-    select.addEventListener('click', () => onPick(item.id));
+    select.addEventListener('click', () => { if (!multi) advanceFrom = category; onPick(item.id); });
     const info = infoButton(item.name, () => [h('strong', {}, item.name), h('span', { class: 'stats' }, detail(item)), item.description && h('p', {}, item.description)]);
-    grid.append(h('div', { class: 'choice-row' }, select, info));
+    body.append(h('div', { class: 'choice-row' }, select, info));
   }
-  return h('fieldset', { class: lock ? 'choice-group locked' : 'choice-group' }, h('legend', {}, lock ? `${title} · decided by ${lock}` : title), grid);
+  const section = h('section', { class: `choice-group choice-group--collapsible${lock ? ' locked' : ''}`, role: 'group', 'aria-labelledby': headId }, head, body);
+  head.addEventListener('click', () => {
+    const willOpen = head.getAttribute('aria-expanded') !== 'true';
+    for (const g of document.querySelectorAll<HTMLElement>('.console-panel .choice-group--collapsible')) {
+      const on = willOpen && g === section;
+      g.querySelector('.group-head')?.setAttribute('aria-expanded', String(on));
+      const rows = g.querySelector<HTMLElement>('.choices');
+      if (rows) rows.hidden = !on;
+    }
+    if (openGroup) openGroup = { ...openGroup, category: willOpen ? category : null };
+  });
+  return section;
 }
 
 function numberField(id: string, label: string, value: string, step: string, onInput: (v: string) => void, lock: string | null = null): HTMLElement {
@@ -143,15 +199,17 @@ function phasePanel(view: CockpitView, a: CockpitActions): HTMLElement {
     );
   } else if (s.currentPhase === 'SRR') {
     box.append(
-      choices('Launch vehicle', 'lv', hw.launch_vehicles, s.selectedLaunchVehicle,
-        (x) => `${kg(x.tli_capacity_kg)} to the Moon · ${x.fairing_diameter_m} m fairing · ${usdM(x.cost_usd)}`,
-        (id) => a.update({ selectedLaunchVehicle: id }), lock('launch vehicle')),
-      choices('Transfer trajectory', 'trajectory', c.trajectories, s.selectedTrajectory,
-        (x) => `${x.cruise_days} days of cruise · landing needs ${x.descent_delta_v_m_s} m/s · ${usdM(x.extra_cost_usd)} extra`,
-        (id) => a.update({ selectedTrajectory: id }), lock('trajectory')),
-      choices('Landing pad', 'pad', hw.launchpads, s.selectedLaunchpad,
-        (x) => `${kg(x.mass_kg)} · ${usdM(x.cost_usd)} · must stand at least ${x.requires_standoff_distance_m} m from the solar mast`,
-        (id) => a.update({ selectedLaunchpad: id }), lock('landing pad')),
+      ...renderGroups('SRR', [
+        group('Launch vehicle', 'lv', hw.launch_vehicles, s.selectedLaunchVehicle,
+          (x) => `${kg(x.tli_capacity_kg)} to the Moon · ${x.fairing_diameter_m} m fairing · ${usdM(x.cost_usd)}`,
+          (id) => a.update({ selectedLaunchVehicle: id }), lock('launch vehicle')),
+        group('Transfer trajectory', 'trajectory', c.trajectories, s.selectedTrajectory,
+          (x) => `${x.cruise_days} days of cruise · landing needs ${x.descent_delta_v_m_s} m/s · ${usdM(x.extra_cost_usd)} extra`,
+          (id) => a.update({ selectedTrajectory: id }), lock('trajectory')),
+        group('Landing pad', 'pad', hw.launchpads, s.selectedLaunchpad,
+          (x) => `${kg(x.mass_kg)} · ${usdM(x.cost_usd)} · must stand at least ${x.requires_standoff_distance_m} m from the solar mast`,
+          (id) => a.update({ selectedLaunchpad: id }), lock('landing pad')),
+      ]),
       numberField('input-pad-distance', 'Distance from pad to solar mast (m)', view.padDistanceDraft, '50', (v) => {
         a.setPadDistanceDraft(v);
         const line = document.getElementById('objective-padDistanceM');
@@ -160,31 +218,33 @@ function phasePanel(view: CockpitView, a: CockpitActions): HTMLElement {
     );
   } else if (s.currentPhase === 'PDR') {
     const site = s.selectedSite ? c.site_catalog[s.selectedSite] : undefined;
-    box.append(
-      choices('Power mast', 'mast', hw.power_masts, s.selectedMast,
+    box.append(...renderGroups('PDR', [
+      group('Power mast', 'mast', hw.power_masts, s.selectedMast,
         (x) => `${x.rated_power_w.toLocaleString('en-US')} W in sunlight · works when the Sun is above ${x.cutoff_elevation_deg}°${site ? ` · longest shadow here ${formatShadow(shadowHoursForMast(c, site, x))}` : ''} · ${kg(x.mass_kg)} · ${usdM(x.cost_usd)}`,
         (id) => a.update({ selectedMast: id }), lock('power mast')),
-      choices('Energy storage', 'battery', hw.energy_storage, s.selectedBattery,
+      group('Energy storage', 'battery', hw.energy_storage, s.selectedBattery,
         (x) => `${x.capacity_kwh} kWh, ${pct(x.max_dod)} usable · ${kg(x.mass_kg)} · ${usdM(x.cost_usd)}`,
         (id) => a.update({ selectedBattery: id }), lock('battery')),
-      choices('Communications', 'comm', hw.comm_systems, s.selectedComm,
+      group('Communications', 'comm', hw.comm_systems, s.selectedComm,
         (x) => `${x.downlink_kbps.toLocaleString('en-US')} kbps · ${x.direct_to_earth ? 'needs Earth above the horizon' : `relay in view ${pct(x.relay_coverage_fraction ?? 0)} of the time`} · ${x.tx_power_w} W · ${kg(x.mass_kg)} · ${usdM(x.cost_usd)}`,
         (id) => a.update({ selectedComm: id }), lock('communications system')),
-      choices('Data storage', 'storage', hw.data_storage, s.selectedStorage,
+      group('Data storage', 'storage', hw.data_storage, s.selectedStorage,
         (x) => `${(x.capacity_mb / 1000).toLocaleString('en-US')} Gbit · ${x.power_w} W · ${kg(x.mass_kg)} · ${usdM(x.cost_usd)}`,
         (id) => a.update({ selectedStorage: id }), lock('data storage')),
-      choices('Science instruments (choose any)', 'instrument', hw.science_instruments, s.selectedInstruments,
+      group('Science instruments (choose any)', 'instrument', hw.science_instruments, s.selectedInstruments,
         (x) => `${x.peak_power_w} W peak · ${x.data_rate_kbps} kbps · ${kg(x.mass_kg)} · ${usdM(x.cost_usd)}`,
         (id) => a.update({ selectedInstruments: s.selectedInstruments.includes(id) ? s.selectedInstruments.filter((i) => i !== id) : [...s.selectedInstruments, id] }), lock('science instruments')),
-    );
+    ]));
   } else if (s.currentPhase === 'CDR') {
     box.append(
-      choices('Cold-trap logistics', 'logistics', hw.cold_trap_logistics, s.selectedLogistics,
-        (x) => `Climbs ${x.max_slope_deg}° · survives the year with ${pct(x.reliability_365d)} probability · heater ${x.survival_heater_w} W · ${kg(x.mass_kg)}${per(x.per_km)} · ${usdM(x.cost_usd)}${per(x.per_km)}`,
-        (id) => a.update({ selectedLogistics: id }), lock('cold-trap logistics')),
-      choices('Power link to the drill', 'link', hw.utility_links, s.selectedUtilityLink,
-        (x) => `Delivers ${pct(x.efficiency)} of ${x.source_power_w} W · ${x.max_range_km === null ? 'any distance' : `reaches ${x.max_range_km} km`} · ${pct(x.sever_probability)} chance of a break · ${kg(x.mass_kg)}${per(x.per_km)} · ${usdM(x.cost_usd)}${per(x.per_km)}`,
-        (id) => a.update({ selectedUtilityLink: id }), lock('utility link')),
+      ...renderGroups('CDR', [
+        group('Cold-trap logistics', 'logistics', hw.cold_trap_logistics, s.selectedLogistics,
+          (x) => `Climbs ${x.max_slope_deg}° · survives the year with ${pct(x.reliability_365d)} probability · heater ${x.survival_heater_w} W · ${kg(x.mass_kg)}${per(x.per_km)} · ${usdM(x.cost_usd)}${per(x.per_km)}`,
+          (id) => a.update({ selectedLogistics: id }), lock('cold-trap logistics')),
+        group('Power link to the drill', 'link', hw.utility_links, s.selectedUtilityLink,
+          (x) => `Delivers ${pct(x.efficiency)} of ${x.source_power_w} W · ${x.max_range_km === null ? 'any distance' : `reaches ${x.max_range_km} km`} · ${pct(x.sever_probability)} chance of a break · ${kg(x.mass_kg)}${per(x.per_km)} · ${usdM(x.cost_usd)}${per(x.per_km)}`,
+          (id) => a.update({ selectedUtilityLink: id }), lock('utility link')),
+      ]),
       numberField('input-drill-heater', 'Drill survival heater power (W)', view.heaterDraft, '5', a.setHeaterDraft, lock('heater power')),
     );
   }
@@ -382,4 +442,6 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
   // A choice re-renders the panel: keep the player's place in it. A new stage starts at its top.
   if (samePhase) panel.scrollTop = panelScroll;
   if (focusId && !view.review) document.getElementById(focusId)?.focus({ preventScroll: true });
+  // A pick collapsed its group: keep a keyboard player on the group that just opened (D-303).
+  if (pendingFocusId) { document.getElementById(pendingFocusId)?.focus({ preventScroll: true }); pendingFocusId = null; }
 }
