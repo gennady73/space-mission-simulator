@@ -8,6 +8,15 @@
 export type StarfieldMode = 'twinkle' | 'static' | 'off';
 export type HomeIcon = 'globe' | 'scales' | 'target';
 
+/** "How to play": five stages shown one at a time, then the tips as one more slide (D-043, D-305). */
+export interface HomeTutorial {
+  title: string;
+  intro: string;
+  steps: Array<{ tag: string; title: string; text: string }>;
+  tips_title: string;
+  tips: string[];
+}
+
 export interface UiConfig {
   schema_version: string;
   /** Placeholder until the team decides the name. Shown in the nav brand and the hero title. */
@@ -36,14 +45,19 @@ export interface UiConfig {
     /** Labels for the quieter ways in under the CTA; leave one out to hide it. */
     secondary?: { example?: string; watch?: string; team?: string };
     cards: Array<{ icon: HomeIcon; title: string; text: string }>;
-    /** "How to play" section under the cards; leave it out to hide it. */
-    tutorial?: {
-      title: string;
-      intro: string;
-      steps: Array<{ tag: string; title: string; text: string }>;
-      tips_title: string;
-      tips: string[];
+    /** Labels of the controls on the in-place panels (D-305). */
+    controls: {
+      back: string;
+      next: string;
+      skip: string;
+      /** The primary button on the last slide; does what START MISSION did before D-305. */
+      begin_mission: string;
+      back_to_home: string;
+      /** Screen-reader label of one step dot; `{n}` and `{total}` are filled in by the code. */
+      step_of: string;
     };
+    /** "How to play" panel behind START MISSION and the nav link; leave it out to skip straight to the console. */
+    tutorial?: HomeTutorial;
     narrator_line: string;
   };
 }

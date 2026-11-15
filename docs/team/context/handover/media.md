@@ -4,6 +4,38 @@ Newest block on top. One block per session. Other roles write in their own files
 
 ---
 
+## 2026-11-15 ~18:10 — Home page on one screen, How to play as slides (D-305), branch `ux/home-one-screen` from `main` (470f2f4), not pushed
+
+**What changed, file by file:**
+- `src/ui/home/HomeView.ts`: the hero's middle is now `.home__stage`, a slot that holds one of three views: the title block (`.home__centre`), the **How to play** panel (`section#how-to-play.home__panel.home__howto`) and the **How it works** panel (`section#how-it-works.home__panel.home__works`). Swapping is `replaceWith` in place; nav, stars and Moon picture never re-render. `#btn-start-mission` opens the slides (rewound to slide 1) instead of the console. Slides: heading `#how-to-play-title` (tabindex −1, takes focus), intro, the live region `.home__slide` (`aria-live="polite" aria-atomic`), `.home__slide-nav` with `#btn-step-back` (ghost pill, disabled on slide 1) · `.home__dots` (buttons "Step n of 6", `aria-current="step"`) · `#btn-step-next` (primary) or, on the last slide only, `#btn-begin-mission` (primary; `destroy()` + `onStart('mission')`, exactly what START did). Quiet row: `#btn-howto-home` "Back to home" (left) and `#btn-skip-tutorial` "Skip" (right, always visible, same as Begin). A `document` keydown listener lives only while a panel is open: Escape closes, Left/Right step. Focus returns to whichever control opened the panel (START or a nav link). The cards panel has `#how-it-works-title` and `#btn-works-home`. The narrator `p.home__narrator` is now a hero child, not part of the cards. If `home.tutorial` is missing from the JSON, START goes straight to the console as before.
+- `src/ui/home/home.css`: `.home` is `100dvh; overflow: hidden`; `.home__hero` fills it; `.home__stage` is `flex: 1; overflow-y: auto` with views centred by auto margins (so on a screen too small for a view the stage scrolls inside the hero instead of clipping; at the three laptop sizes nothing scrolls). New: `.home__panel`, `.home__howto` (max 760 px), `.home__works` (max 1152 px, grid locked to three columns above 900 px), `.home__slide*`, `.home__step-count`, `.home__dots`/`.home__dot` (28 px hit area, 8 px dot), `.home__ghost` (Back), `.home__quiet-row`, `.home [hidden]`. Removed: `.home__cards`, `.home__tutorial`, `.home__steps`, `.home__step` (no longer rendered). Focus ring (`2px solid --home-text`) on the CTA, ghost, quiet, dots, nav links and the panel headings. 180 ms slide-in (`home-slide-next` / `-back`), `animation: none` under `prefers-reduced-motion`. Narrator bottom-left mirrors the caption bottom-right. No new colours.
+- `src/ui/home/uiConfig.ts`: `HomeTutorial` type exported; new required `home.controls` block.
+- `public/config/ui-config.json`: new `home.controls`: `back` "Back", `next` "Next", `skip` "Skip", `begin_mission` "Begin mission", `back_to_home` "Back to home", `step_of` "Step {n} of {total}" (the dots' screen-reader label). No other wording touched.
+- `tests/home.e2e.spec.ts`: eight tests: START → slides → Next to the last → Begin mission reaches `#mission`; Skip reaches `#mission`; arrows/Escape/nav link/Back to home; How it works cards in place; `/#mission` shows no slides; no overflow at 1280×720, 1440×900, 1024×768 for the title block, every slide and the cards; About unchanged.
+
+**Measured on the built site (page overflow / stage overflow, px; 0 = no scrollbar), view height of the stage height:**
+
+| viewport (stage) | home | slides 1–4 | slide 5 (OPS) | slide 6 (Tips) | cards |
+|---|---|---|---|---|---|
+| 1280×720 (656) | 0 / 0, 453 | 0 / 0, 430 | 0 / 0, 454 | 0 / 0, 582 | 0 / 0, 368 |
+| 1440×900 (836) | 0 / 0, 453 | 0 / 0, 430 | 0 / 0, 454 | 0 / 0, 582 | 0 / 0, 368 |
+| 1024×768 (704) | 0 / 0, 441 | 0 / 0, 430 | 0 / 0, 454 | 0 / 0, 582 | 0 / 0, 414 |
+
+No slide's text is too long; the Tips slide is the tallest with 74 px to spare at 1280×720. Three cards fit one row at 1024 wide (309 px each, the third title wraps to two lines).
+
+**Judgment calls, easy to change:**
+- The counter reads "n / 6", not "n / 5": the Tips are the sixth slide, so counter and dot labels agree.
+- "Back" is a ghost pill (border, uppercase like the CTA) so the pair reads as Back/Next; Skip and Back to home reuse the quiet `.home__alt` text style from under the CTA.
+- Opening the slides from START or the nav link always rewinds to slide 1.
+- "How it works" has a heading "How it works" (the nav label, no new copy).
+- The dots have no group label (would be new copy); each dot is labelled.
+
+**Verified:** typecheck; 80 unit; 29 e2e with `PW_CHROMIUM_PATH` (screenshots of every state at the three sizes checked by eye). `src/main.ts` untouched; `#mission`, `#design=` and `#about` behave as before.
+
+**Open:** the `#app` div is itself `aria-live="polite"` (index.html, Architect's), so screen readers may announce the whole swap as well as the slide; harmless but noisy, worth a look. Phones (< 900 px) stack the cards and scroll the stage inside the hero; not measured, outside the brief. The nav links still carry `href="#how-it-works"` / `#how-to-play` with `preventDefault` (as before); they could become buttons.
+
+---
+
 ## 2026-11-15 ~15:45 — Sticky notes (D-304), branch `ux/sticky-notes` on top of `ux/minimal-console`, not pushed
 
 **Component:** `src/ui/StickyNote.ts` (`renderStickyNote({ kind, title, body, footer?, onClose?, class? })`, `stickyIcon(kind)`), `src/ui/sticky-notes.css`. Kinds: success #39D98A +1°, mistake #EF4444 −2° (role alert), tip #FFD43B −1° (role status). Ink #080F1E; contrast 10.45:1, 5.09:1, 13.42:1. Tokens `--note-success`, `--note-mistake`, `--note-tip`, `--note-ink` added to `:root` in `src/styles.css`. **DESIGN.md** (`html-things/DESIGN.md`, the Stitch export) does not list any of the three fills; all three are new to it, and #EF4444 and #39D98A are new to the repo (#FFD43B was already `--home-narrator`).

@@ -46,6 +46,14 @@
       "watch": "Watch the example fly",
       "team": "Team play · 2–4 players"
     },
+    "controls": {
+      "back": "Back",
+      "next": "Next",
+      "skip": "Skip",
+      "begin_mission": "Begin mission",
+      "back_to_home": "Back to home",
+      "step_of": "Step {n} of {total}"
+    },
     "tutorial": {
       "title": "How to play",
       "intro": "You lead the team behind a robotic outpost at the Moon's south pole. Plan it in four design reviews, the way NASA does, then watch it work for a year.",

@@ -8,20 +8,23 @@
   --home-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Consolas, monospace;
   background: var(--home-bg); color: var(--home-text); font-family: var(--home-font);
   -webkit-font-smoothing: antialiased;
+  /* One screen, nothing below the fold (D-305). */
+  height: 100vh; height: 100dvh; overflow: hidden;
 }
 #app.home-host { max-width: none; padding: 0; }
 .home a { color: inherit; text-decoration: none; }
 .home ::selection { background: var(--home-primary); color: var(--home-bg); }
+.home [hidden] { display: none !important; }
 
-/* ---- Hero: one viewport tall; nav on top, copy in the middle, image caption bottom-right ---- */
-.home__hero { position: relative; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; overflow: hidden; background: var(--home-bg); }
+/* ---- Hero: exactly one viewport tall; nav on top, a swappable stage in the middle, the corners at the bottom ---- */
+.home__hero { position: relative; height: 100%; display: flex; flex-direction: column; overflow: hidden; background: var(--home-bg); }
 .home__stars { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
 .home__scene { position: absolute; inset: 0; z-index: 1; pointer-events: none; display: flex; flex-direction: column; justify-content: flex-end; }
 .home__scene-image { width: 100%; height: 60%; background: center bottom / cover no-repeat; opacity: .9; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 40%); mask-image: linear-gradient(to bottom, transparent, #000 40%); }
 .home__scene-fade-top { position: absolute; inset: 0; background: linear-gradient(to top, transparent, rgb(8 15 30 / .3), var(--home-bg)); }
 .home__scene-fade-bottom { position: absolute; inset: auto 0 0 0; height: 160px; background: linear-gradient(to top, var(--home-bg), rgb(8 15 30 / .8), transparent); }
 
-.home__nav { position: relative; z-index: 3; height: 64px; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--home-line); }
+.home__nav { position: relative; z-index: 3; height: 64px; flex: none; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--home-line); }
 .home__brand { font: 500 15px var(--home-font); letter-spacing: .2em; text-transform: uppercase; white-space: nowrap; }
 .home__links { display: flex; align-items: center; gap: 24px; }
 .home__links a { font-size: 13px; line-height: 1; color: var(--home-muted); transition: color .15s, border-color .15s; }
@@ -29,7 +32,11 @@
 .home__links a.pill { padding: 7px 14px; border: 1px solid var(--home-line); border-radius: 999px; }
 .home__links a.pill:hover { border-color: var(--home-primary); }
 
-.home__centre { position: relative; z-index: 2; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 8px 24px 48px; }
+/* The stage holds one view at a time: the title block, the How to play slides or the How it works cards.
+   Views centre themselves with auto margins, so on a screen too small for them the stage scrolls
+   instead of clipping; at laptop sizes nothing scrolls. */
+.home__stage { position: relative; z-index: 2; flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; }
+.home__centre { width: 100%; margin: auto 0; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 8px 24px 48px; }
 .home__kicker { font: 12px var(--home-mono); letter-spacing: .25em; text-transform: uppercase; color: var(--home-muted); margin: 0 0 20px; }
 /* Sized so the full name sits on one row from tablets up (team note 11-15). */
 .home h1 { font: 300 clamp(26px, 4.4vw, 56px)/1.1 var(--home-font); letter-spacing: .18em; text-transform: uppercase; margin: 0 0 24px; text-shadow: 0 0 30px rgb(0 191 255 / .2); }
@@ -39,46 +46,77 @@
 .home .cta { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 32px; border: 0; border-radius: 999px; background: var(--home-primary); color: var(--home-bg); font: 500 15px var(--home-font); letter-spacing: .05em; text-transform: uppercase; cursor: pointer; transition: background .2s, box-shadow .2s, transform .2s; }
 .home .cta:hover { background: var(--home-primary-hover); box-shadow: 0 0 24px rgb(0 191 255 / .6); transform: scale(1.02); }
 .home .cta:active { transform: scale(.98); }
-.home .cta:focus-visible { outline: 2px solid var(--home-text); outline-offset: 3px; }
 .home__footnote { font: 12px var(--home-mono); color: var(--home-muted); margin: 16px 0 0; }
 
+/* Visible focus ring on everything that takes focus here, including the panel headings. */
+.home .cta:focus-visible, .home__alt:focus-visible, .home__ghost:focus-visible, .home__dot:focus-visible,
+.home__links a:focus-visible, .home .home__section-title:focus-visible { outline: 2px solid var(--home-text); outline-offset: 3px; }
+.home__links a:focus-visible { outline-offset: 6px; border-radius: 2px; }
+
+/* Bottom corners: the narrator line left, the image caption right. */
+.home__narrator { position: absolute; left: 24px; bottom: 16px; z-index: 3; margin: 0; font: 12px var(--home-mono); letter-spacing: .04em; color: var(--home-narrator); }
 .home__caption { position: absolute; right: 24px; bottom: 16px; z-index: 3; font: 12px var(--home-mono); color: var(--home-muted); opacity: .8; user-select: none; }
 
-/* ---- How it works: three cards and the narrator line ---- */
-.home__cards { position: relative; z-index: 2; max-width: 1152px; margin: 0 auto; padding: 80px 24px; }
-.home__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; }
+/* ---- Panels that take the title block's place (D-305) ---- */
+.home__panel { width: 100%; margin: auto; padding: 16px 24px 48px; text-align: center; }
+.home .home__section-title { font: 300 28px/1.2 var(--home-font); letter-spacing: .12em; text-transform: uppercase; text-align: center; max-width: none; margin: 0 0 8px; }
+.home__quiet-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 8px; }
+.home__quiet-row--centre { justify-content: center; margin-top: 24px; }
+
+/* The quieter text buttons: the ways in under the CTA (D-113 -> D-301), Skip and Back to home. */
+.home__alts { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+.home__alt { background: none; border: none; padding: 4px 2px; font: inherit; font-size: 14px; color: var(--home-muted); cursor: pointer; border-bottom: 1px solid transparent; }
+.home__alt:hover { color: var(--home-text); border-bottom-color: var(--home-primary); }
+/* The secondary pill: Back, next to the primary Next. */
+.home__ghost { min-height: 48px; padding: 12px 24px; background: none; border: 1px solid var(--home-line); border-radius: 999px; font: 500 15px var(--home-font); letter-spacing: .05em; text-transform: uppercase; color: var(--home-text); cursor: pointer; transition: border-color .15s, color .15s, opacity .15s; }
+.home__ghost:hover:not(:disabled) { border-color: var(--home-primary); }
+.home__ghost:disabled { opacity: .35; cursor: default; }
+
+/* ---- How it works: the three cards in one row ---- */
+.home__works { max-width: 1152px; }
+.home__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-top: 24px; text-align: left; }
 .home__card { background: var(--home-panel); border: 1px solid var(--home-line); border-radius: 6px; padding: 24px; }
 .home__card svg { width: 24px; height: 24px; stroke: currentColor; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; display: block; margin-bottom: 16px; }
 .home__card h3 { font: 500 17px/1.3 var(--home-font); margin: 0 0 8px; }
 .home__card p { font-size: 15px; line-height: 1.6; color: var(--home-muted); margin: 0; }
-.home__narrator { margin: 48px 0 0; text-align: center; font: 12px var(--home-mono); letter-spacing: .04em; color: var(--home-narrator); }
 
-/* ---- How to play: five numbered stages, then tips ---- */
-.home__tutorial { position: relative; z-index: 2; max-width: 1152px; margin: 0 auto; padding: 0 24px 96px; }
-.home .home__section-title { font: 300 28px/1.2 var(--home-font); letter-spacing: .12em; text-transform: uppercase; text-align: center; max-width: none; margin: 0 0 12px; }
-.home__tutorial-intro { max-width: 40rem; margin: 0 auto 40px; text-align: center; font-size: 16px; line-height: 1.6; color: var(--home-muted); }
-.home__steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; counter-reset: step; }
-.home__step { counter-increment: step; position: relative; background: var(--home-panel); border: 1px solid var(--home-line); border-top: 2px solid var(--home-primary); border-radius: 6px; padding: 20px; }
-.home__step::before { content: counter(step); position: absolute; top: 16px; right: 18px; font: 300 28px/1 var(--home-font); color: var(--home-line); }
-.home__step-tag { display: inline-block; font: 11px var(--home-mono); letter-spacing: .15em; color: var(--home-primary); margin-bottom: 10px; }
-.home__step h3 { font: 500 16px/1.3 var(--home-font); margin: 0 0 8px; padding-right: 24px; }
-.home__step p { font-size: 14px; line-height: 1.6; color: var(--home-muted); margin: 0; }
-.home__tips-title { font: 500 17px/1.3 var(--home-font); margin: 48px 0 12px; }
+/* ---- How to play: one slide at a time (five stages, then the tips) ---- */
+.home__howto { max-width: 760px; }
+.home__tutorial-intro { max-width: 40rem; margin: 0 auto 20px; text-align: center; font-size: 16px; line-height: 1.6; color: var(--home-muted); }
+.home__slide { background: var(--home-panel); border: 1px solid var(--home-line); border-top: 2px solid var(--home-primary); border-radius: 6px; padding: 20px 24px; text-align: left; }
+.home__slide-meta { display: flex; align-items: baseline; gap: 16px; margin-bottom: 10px; }
+.home__step-count { font: 12px var(--home-mono); letter-spacing: .15em; color: var(--home-muted); }
+.home__step-tag { font: 11px var(--home-mono); letter-spacing: .15em; color: var(--home-primary); }
+.home .home__slide-title { font: 500 18px/1.3 var(--home-font); margin: 0 0 8px; max-width: none; }
+.home__slide p { font-size: 15px; line-height: 1.6; color: var(--home-muted); margin: 0; }
 .home__tips { margin: 0; padding-left: 20px; display: grid; gap: 8px; color: var(--home-muted); font-size: 15px; line-height: 1.6; }
 .home__tips li::marker { color: var(--home-primary); }
+
+/* A short slide-in between steps; off when the visitor asked for less motion. */
+.home__slide-body { animation: home-slide-next .18s ease-out; }
+.home__slide-body[data-dir="back"] { animation-name: home-slide-back; }
+@keyframes home-slide-next { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+@keyframes home-slide-back { from { opacity: 0; transform: translateX(-14px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .home__slide-body { animation: none; } }
+
+/* Back · dots · Next (or Begin mission): one primary button on screen at a time. */
+.home__slide-nav { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; margin-top: 20px; }
+.home__slide-nav > :first-child { justify-self: start; }
+.home__slide-nav > .cta { justify-self: end; }
+.home__dots { display: flex; gap: 2px; }
+.home__dot { width: 28px; height: 28px; padding: 0; background: none; border: 0; border-radius: 50%; cursor: pointer; display: grid; place-items: center; }
+.home__dot::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--home-line); transition: background .15s, transform .15s; }
+.home__dot:hover::before { background: var(--home-muted); }
+.home__dot[aria-current]::before { background: var(--home-primary); box-shadow: 0 0 8px var(--home-primary); transform: scale(1.25); }
 
 @media (max-width: 899px) {
   .home__nav { padding: 0 16px; }
   .home__links { gap: 14px; }
   .home__centre { padding-bottom: 32px; }
+  .home__grid { grid-template-columns: 1fr; }
 }
 
 /* Self-hosted fonts (SIL Open Font License, licences next to the files in public/assets/fonts/).
    Exo 2 is the default face. Doto is a pixel display face reserved for a later use; it is only
    downloaded once something sets font-family: "Doto". */
 /* The @font-face rules live in index.html: document-relative URLs are correct under any base (D-301). */
-
-/* The quieter ways in, under the CTA (moved from the console start overlay, D-113 -> D-301). */
-.home__alts { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
-.home__alt { background: none; border: none; padding: 4px 2px; font: inherit; font-size: 14px; color: var(--home-muted); cursor: pointer; border-bottom: 1px solid transparent; }
-.home__alt:hover { color: var(--home-text); border-bottom-color: var(--home-primary); }
