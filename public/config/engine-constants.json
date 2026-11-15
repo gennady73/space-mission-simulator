@@ -910,6 +910,11 @@
       "source": "Team estimate for a CLPS-class lander bus",
       "tier": "game-rule"
     },
+    "hardware_catalog.spacecraft_bus.lander_bus_standard.isp_s": {
+      "source": "Game rule (team estimate). 320 s is consistent with the vacuum Isp of hypergolic (MMH/NTO) thrusters typical for small robotic landers; no open CLPS-class document provided by this review gives a lander Isp figure. The descent delta-v (1,850 m/s, trajectories provenance) is the operationally constraining input; Isp sets propellant fraction in the launch mass stack but no game gate tests it directly.",
+      "tier": "game-rule",
+      "note": "Hardware D-213."
+    },
     "hardware_catalog.launch_vehicles": {
       "source": "Generic classes; capacities and prices are rounded team estimates",
       "tier": "game-rule"

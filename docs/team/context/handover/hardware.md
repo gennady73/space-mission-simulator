@@ -4,6 +4,14 @@ Newest block on top. One block per session. Other roles write in their own files
 
 ---
 
+## 2026-11-15 ~15:00 IST · Hardware (Gabriel, with Claude) · number review — lander Isp
+**Did** (branch `hw/review-engine-constants`, provenance only, no value changes)
+- D-213: lander `isp_s` 320 s — no open CLPS-class document found among sources given; value is consistent with hypergolic vacuum Isp; provenance stays game-rule, physical context added in a new fine-grained provenance key alongside the existing section key.
+
+**Next (Hardware)** — descent delta-v (1,850 m/s); X-band / S-band comms rates; VSAT 10 m mast mass (320 kg); maglev values; launch vehicle capacities; other instrument masses.
+
+---
+
 ## 2026-11-15 ~13:30 IST · Hardware (Gabriel, with Claude) · number review
 **Did** (one PR, branch `hw/review-engine-constants`, provenance only, no value changes)
 - Full review in `docs/team/context/HW-REVIEW.md`: key figures, 5 sites, design runs, side-quests.
