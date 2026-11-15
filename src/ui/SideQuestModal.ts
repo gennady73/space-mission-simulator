@@ -1,6 +1,7 @@
 import './side-quests.css';
 import type { EngineConstants, Phase, SideQuestConfig } from '../models/Interfaces';
 import { h } from './dom';
+import { togglePopover } from './popover';
 import { checkAnswer, questsForPhase, TRIES_BEFORE_REVEAL } from './sideQuestModel';
 
 /**
@@ -19,19 +20,29 @@ export function renderSideQuests(
 ): HTMLElement | null {
   const quests = questsForPhase(c, phase);
   if (quests.length === 0) return null;
-  const section = h('section', { class: 'quests', 'aria-label': 'Optional calculations' },
-    h('h3', {}, 'Want to know more?'),
-    h('p', { class: 'hint' }, 'Optional: try the arithmetic the engineers do at this review. It does not change your mission.'));
-  const list = h('ul', { class: 'quests__list' });
-  for (const q of quests) {
-    const done = completed.includes(q.id);
-    const button = h('button', { type: 'button', id: `btn-quest-${q.id}`, class: done ? 'quest-btn quest-btn--done' : 'quest-btn' },
-      done ? `✓ ${q.title}` : q.title);
-    button.addEventListener('click', () => openQuest(q, hintsEnabled, () => { if (!completed.includes(q.id)) onSolved(q.id); }));
-    list.append(h('li', {}, button));
-  }
-  section.append(list);
-  return section;
+  const list = (): HTMLElement => {
+    const ul = h('ul', { class: 'quests__list' });
+    for (const q of quests) {
+      const done = completed.includes(q.id);
+      const button = h('button', { type: 'button', id: `btn-quest-${q.id}`, class: done ? 'quest-btn quest-btn--done' : 'quest-btn' },
+        done ? `✓ ${q.title}` : q.title);
+      button.addEventListener('click', () => openQuest(q, hintsEnabled, () => { if (!completed.includes(q.id)) onSolved(q.id); }));
+      ul.append(h('li', {}, button));
+    }
+    return ul;
+  };
+  // One row (D-303): the heading and the number of quests; the list opens in a popover. The quest dialog is unchanged.
+  const solved = quests.filter((q) => completed.includes(q.id)).length;
+  const count = `${quests.length} ${quests.length === 1 ? 'quest' : 'quests'}${solved ? ` · ${solved} solved` : ''}`;
+  const row = h('button', { type: 'button', id: 'btn-quests', class: 'quests-row', 'aria-expanded': 'false', 'aria-haspopup': 'dialog' },
+    h('span', { class: 'quests-row__title' }, 'Want to know more?'),
+    h('span', { class: 'quests-row__count' }, count),
+    h('span', { class: 'quests-row__chevron', 'aria-hidden': 'true' }, '▸'));
+  row.addEventListener('click', () => togglePopover(row, 'Want to know more?', () => [
+    h('p', { class: 'hint' }, 'Optional: try the arithmetic the engineers do at this review. It does not change your mission.'),
+    list(),
+  ]));
+  return h('section', { class: 'quests', 'aria-label': 'Optional calculations' }, row);
 }
 
 function openQuest(q: SideQuestConfig, hintsEnabled: boolean, onSolved: () => void): void {

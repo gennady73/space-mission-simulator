@@ -184,6 +184,17 @@ button.linklike:disabled { color: var(--muted); }
 /* number fields stay single rows: label left, input right */
 .console .panel .field:not(.wide) { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 40px; }
 .console .panel .field:not(.wide) input { width: 140px; flex: none; }
+/* ---- trimmed panel (D-303): briefing as one line, objectives note behind "i", status beside the submit button ---- */
+.console .placeholder--line { height: auto; margin: 0; aspect-ratio: auto !important; }
+.placeholder--line .fallback-frame { flex-direction: row; justify-content: flex-start; align-items: center; gap: 10px; padding: 0 6px 0 12px; min-height: 40px; text-align: left; }
+.placeholder--line .fallback-frame > * { margin: 0; }
+.placeholder--line .fallback-badge { flex: none; }
+.placeholder--line h3 { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.placeholder--line .info-btn, .objectives-head .info-btn { width: 32px; min-height: 32px; }
+.objectives-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.submit-row { display: flex; align-items: center; gap: 12px; }
+.submit-row #objectives-status { flex: 1 1 40%; min-width: 0; font-size: 13px; }
+.panel-submit .submit-row #btn-next-phase { width: auto; flex: 1 1 60%; }
 .menu { position: relative; }
 .menu summary { list-style: none; display: inline-flex; align-items: center; padding: 0 14px; border: 1px solid var(--line); border-radius: 6px; color: var(--text); font-weight: 600; }
 .menu summary::-webkit-details-marker { display: none; }

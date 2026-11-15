@@ -1,11 +1,10 @@
 import { GATE_NAMES } from '../engine/StageGateValidators';
 import { computeLedger, shadowHoursForMast } from '../engine/SubsystemEngines';
 import { PHASES } from '../models/StateStore';
-import type { EngineConstants, GateValidationResult, Phase, SimulationState, TeamRole } from '../models/Interfaces';
+import type { EngineConstants, GateValidationResult, GraphicPlaceholderConfig, Phase, SimulationState, TeamRole } from '../models/Interfaces';
 import { renderDebrief, renderGateBanner, type Debrief, type DebriefActions } from './DebriefView';
 import { PHASE_CHOICES, provisionalDesign } from './DesignFlow';
 import { h, kg, pct, usdM } from './dom';
-import { renderPlaceholder } from './GraphicPlaceholderView';
 import { closePopover, togglePopover } from './popover';
 import { renderSideQuests } from './SideQuestModal';
 import { renderPreStageQuestion, type PreStageActions } from './PreStageQuestion';
@@ -56,6 +55,16 @@ function infoButton(name: string, build: () => Child[]): HTMLElement {
   const button = h('button', { type: 'button', class: 'info-btn', 'aria-label': `More about ${name}`, 'aria-expanded': 'false', 'aria-haspopup': 'dialog' }, 'i');
   button.addEventListener('click', () => togglePopover(button, `About ${name}`, build));
   return button;
+}
+
+/**
+ * Narrative briefing as one line (D-303): badge and title from the placeholder config, the text in a popover.
+ * Keeps the REQ-011 hooks ([data-placeholder-id], .fallback-frame .fallback-badge); the END card is unchanged.
+ */
+function briefingLine(cfg: GraphicPlaceholderConfig): HTMLElement {
+  const info = infoButton(cfg.title, () => [h('strong', {}, cfg.title), h('p', {}, cfg.brief_explanation)]);
+  return h('figure', { class: 'placeholder placeholder--line', 'data-placeholder-id': cfg.id },
+    h('div', { class: 'fallback-frame' }, h('span', { class: 'fallback-badge' }, cfg.fallback_badge), h('h3', {}, cfg.title), info));
 }
 
 /** Which decision group is open: presentation only, one per stage, recomputed when the stage changes (D-303). */
@@ -254,11 +263,8 @@ function phasePanel(view: CockpitView, a: CockpitActions): HTMLElement {
 const isNumber = (text: string): boolean => Number.isFinite(Number.parseFloat(text));
 const objectiveText = (label: string, done: boolean): string => `${done ? '✓' : '○'} Choose the ${label}`;
 
-/**
- * Objectives checklist (D-034): what this stage's review needs, ticked as the player chooses.
- * The typed pad distance is a draft outside the store, so its line is also updated by the field.
- */
-function objectives(view: CockpitView): HTMLElement {
+/** What this stage's review needs, ticked as the player chooses. The typed pad distance is a draft outside the store. */
+function objectiveItems(view: CockpitView) {
   const { constants: c, state: s } = view;
   const items = PHASE_CHOICES[s.currentPhase].map(({ key, label }) => ({
     key, label, done: key === 'padDistanceM' ? isNumber(view.padDistanceDraft) : s[key] !== null,
@@ -266,11 +272,19 @@ function objectives(view: CockpitView): HTMLElement {
   const left = items.filter((i) => !i.done).length;
   const { assumed } = provisionalDesign(c, { ...s, padDistanceM: isNumber(view.padDistanceDraft) ? Number.parseFloat(view.padDistanceDraft) : null });
   const later = assumed.filter((label) => !items.some((i) => i.label === label));
+  return { items, left, later, status: left ? `${left} still to choose before the review.` : 'Ready for the review.' };
+}
+
+/**
+ * Objectives checklist (D-034). The "estimated from the reference design" note sits behind an "i" next to
+ * the heading, and the status line (#objectives-status) lives beside the submit button (D-303).
+ */
+function objectives(view: CockpitView): HTMLElement {
+  const { items, later } = objectiveItems(view);
   return h('section', { id: 'objectives', class: 'objectives', 'aria-label': 'Objectives for this review' },
-    h('h3', {}, 'Objectives for this review'),
+    h('div', { class: 'objectives-head' }, h('h3', {}, 'Objectives for this review'),
+      later.length > 0 && infoButton('the objectives', () => [h('strong', {}, 'Estimated until you choose'), h('p', {}, `Later stages are estimated from the reference design until you choose: ${later.join(', ')}.`)])),
     h('ul', {}, ...items.map((i) => h('li', { id: `objective-${i.key}`, 'data-done': String(i.done) }, objectiveText(i.label, i.done)))),
-    h('p', { id: 'objectives-status', class: 'hint' }, left ? `${left} still to choose before the review.` : 'Ready for the review.'),
-    later.length > 0 && h('p', { class: 'hint' }, `Later stages are estimated from the reference design until you choose: ${later.join(', ')}.`),
   );
 }
 
@@ -395,9 +409,9 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
       }
       panel.append(h('section', { class: 'team' }, h('p', { class: 'hint' }, 'Team play: pass the device to the player whose seat is selected. Each player makes only their own decisions, and all share one budget and one mass limit.'), seats));
     }
-    if (s.currentPhase === 'MCR' && !s.selectedSite) {
-      const intro = renderPlaceholder(c, 'IMG-PLACEHOLDER-INTRO');
-      if (intro) panel.append(intro);
+    if (s.currentPhase === 'MCR') {
+      const intro = c.graphic_placeholders['IMG-PLACEHOLDER-INTRO'];
+      if (intro) panel.append(briefingLine(intro));
     }
     const ownerEntry = Object.entries(c.team_roles).find(([, r]) => r.owns_gates.includes(s.currentPhase));
     const owner = ownerEntry?.[1];
@@ -418,10 +432,10 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
       const next = h('button', { id: 'btn-next-phase', type: 'button', ...(mustHandOver ? { disabled: '' } : {}) },
         s.teamMode && owner ? `${verb}: sign-off by ${owner.label}` : verb);
       next.addEventListener('click', a.nextPhase);
-      // The submit bar stays in reach at the bottom of the panel while the cards scroll under it.
+      // The submit bar stays pinned at the bottom of the panel, with the status line beside the button (D-303).
       panel.append(h('div', { class: 'panel-submit' },
         mustHandOver && owner && h('p', { id: 'signoff-note', class: 'hint' }, `Only ${owner.label} can sign off this review. Select that seat to submit.`),
-        next));
+        h('div', { class: 'submit-row' }, h('p', { id: 'objectives-status', class: 'hint' }, objectiveItems(view).status), next)));
     }
   }
 
