@@ -1,7 +1,7 @@
 import { GATE_NAMES } from '../engine/StageGateValidators';
 import { computeLedger, shadowHoursForMast } from '../engine/SubsystemEngines';
 import { PHASES } from '../models/StateStore';
-import type { EngineConstants, GateValidationResult, ResourceLedger, Phase, SimulationState, TeamRole } from '../models/Interfaces';
+import type { EngineConstants, GateValidationResult, MissionChallengeId, ResourceLedger, Phase, SimulationState, TeamRole } from '../models/Interfaces';
 import { renderDebrief, renderGateBanner, type Debrief, type DebriefActions } from './DebriefView';
 import { PHASE_CHOICES, provisionalDesign } from './DesignFlow';
 import { h, kg, pct, usdM } from './dom';
@@ -128,6 +128,10 @@ function phasePanel(view: CockpitView, a: CockpitActions): HTMLElement {
       choices('Energy storage', 'battery', hw.energy_storage, s.selectedBattery,
         (x) => `${x.capacity_kwh} kWh, ${pct(x.max_dod)} usable · ${kg(x.mass_kg)} · ${usdM(x.cost_usd)}`,
         (id) => a.update({ selectedBattery: id }), lock('battery'), pv('selectedBattery')),
+      ...(s.missionChallenges.includes('night_survival') ? [choices('Night power source (night survival challenge)', 'nightpower', c.mission_challenges.night_survival.night_power_options,
+        s.selectedNightPower ?? c.mission_challenges.night_survival.default_night_power,
+        (x) => `${x.power_w.toLocaleString('en-US')} W day and night · ${x.runs_operations ? 'keeps working at night' : 'survival only at night'} · ${kg(x.mass_kg)} · ${usdM(x.cost_usd)}`,
+        (id) => a.update({ selectedNightPower: id }), lock('battery'), pv('selectedNightPower'))] : []),
       choices('Communications', 'comm', hw.comm_systems, s.selectedComm,
         (x) => `${x.downlink_kbps.toLocaleString('en-US')} kbps · ${x.direct_to_earth ? 'needs Earth above the horizon' : `relay in view ${pct(x.relay_coverage_fraction ?? 0)} of the time`} · ${x.tx_power_w} W · ${kg(x.mass_kg)} · ${usdM(x.cost_usd)}`,
         (id) => a.update({ selectedComm: id }), lock('communications system'), pv('selectedComm')),
@@ -172,7 +176,16 @@ function iceProspectingToggle(c: EngineConstants, s: SimulationState, a: Cockpit
   return h('fieldset', { class: lock ? 'choice-group locked' : 'choice-group' },
     h('legend', {}, lock ? `Mission challenge (optional) · decided by ${lock}` : 'Mission challenge (optional)'),
     h('label', { class: 'toggle' }, box, ` ${ip.name} · target ${kg(ip.water_target_kg)} of water`),
-    h('p', { class: 'hint' }, ip.description));
+    h('p', { class: 'hint' }, ip.description),
+    ...Object.values(c.mission_challenges).flatMap((ch) => {
+      // D-041: further challenges; each changes one rule of the same outpost, and they can be combined.
+      const t = h('input', { id: `toggle-challenge-${ch.id}`, type: 'checkbox', ...(s.missionChallenges.includes(ch.id) ? { checked: '' } : {}), ...(lock ? { disabled: '' } : {}) });
+      t.addEventListener('change', () => a.update({
+        missionChallenges: toggle(s.missionChallenges, ch.id) as MissionChallengeId[],
+        ...(ch.id === 'night_survival' && !t.checked ? { selectedNightPower: null } : {}),
+      }));
+      return [h('label', { class: 'toggle' }, t, ` ${ch.name}`), h('p', { class: 'hint' }, ch.description)];
+    }));
 }
 
 /**

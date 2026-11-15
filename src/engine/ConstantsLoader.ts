@@ -10,7 +10,7 @@ export const CONSTANTS_URL = './config/engine-constants.json';
 const REQUIRED_TOP_LEVEL: Array<keyof EngineConstants> = [
   'schema_version', 'system_constants', 'simulation', 'difficulty_levels', 'team_roles',
   'site_catalog', 'trajectories', 'hardware_catalog', 'graphic_placeholders',
-  'side_quests', 'pre_stage_questions', 'shortfall_badges', 'provenance', 'ice_prospecting',
+  'side_quests', 'pre_stage_questions', 'shortfall_badges', 'provenance', 'ice_prospecting', 'mission_challenges',
 ];
 
 const REQUIRED_CATALOGS = [
@@ -40,6 +40,11 @@ export function validateConstants(raw: unknown): string[] {
   if (ip) {
     for (const [key, v] of Object.entries(ip.drill_options ?? {})) if (v.id !== key) problems.push(`ice_prospecting.drill_options.${key}.id must equal its key`);
     if (!ip.default_drill_option || !ip.drill_options?.[ip.default_drill_option]) problems.push('ice_prospecting.default_drill_option must name one of its drill_options');
+  }
+  const night = (c.mission_challenges as { night_survival?: { default_night_power?: string; night_power_options?: Record<string, { id?: string }> } } | undefined)?.night_survival;
+  if (night) {
+    for (const [key, v] of Object.entries(night.night_power_options ?? {})) if (v.id !== key) problems.push(`mission_challenges.night_survival.night_power_options.${key}.id must equal its key`);
+    if (!night.default_night_power || !night.night_power_options?.[night.default_night_power]) problems.push('mission_challenges.night_survival.default_night_power must name one of its night_power_options');
   }
   const sc = c.system_constants as Record<string, unknown> | undefined;
   if (sc) for (const k of ['minimum_power_margin_pdr', 'minimum_mass_margin_pdr']) {

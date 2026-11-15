@@ -658,6 +658,81 @@
       }
     }
   },
+  "mission_challenges": {
+    "night_survival": {
+      "id": "night_survival",
+      "name": "Lunar night survival",
+      "description": "The outpost stands where the Sun sets for 14 days in every month. No battery in the catalog carries it through alone: add a power source that works in the dark, and size the battery for what is left.",
+      "night_h": 336,
+      "default_night_power": "none",
+      "night_power_options": {
+        "none": {
+          "id": "none",
+          "name": "No night power source",
+          "mass_kg": 0,
+          "cost_usd": 0,
+          "power_w": 0,
+          "runs_operations": false,
+          "description": "Batteries only."
+        },
+        "rtg_110w": {
+          "id": "rtg_110w",
+          "name": "Radioisotope generator, 110 W",
+          "mass_kg": 45,
+          "cost_usd": 30000000.0,
+          "power_w": 110,
+          "runs_operations": false,
+          "description": "Steady power from plutonium decay heat. Enough to keep a lean outpost alive through the night, not to work."
+        },
+        "fsp_1kw": {
+          "id": "fsp_1kw",
+          "name": "Small fission reactor, 1 kW",
+          "mass_kg": 400,
+          "cost_usd": 55000000.0,
+          "power_w": 1000,
+          "runs_operations": true,
+          "description": "A kilowatt day and night: instruments, downlink and the drill keep working in the dark. Heavy and expensive."
+        }
+      }
+    },
+    "far_side_telescope": {
+      "id": "far_side_telescope",
+      "name": "Far-side radio telescope",
+      "description": "The outpost carries a low-frequency radio telescope to a place where Earth never rises, shielded from Earth's radio noise. Direct links are impossible, so every bit goes through the relay orbiter, and the telescope produces a lot of bits.",
+      "telescope": {
+        "id": "low_freq_radio_telescope",
+        "name": "Low-frequency radio telescope",
+        "mass_kg": 60,
+        "cost_usd": 18000000.0,
+        "peak_power_w": 40,
+        "data_rate_kbps": 1800,
+        "science_value": 0.6,
+        "enables_layers": [],
+        "extracts_ice": false,
+        "description": "Listens to the early universe below 50 MHz, where Earth's own radio noise drowns the signal everywhere else."
+      }
+    },
+    "crew_support": {
+      "id": "crew_support",
+      "name": "Artemis crew support",
+      "description": "Astronauts land near the outpost on a fixed date. Supplies and a landing beacon must be waiting on a prepared pad before they arrive, so a slow transfer or a slow pad can miss the date.",
+      "crew_arrival_days": 130,
+      "cargo_mass_kg": 262,
+      "cargo_cost_usd": 10000000.0,
+      "beacon_power_w": 15,
+      "min_pad_deflection_efficiency": 0.8
+    },
+    "clps_ride": {
+      "id": "clps_ride",
+      "name": "Commercial lander ride",
+      "description": "Buy a delivery on a commercial lander instead of a launcher and a lander of your own. Much cheaper, but the lander carries less, passes little survival power to its payload, and may arrive late.",
+      "payload_capacity_kg": 900,
+      "delivery_cost_usd": 115000000.0,
+      "max_survival_power_w": 120,
+      "delay_probability": 0.3,
+      "delay_days": 45
+    }
+  },
   "graphic_placeholders": {
     "IMG-PLACEHOLDER-INTRO": {
       "id": "IMG-PLACEHOLDER-INTRO",
@@ -948,6 +1023,22 @@
     },
     "ice_prospecting": {
       "source": "Concept: NASA in-situ resource utilisation and the TRIDENT 1 m drill (PRIME-1, VIPER). Water in permanently shadowed regolith: LCROSS measured 5.6 +/- 2.9 wt% at Cabeus (Colaprete et al. 2010, Science 330:463). Thermal extraction uses the latent heat of sublimation in system_constants. The water target, drill-string depths, masses, costs, power, yield factors and the heater efficiency are game rules (D-040); Hardware to review.",
+      "tier": "game-rule"
+    },
+    "mission_challenges.night_survival": {
+      "source": "Concept: NASA Fission Surface Power project and the Kilopower/KRUSTY 1 kWe reactor test (2018); the Multi-Mission Radioisotope Thermoelectric Generator gives about 110 W and weighs about 45 kg (NASA Radioisotope Power Systems). A lunar night away from the polar ridges lasts about 14 Earth days. The reactor mass, all costs and the rule that 1 kW runs operations are game rules (D-041); Hardware to review.",
+      "tier": "game-rule"
+    },
+    "mission_challenges.far_side_telescope": {
+      "source": "Concept: NASA/DOE LuSEE-Night and the FARSIDE concept (low-frequency radio astronomy from the radio-quiet lunar far side, reached only through a relay). The telescope's mass, cost, power, data rate and science value are game rules (D-041); Hardware to review. The game keeps its south-pole map for this challenge.",
+      "tier": "game-rule"
+    },
+    "mission_challenges.crew_support": {
+      "source": "Concept: NASA Artemis surface missions with pre-positioned cargo. The crew date, cargo mass and cost, beacon power and pad requirement are game rules (D-041); Hardware to review.",
+      "tier": "game-rule"
+    },
+    "mission_challenges.clps_ride": {
+      "source": "Concept: NASA Commercial Lunar Payload Services (CLPS), fixed-price deliveries on commercial landers. Payload capacity, price, power service, delay chance and delay length are game rules (D-041); Hardware to review.",
       "tier": "game-rule"
     },
     "simulation.dust_event_probability_per_cycle": {

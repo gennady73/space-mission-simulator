@@ -46,6 +46,8 @@ export interface EngineConstants {
   fault_protection: FaultProtectionConfig;
   /** Optional mission challenge: ice prospecting with a water target, drill strings and thermal extraction (D-040). */
   ice_prospecting: IceProspectingConfig;
+  /** Further optional mission challenges (D-041): each one changes a rule of the same outpost. */
+  mission_challenges: MissionChallengesConfig;
   hardware_catalog: {
     spacecraft_bus: Record<string, SpacecraftBusConfig>;
     launch_vehicles: Record<string, LaunchVehicle>;
@@ -368,6 +370,71 @@ export interface IceProspectingConfig {
   drill_options: Record<string, DrillOptionConfig>;
 }
 
+/** Ids of the optional mission challenges in `mission_challenges` (D-041). They can be combined. */
+export type MissionChallengeId = 'night_survival' | 'far_side_telescope' | 'crew_support' | 'clps_ride';
+
+interface ChallengeBase {
+  id: MissionChallengeId;
+  name: string;
+  description: string;
+}
+
+/** A power source that keeps working without sunlight (night survival challenge). */
+export interface NightPowerConfig {
+  id: string;
+  name: string;
+  mass_kg: number;
+  cost_usd: number;
+  /** Continuous electrical output, day and night. */
+  power_w: number;
+  /** True when the source is strong enough to keep instruments, downlink and the drill working at night. */
+  runs_operations: boolean;
+  description: string;
+}
+
+/** Night survival: every synodic cycle has a forced night of `night_h` hours, whatever the mast. */
+export interface NightSurvivalConfig extends ChallengeBase {
+  night_h: number;
+  /** The option used when the player has not chosen one (must add nothing). */
+  default_night_power: string;
+  night_power_options: Record<string, NightPowerConfig>;
+}
+
+/** Far-side radio telescope: Earth is never in view, and the telescope is added to the instruments. */
+export interface FarSideTelescopeConfig extends ChallengeBase {
+  telescope: InstrumentConfig;
+}
+
+/** Artemis crew support: cargo and a landing beacon must be ready on a prepared pad before the crew's date. */
+export interface CrewSupportConfig extends ChallengeBase {
+  /** Days after launch when the crew lands. Cruise plus pad construction must fit. */
+  crew_arrival_days: number;
+  cargo_mass_kg: number;
+  cargo_cost_usd: number;
+  /** The landing beacon runs through every shadow. */
+  beacon_power_w: number;
+  min_pad_deflection_efficiency: number;
+}
+
+/** Commercial lander ride: a bought delivery replaces the launcher and the lander bus. */
+export interface ClpsRideConfig extends ChallengeBase {
+  /** Payload the commercial lander carries (everything except the lander bus). */
+  payload_capacity_kg: number;
+  /** One price, instead of the launch vehicle, the lander bus and the trajectory surcharge. */
+  delivery_cost_usd: number;
+  /** Survival power the lander can pass to the payload through shadows. */
+  max_survival_power_w: number;
+  delay_probability: number;
+  delay_days: number;
+}
+
+export interface MissionChallengesConfig {
+  night_survival: NightSurvivalConfig;
+  far_side_telescope: FarSideTelescopeConfig;
+  crew_support: CrewSupportConfig;
+  clps_ride: ClpsRideConfig;
+}
+
 export interface PreStageQuestion {
   phase: Phase;
   question: string;
@@ -417,6 +484,10 @@ export interface SimulationState {
   iceProspecting: boolean;
   /** CDR choice in the ice prospecting challenge: which drill string (D-040). Null = the default string. */
   selectedDrillOption: string | null;
+  /** MCR options: further mission challenges that are switched on (D-041). */
+  missionChallenges: MissionChallengeId[];
+  /** PDR choice in the night survival challenge (D-041). Null = the default (no extra source). */
+  selectedNightPower: string | null;
 
   allocatedBudgetUSD: number;
   remainingBudgetUSD: number;
@@ -495,7 +566,7 @@ export interface MissionDesignExport {
     | 'selectedLaunchVehicle' | 'selectedLaunchpad' | 'padDistanceM' | 'selectedMast'
     | 'selectedBattery' | 'selectedComm' | 'selectedStorage' | 'selectedLogistics'
     | 'selectedUtilityLink' | 'drillHeaterW' | 'selectedInstruments' | 'userHypotheses'
-  > & Partial<Pick<SimulationState, 'faultProtection' | 'iceProspecting' | 'selectedDrillOption'>>;
+  > & Partial<Pick<SimulationState, 'faultProtection' | 'iceProspecting' | 'selectedDrillOption' | 'missionChallenges' | 'selectedNightPower'>>;
   /** Optional override of constants (REQ-007 difficulty / physics import). */
   constantsOverride?: Partial<EngineConstants>;
 }

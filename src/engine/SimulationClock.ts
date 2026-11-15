@@ -1,7 +1,7 @@
 import type { EngineConstants, MissionScore, SubsystemTelemetry } from '../models/Interfaces';
 import { createPrng } from './Prng';
 import {
-  drillPeakW, hasLink, iceRateKgPerHour, iceTargetKg, solarElevationDeg, solarPowerW, survivalLoadW,
+  drillPeakW, hasLink, iceRateKgPerHour, iceTargetKg, isForcedNight, solarElevationDeg, solarPowerW, survivalLoadW,
   totalCostUSD, utilityLinkPower, type ResolvedDesign,
 } from './SubsystemEngines';
 import { validatePLAR } from './StageGateValidators';
@@ -18,6 +18,8 @@ import { validatePLAR } from './StageGateValidators';
  *  - Battery at 0 Wh => terminal brownout (mission ends).
  *  - D-040: each drilling hour yields iceRateKgPerHour (drill string × assay rate + thermal extraction from heater
  *    power above the minimum); the default string at the minimum heater gives exactly ice_assay_rate_kg_h.
+ *  - D-041: mission challenges. Night survival forces a night in every cycle, and a night power source adds its
+ *    output all the time (a strong one keeps operations going at night). A late commercial lander delays the start.
  *  - D-039: a logistics failure is permanent, unless the design has fault protection: then it is safed, and
  *    after recovery_link_hours of Earth contact the ground team recovers it with recovery_probability.
  */
@@ -38,6 +40,8 @@ export interface SimulationResult {
   failureCause: FailureCause;
   failureHour: number | null;
   iceKg: number;
+  /** D-041: hours lost before operations began, when the commercial lander was late (0 otherwise). */
+  delayHours: number;
   drillHours: number;
   dataGeneratedMb: number;
   dataDroppedMb: number;
@@ -102,6 +106,13 @@ export function runMission(c: EngineConstants, r: ResolvedDesign, opt: Simulatio
     }
   }
 
+  // D-041: a late commercial lander. Drawn last and only with that challenge, so other runs keep their random sequence.
+  let delayHours = 0;
+  if (opt.randomEvents && r.challenges.clps && rand() < r.challenges.clps.delay_probability) {
+    delayHours = r.challenges.clps.delay_days * 24;
+    events.push({ hour: 0, text: `The commercial lander slipped ${r.challenges.clps.delay_days} days: operations start late` });
+  }
+
   // --- Hourly loop ----------------------------------------------------------------
   let eWh = capWh; // launch fully charged
   let bufMb = 0;
@@ -118,9 +129,11 @@ export function runMission(c: EngineConstants, r: ResolvedDesign, opt: Simulatio
   for (let h = 0; h < H; h++) {
     const hourEvents: string[] = [];
     const alpha = solarElevationDeg(c, r.site, h);
-    const genW = solarPowerW(r.mast, alpha, baseDust);
-    const eclipse = genW === 0;
-    if (eclipse) eclipseHours++;
+    const solarW = isForcedNight(c, r, h) ? 0 : solarPowerW(r.mast, alpha, baseDust);
+    const genW = solarW + r.nightPower.power_w;
+    if (solarW === 0) eclipseHours++;
+    // Survival mode: no sunlight (unless a night power source can run operations), or the lander has not arrived yet.
+    const eclipse = (solarW === 0 && !r.nightPower.runs_operations) || h < delayHours;
     const dust = dustUntil.has(h);
     const link = hasLink(c, r, h);
     if (link) linkHours++;
@@ -179,7 +192,7 @@ export function runMission(c: EngineConstants, r: ResolvedDesign, opt: Simulatio
       telemetry.push({
         hour: h, solarElevationDeg: alpha, solarPowerGeneratedW: genW, batterySoCPercent: soc,
         baseLoadW: survivalW, heaterLoadW: r.drillHeaterW + (r.logistics?.survival_heater_w ?? 0),
-        isEclipse: eclipse, earthLineOfSight: link, ssmmBufferOccupancyPercent: (bufMb / bufCapMb) * 100,
+        isEclipse: solarW === 0, earthLineOfSight: link, ssmmBufferOccupancyPercent: (bufMb / bufCapMb) * 100,
         downlinkBandwidthKbps: downKbps, cumulativeIceAssayedKg: ice, droppedDataMb: droppedMb, events: hourEvents,
       });
     }
@@ -187,7 +200,7 @@ export function runMission(c: EngineConstants, r: ResolvedDesign, opt: Simulatio
   }
 
   return {
-    uptimeHours: failureHour ?? H, failureCause, failureHour, iceKg: ice, drillHours,
+    uptimeHours: failureHour ?? H, failureCause, failureHour, iceKg: ice, delayHours, drillHours,
     dataGeneratedMb: genMb, dataDroppedMb: dropMb, minSoCPercent: minSoC, eclipseHours, linkHours,
     events: events.sort((a, b) => a.hour - b.hour), telemetry,
   };
@@ -205,7 +218,8 @@ export function scoreMission(c: EngineConstants, r: ResolvedDesign, res: Simulat
   const H = s.mission_duration_h;
   const completeness = res.dataGeneratedMb > 0 ? 1 - res.dataDroppedMb / res.dataGeneratedMb : 0;
   const sScore = (res.iceKg / iceTargetKg(c, r)) * (res.uptimeHours / H) * completeness;
-  const maxSci = Object.values(c.hardware_catalog.science_instruments).reduce((a, i) => a + i.science_value, 0);
+  const maxSci = Object.values(c.hardware_catalog.science_instruments).reduce((a, i) => a + i.science_value, 0)
+    + (r.challenges.farSide?.telescope.science_value ?? 0);
   const sciFactor = r.instruments.reduce((a, i) => a + i.science_value, 0) / maxSci;
   const cost = totalCostUSD(r);
   const budgetEff = Math.max(0, Math.min(1, ((budgetUSD - cost) / budgetUSD) * 2));

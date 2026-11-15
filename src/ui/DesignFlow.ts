@@ -73,7 +73,7 @@ const incomplete = (phase: Phase, missing: string[]): GateValidationResult => ({
 
 function gate(c: EngineConstants, phase: Phase, r: ResolvedDesign): GateValidationResult {
   switch (phase) {
-    case 'MCR': return validateMCR(c, r.site);
+    case 'MCR': return validateMCR(c, r.site, r.challenges.farSide !== null);
     case 'SRR': return validateSRR(c, r);
     case 'PDR': return validatePDR(c, r);
     default: return validateCDR(c, r);
