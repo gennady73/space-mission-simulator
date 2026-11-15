@@ -45,6 +45,45 @@
       "example": "Explore the example design",
       "watch": "Watch the example fly",
       "team": "Team play · 2–4 players"
+    },
+    "tutorial": {
+      "title": "How to play",
+      "intro": "You lead the team behind a robotic outpost at the Moon's south pole. Plan it in four design reviews, the way NASA does, then watch it work for a year.",
+      "steps": [
+        {
+          "tag": "MCR",
+          "title": "Concept: pick a site",
+          "text": "Tap a landing site on the map. A good site is flat enough to land on, sees Earth for radio, and sits near a permanently dark crater where the ice is. Optional mission challenges are here too."
+        },
+        {
+          "tag": "SRR",
+          "title": "Landing: get there safely",
+          "text": "Choose the rocket, the route and the landing pad. Keep the pad far enough from your solar mast that the rocket blast does not sandblast it, and keep the total mass under what the rocket can lift."
+        },
+        {
+          "tag": "PDR",
+          "title": "Power: survive the shadows",
+          "text": "Choose the solar mast, battery, radio, data storage and instruments. Taller masts see the Sun longer. The battery must carry the outpost through the longest shadow with 15% to spare."
+        },
+        {
+          "tag": "CDR",
+          "title": "Ice: reach the cold trap",
+          "text": "Choose how to get into the crater (guideway or rover), how to power the drill (laser or cable) and how much heater power keeps the drill from freezing at about 40 K."
+        },
+        {
+          "tag": "OPS",
+          "title": "Operations: one year on the Moon",
+          "text": "Launch and watch the outpost through 365 days of light, shadow, dust and breakdowns. The debrief shows your score out of 1,000, what went wrong, and lets you improve the design and fly again."
+        }
+      ],
+      "tips_title": "Tips",
+      "tips": [
+        "Each review shows why you failed and what to change. Fix it and submit again.",
+        "Watch the six tiles at the top: mass, power, budget, data, comms and time. Hover over a choice to see what it would change.",
+        "Money left over counts for up to 200 of the 1,000 points, so don't buy more than you need.",
+        "Before each review, write your guess to the Think first question, then see the answer.",
+        "Stuck? Press Reference mission to fly a design that works, then try to beat it. Difficulty is in the Menu."
+      ]
     }
   }
 }

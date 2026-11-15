@@ -42,16 +42,33 @@ export function renderHome(app: HTMLElement, ui: UiConfig, onStart: (mode: Start
       ...home.cards.map((card) => h('article', { class: 'home__card' }, icon(card.icon), h('h3', {}, card.title), h('p', {}, card.text)))),
     h('p', { class: 'home__narrator' }, home.narrator_line));
 
+  // "How to play" (short tutorial): numbered stages, then tips. Text from ui-config.json.
+  const t = home.tutorial;
+  const tutorial = t
+    ? h('section', { id: 'how-to-play', class: 'home__tutorial', 'aria-labelledby': 'how-to-play-title' },
+        h('h2', { id: 'how-to-play-title', class: 'home__section-title' }, t.title),
+        h('p', { class: 'home__tutorial-intro' }, t.intro),
+        h('ol', { class: 'home__steps' },
+          ...t.steps.map((step) => h('li', { class: 'home__step' },
+            h('span', { class: 'home__step-tag' }, step.tag),
+            h('h3', {}, step.title),
+            h('p', {}, step.text)))),
+        h('h3', { class: 'home__tips-title' }, t.tips_title),
+        h('ul', { class: 'home__tips' }, ...t.tips.map((tip) => h('li', {}, tip))))
+    : null;
+
   const howLink = h('a', { href: '#how-it-works' }, home.nav.how_it_works);
   howLink.addEventListener('click', (e) => { e.preventDefault(); cards.scrollIntoView({ behavior: 'smooth' }); });
   // Same tab: main.ts swaps the About page in on hashchange, and Back returns here.
+  const playLink = tutorial && t ? h('a', { href: '#how-to-play' }, t.title) : null;
+  playLink?.addEventListener('click', (e) => { e.preventDefault(); tutorial?.scrollIntoView({ behavior: 'smooth' }); });
   const aboutLink = h('a', { href: '#about' }, home.nav.about);
   const demoLink = home.nav.demo_video_url
     ? h('a', { class: 'pill', href: home.nav.demo_video_url, target: '_blank', rel: 'noopener' }, home.nav.demo)
     : null;
   const nav = h('header', { class: 'home__nav' },
     h('div', { class: 'home__brand' }, ui.game_name),
-    h('nav', { class: 'home__links', 'aria-label': 'Site' }, howLink, aboutLink, demoLink));
+    h('nav', { class: 'home__links', 'aria-label': 'Site' }, howLink, playLink, aboutLink, demoLink));
 
   const cta = h('button', { id: 'btn-start-mission', class: 'cta', type: 'button' }, home.cta_label);
   // The other ways in (moved here from the console start overlay, D-113 -> D-301).
@@ -81,7 +98,7 @@ export function renderHome(app: HTMLElement, ui: UiConfig, onStart: (mode: Start
   const hero = h('section', { class: 'home__hero' }, stars, scene, nav, centre, caption);
 
   app.classList.add('home-host');
-  app.replaceChildren(h('div', { class: 'home' }, hero, cards));
+  app.replaceChildren(h('div', { class: 'home' }, hero, cards, tutorial));
   const field = startStarfield(stars, hero, { mode: home.starfield.mode, starCount: home.starfield.star_count });
 
   const destroy = (): void => {

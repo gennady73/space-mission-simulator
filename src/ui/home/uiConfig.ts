@@ -36,6 +36,14 @@ export interface UiConfig {
     /** Labels for the quieter ways in under the CTA; leave one out to hide it. */
     secondary?: { example?: string; watch?: string; team?: string };
     cards: Array<{ icon: HomeIcon; title: string; text: string }>;
+    /** "How to play" section under the cards; leave it out to hide it. */
+    tutorial?: {
+      title: string;
+      intro: string;
+      steps: Array<{ tag: string; title: string; text: string }>;
+      tips_title: string;
+      tips: string[];
+    };
     narrator_line: string;
   };
 }

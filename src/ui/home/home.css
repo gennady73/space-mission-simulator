@@ -53,6 +53,20 @@
 .home__card p { font-size: 15px; line-height: 1.6; color: var(--home-muted); margin: 0; }
 .home__narrator { margin: 48px 0 0; text-align: center; font: 12px var(--home-mono); letter-spacing: .04em; color: var(--home-narrator); }
 
+/* ---- How to play: five numbered stages, then tips ---- */
+.home__tutorial { position: relative; z-index: 2; max-width: 1152px; margin: 0 auto; padding: 0 24px 96px; }
+.home .home__section-title { font: 300 28px/1.2 var(--home-font); letter-spacing: .12em; text-transform: uppercase; text-align: center; max-width: none; margin: 0 0 12px; }
+.home__tutorial-intro { max-width: 40rem; margin: 0 auto 40px; text-align: center; font-size: 16px; line-height: 1.6; color: var(--home-muted); }
+.home__steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; counter-reset: step; }
+.home__step { counter-increment: step; position: relative; background: var(--home-panel); border: 1px solid var(--home-line); border-top: 2px solid var(--home-primary); border-radius: 6px; padding: 20px; }
+.home__step::before { content: counter(step); position: absolute; top: 16px; right: 18px; font: 300 28px/1 var(--home-font); color: var(--home-line); }
+.home__step-tag { display: inline-block; font: 11px var(--home-mono); letter-spacing: .15em; color: var(--home-primary); margin-bottom: 10px; }
+.home__step h3 { font: 500 16px/1.3 var(--home-font); margin: 0 0 8px; padding-right: 24px; }
+.home__step p { font-size: 14px; line-height: 1.6; color: var(--home-muted); margin: 0; }
+.home__tips-title { font: 500 17px/1.3 var(--home-font); margin: 48px 0 12px; }
+.home__tips { margin: 0; padding-left: 20px; display: grid; gap: 8px; color: var(--home-muted); font-size: 15px; line-height: 1.6; }
+.home__tips li::marker { color: var(--home-primary); }
+
 @media (max-width: 899px) {
   .home__nav { padding: 0 16px; }
   .home__links { gap: 14px; }
