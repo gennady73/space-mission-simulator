@@ -1,11 +1,11 @@
 import { GATE_NAMES } from '../engine/StageGateValidators';
 import { computeLedger, shadowHoursForMast } from '../engine/SubsystemEngines';
 import { PHASES } from '../models/StateStore';
-import type { EngineConstants, GateValidationResult, MissionChallengeId, ResourceLedger, Phase, SimulationState, TeamRole } from '../models/Interfaces';
+import type { EngineConstants, GateValidationResult, GraphicPlaceholderConfig, MissionChallengeId, ResourceLedger, Phase, SimulationState, TeamRole } from '../models/Interfaces';
 import { renderDebrief, renderGateBanner, type Debrief, type DebriefActions } from './DebriefView';
 import { PHASE_CHOICES, provisionalDesign } from './DesignFlow';
 import { h, kg, pct, usdM } from './dom';
-import { renderPlaceholder } from './GraphicPlaceholderView';
+import { closePopover, togglePopover } from './popover';
 import { renderSideQuests } from './SideQuestModal';
 import { renderPreStageQuestion, type PreStageActions } from './PreStageQuestion';
 import { renderReviewModal, type ReviewActions, type ReviewOutcome } from './ReviewModal';
@@ -44,32 +44,134 @@ export interface CockpitActions extends DebriefActions, PreStageActions, ReviewA
   nextPhase(): void;
   goToPhase(phase: Phase): void;
   runReference(): void;
+  /** Close the gate-failure note on the panel (D-304); the next failed review brings a new one. */
+  dismissBanner(): void;
   importFile(file: File): void;
 }
 
 
 interface Entry { id: string; name: string; description?: string }
+type Child = Node | string | null | undefined | false;
 
-function choices<T extends Entry>(
+/** Small "i" button: the details open in a popover on demand. Always enabled, because reading is never locked (D-303). */
+function infoButton(name: string, build: () => Child[]): HTMLElement {
+  const button = h('button', { type: 'button', class: 'info-btn', 'aria-label': `More about ${name}`, 'aria-expanded': 'false', 'aria-haspopup': 'dialog' }, 'i');
+  button.addEventListener('click', () => togglePopover(button, `About ${name}`, build));
+  return button;
+}
+
+/**
+ * Narrative briefing as one line (D-303): badge and title from the placeholder config, the text in a popover.
+ * Keeps the REQ-011 hooks ([data-placeholder-id], .fallback-frame .fallback-badge); the END card is unchanged.
+ */
+function briefingLine(cfg: GraphicPlaceholderConfig): HTMLElement {
+  const info = infoButton(cfg.title, () => [h('strong', {}, cfg.title), h('p', {}, cfg.brief_explanation)]);
+  return h('figure', { class: 'placeholder placeholder--line', 'data-placeholder-id': cfg.id },
+    h('div', { class: 'fallback-frame' }, h('span', { class: 'fallback-badge' }, cfg.fallback_badge), h('h3', {}, cfg.title), info));
+}
+
+/** Which decision group is open: presentation only, one per stage, recomputed when the stage changes (D-303). */
+let openGroup: { phase: Phase; category: string | null } | null = null;
+/** Category just picked in a single-choice group: the next render opens the next group that still needs a choice. */
+let advanceFrom: string | null = null;
+/** Element to focus after the next render: the header of a group that was just opened, for keyboard players. */
+let pendingFocusId: string | null = null;
+
+/** `optional` groups (challenges, fault protection) never open by themselves: the player opens them. */
+interface Group { category: string; title: string; selected: string | string[] | null; optional?: boolean; build: (open: boolean) => HTMLElement }
+const hasChoice = (g: Group): boolean => (Array.isArray(g.selected) ? g.selected.length > 0 : g.selected !== null);
+const needsChoice = (g: Group): boolean => !g.optional && !hasChoice(g);
+
+/**
+ * One decision group open at a time (D-303). When a stage opens, the first required group without a choice
+ * is open (all collapsed when every one has a choice). After a pick, the next required group after it that
+ * still needs a choice opens, else the next required one in order; a multi-choice group stays open.
+ * Nothing here touches the state.
+ */
+function renderGroups(phase: Phase, groups: Group[]): HTMLElement[] {
+  if (!openGroup || openGroup.phase !== phase) {
+    openGroup = { phase, category: groups.find(needsChoice)?.category ?? null };
+  } else if (advanceFrom) {
+    const after = groups.slice(groups.findIndex((g) => g.category === advanceFrom) + 1);
+    const next = after.find(needsChoice) ?? after.find((g) => !g.optional);
+    if (next) { openGroup = { phase, category: next.category }; pendingFocusId = `group-${next.category}`; }
+  }
+  advanceFrom = null;
+  return groups.map((g) => g.build(openGroup?.category === g.category));
+}
+
+/**
+ * Collapsible group shell (D-303): a header button (aria-expanded, aria-controls) with the title, the chosen
+ * names or "not chosen", and a chevron; the body is hidden when closed but stays in the DOM. The header always
+ * works, even for a locked seat, because reading is always allowed.
+ */
+function collapsible(title: string, category: string, chosen: string[], lock: string | null, open: boolean, body: HTMLElement): HTMLElement {
+  const headId = `group-${category}`;
+  body.id = `group-${category}-body`;
+  body.hidden = !open;
+  const head = h('button', { type: 'button', id: headId, class: 'group-head', 'aria-expanded': String(open), 'aria-controls': body.id },
+    h('span', { class: 'group-title' }, lock ? `${title} · decided by ${lock}` : title),
+    h('span', { class: chosen.length ? 'group-choice' : 'group-choice group-choice--none' }, chosen.length ? chosen.join(', ') : 'not chosen'),
+    h('span', { class: 'group-chevron', 'aria-hidden': 'true' }));
+  const section = h('section', { class: `choice-group choice-group--collapsible${lock ? ' locked' : ''}`, role: 'group', 'aria-labelledby': headId }, head, body);
+  head.addEventListener('click', () => {
+    const willOpen = head.getAttribute('aria-expanded') !== 'true';
+    for (const g of document.querySelectorAll<HTMLElement>('.console-panel .choice-group--collapsible')) {
+      const on = willOpen && g === section;
+      g.querySelector('.group-head')?.setAttribute('aria-expanded', String(on));
+      const rows = g.querySelector<HTMLElement>('.choices');
+      if (rows) rows.hidden = !on;
+    }
+    if (openGroup) openGroup = { ...openGroup, category: willOpen ? category : null };
+  });
+  return section;
+}
+
+/** A checkbox option as one row (D-303): the box and its name in a label, the "i" beside it. The box keeps its id. */
+function toggleRow(box: HTMLInputElement, name: string, info: HTMLElement): HTMLElement {
+  return h('div', { class: 'choice-row' }, h('label', { class: 'choice choice--toggle' }, box, h('span', { class: 'choice-name' }, name)), info);
+}
+
+function group<T extends Entry>(
   title: string, category: string, table: Record<string, T>, selected: string | string[] | null,
   detail: (item: T) => string, onPick: (id: string) => void, lock: string | null = null,
   preview?: { show(id: string): void; clear(): void },
+): Group {
+  return { category, title, selected, build: (open) => choices(title, category, table, selected, detail, onPick, lock, open, preview) };
+}
+
+/**
+ * One option = one row (D-303): the name on one line, and an "i" button whose popover holds the name,
+ * the stats line and the description. Two sibling buttons in a row wrapper, never a button in a button.
+ * The select button keeps its id `btn-<category>-<id>`, its handler and aria-pressed (the e2e contract),
+ * and the hover preview (D-037): while the pointer or focus is on it, the resource tiles show the change.
+ * The group is collapsible: its header is a button with aria-expanded; the header always works, even when
+ * the seat is locked, because reading is always allowed. Collapsed rows stay in the DOM, hidden.
+ */
+function choices<T extends Entry>(
+  title: string, category: string, table: Record<string, T>, selected: string | string[] | null,
+  detail: (item: T) => string, onPick: (id: string) => void, lock: string | null, open: boolean,
+  preview?: { show(id: string): void; clear(): void },
 ): HTMLElement {
+  const multi = Array.isArray(selected);
   const picked = (id: string) => (Array.isArray(selected) ? selected.includes(id) : selected === id);
-  const grid = h('div', { class: 'choices' });
-  for (const item of Object.values(table)) {
-    const button = h('button', { id: `btn-${category}-${item.id}`, type: 'button', class: 'choice', 'aria-pressed': String(picked(item.id)), ...(lock ? { disabled: '' } : {}) },
-      h('strong', {}, item.name), h('span', {}, detail(item)), item.description && h('span', { class: 'why' }, item.description));
-    button.addEventListener('click', () => onPick(item.id));
+  const items = Object.values(table);
+  const chosen = items.filter((i) => picked(i.id)).map((i) => i.name);
+  const body = h('div', { class: 'choices' });
+  for (const item of items) {
+    const select = h('button', { id: `btn-${category}-${item.id}`, type: 'button', class: 'choice', 'aria-pressed': String(picked(item.id)), ...(lock ? { disabled: '' } : {}) },
+      h('span', { class: 'choice-name' }, item.name));
+    select.addEventListener('click', () => { if (!multi) advanceFrom = category; onPick(item.id); });
     if (preview && !lock) {
-      button.addEventListener('mouseenter', () => preview.show(item.id));
-      button.addEventListener('focus', () => preview.show(item.id));
-      button.addEventListener('mouseleave', preview.clear);
-      button.addEventListener('blur', preview.clear);
+      select.addEventListener('mouseenter', () => preview.show(item.id));
+      select.addEventListener('focus', () => preview.show(item.id));
+      select.addEventListener('mouseleave', preview.clear);
+      select.addEventListener('blur', preview.clear);
     }
-    grid.append(button);
+    const info = infoButton(item.name, () => [h('strong', {}, item.name), h('span', { class: 'stats' }, detail(item)), item.description && h('p', {}, item.description)]);
+    body.append(h('div', { class: 'choice-row' }, select, info));
   }
-  return h('fieldset', { class: lock ? 'choice-group locked' : 'choice-group' }, h('legend', {}, lock ? `${title} · decided by ${lock}` : title), grid);
+  return collapsible(title, category, chosen, lock, open, body);
 }
 
 function numberField(id: string, label: string, value: string, step: string, onInput: (v: string) => void, lock: string | null = null): HTMLElement {
@@ -83,10 +185,41 @@ function numberField(id: string, label: string, value: string, step: string, onI
  * Team play (D-010): each decision belongs to one seat, named in team_roles[*].decides.
  * Returns the owning seat's label when the active seat may not make this decision, else null.
  */
-function lockFor(c: EngineConstants, s: SimulationState, decision: string): string | null {
+export function lockFor(c: EngineConstants, s: SimulationState, decision: string): string | null {
   if (!s.teamMode) return null;
   const owner = Object.entries(c.team_roles).find(([, role]) => role.decides.includes(decision));
   return owner && owner[0] !== s.activeRole ? owner[1].label : null;
+}
+
+type Site = EngineConstants['site_catalog'][string];
+const siteStats = (x: Site): string =>
+  `Slope ${x.slope_deg}° · Earth in view ${pct(x.earth_visibility_fraction)} of the time · sunlit ${pct(x.illumination_fraction)} · cold trap ${x.distance_to_cold_trap_km} km away`;
+
+/**
+ * Landing site (D-303): the player picks it on the map; the panel shows one card. The list under the card
+ * is the keyboard-operable equivalent of the pins (the map is a canvas, so its pins cannot take focus).
+ * Hooks: #site-card, #select-site, #btn-site-clear. All site text comes from c.site_catalog.
+ */
+function siteCard(c: EngineConstants, s: SimulationState, a: CockpitActions, lock: string | null): HTMLElement {
+  const site = s.selectedSite ? c.site_catalog[s.selectedSite] : undefined;
+  const list = h('select', { id: 'select-site', 'aria-label': 'Choose a landing site from the list', ...(lock ? { disabled: '' } : {}) },
+    h('option', { value: '' }, 'Choose from the list…'),
+    ...Object.values(c.site_catalog).map((x) => h('option', { value: x.id, ...(x.id === s.selectedSite ? { selected: '' } : {}) }, x.name)));
+  list.addEventListener('change', () => a.update({ selectedSite: list.value || null }));
+  const card = h('div', { id: 'site-card', class: site ? 'site-card' : 'site-card site-card--empty' });
+  if (site) {
+    const clear = h('button', { id: 'btn-site-clear', type: 'button', class: 'linklike', ...(lock ? { disabled: '' } : {}) }, 'Clear');
+    clear.addEventListener('click', () => a.update({ selectedSite: null }));
+    card.append(
+      h('strong', { class: 'site-card__name' }, site.name),
+      h('span', { class: 'site-card__stats' }, siteStats(site)),
+      site.description && h('p', { class: 'site-card__why' }, site.description),
+      h('p', { class: 'hint' }, 'Tap another site on the map to change it.'),
+      h('div', { class: 'site-card__actions' }, list, clear));
+  } else {
+    card.append(h('p', { class: 'site-card__empty' }, 'No site chosen yet. Tap a site on the map.'), h('div', { class: 'site-card__actions' }, list));
+  }
+  return h('fieldset', { class: lock ? 'choice-group locked' : 'choice-group' }, h('legend', {}, lock ? `Landing site · decided by ${lock}` : 'Landing site'), card);
 }
 
 function phasePanel(view: CockpitView, a: CockpitActions): HTMLElement {
@@ -102,22 +235,24 @@ function phasePanel(view: CockpitView, a: CockpitActions): HTMLElement {
     objective.addEventListener('change', () => a.update({ missionObjective: objective.value || null }));
     box.append(
       h('label', { class: 'field wide' }, 'Mission objective: what must this outpost achieve? ', objective),
-      iceProspectingToggle(c, s, a, lock('mission objective')),
-      choices('Landing site', 'site', c.site_catalog, s.selectedSite,
-        (x) => `Slope ${x.slope_deg}° · Earth in view ${pct(x.earth_visibility_fraction)} of the time · sunlit ${pct(x.illumination_fraction)} · cold trap ${x.distance_to_cold_trap_km} km away`,
-        (id) => a.update({ selectedSite: id }), lock('landing site'), pv('selectedSite')),
+      // The site is picked on the map (D-303); the hover preview (D-037) has no card to sit on here.
+      siteCard(c, s, a, lock('landing site')),
+      // Optional challenges (D-040, D-041) as one collapsed group: rows with an "i", never open by themselves.
+      ...renderGroups('MCR', [challengeGroup(c, s, a, lock('mission objective'))]),
     );
   } else if (s.currentPhase === 'SRR') {
     box.append(
-      choices('Launch vehicle', 'lv', hw.launch_vehicles, s.selectedLaunchVehicle,
-        (x) => `${kg(x.tli_capacity_kg)} to the Moon · ${x.fairing_diameter_m} m fairing · ${usdM(x.cost_usd)}`,
-        (id) => a.update({ selectedLaunchVehicle: id }), lock('launch vehicle'), pv('selectedLaunchVehicle')),
-      choices('Transfer trajectory', 'trajectory', c.trajectories, s.selectedTrajectory,
-        (x) => `${x.cruise_days} days of cruise · landing needs ${x.descent_delta_v_m_s} m/s · ${usdM(x.extra_cost_usd)} extra`,
-        (id) => a.update({ selectedTrajectory: id }), lock('trajectory'), pv('selectedTrajectory')),
-      choices('Landing pad', 'pad', hw.launchpads, s.selectedLaunchpad,
-        (x) => `${kg(x.mass_kg)} · ${usdM(x.cost_usd)} · must stand at least ${x.requires_standoff_distance_m} m from the solar mast`,
-        (id) => a.update({ selectedLaunchpad: id }), lock('landing pad'), pv('selectedLaunchpad')),
+      ...renderGroups('SRR', [
+        group('Launch vehicle', 'lv', hw.launch_vehicles, s.selectedLaunchVehicle,
+          (x) => `${kg(x.tli_capacity_kg)} to the Moon · ${x.fairing_diameter_m} m fairing · ${usdM(x.cost_usd)}`,
+          (id) => a.update({ selectedLaunchVehicle: id }), lock('launch vehicle'), pv('selectedLaunchVehicle')),
+        group('Transfer trajectory', 'trajectory', c.trajectories, s.selectedTrajectory,
+          (x) => `${x.cruise_days} days of cruise · landing needs ${x.descent_delta_v_m_s} m/s · ${usdM(x.extra_cost_usd)} extra`,
+          (id) => a.update({ selectedTrajectory: id }), lock('trajectory'), pv('selectedTrajectory')),
+        group('Landing pad', 'pad', hw.launchpads, s.selectedLaunchpad,
+          (x) => `${kg(x.mass_kg)} · ${usdM(x.cost_usd)} · must stand at least ${x.requires_standoff_distance_m} m from the solar mast`,
+          (id) => a.update({ selectedLaunchpad: id }), lock('landing pad'), pv('selectedLaunchpad')),
+      ]),
       numberField('input-pad-distance', 'Distance from pad to solar mast (m)', view.padDistanceDraft, '50', (v) => {
         a.setPadDistanceDraft(v);
         const line = document.getElementById('objective-padDistanceM');
@@ -126,39 +261,41 @@ function phasePanel(view: CockpitView, a: CockpitActions): HTMLElement {
     );
   } else if (s.currentPhase === 'PDR') {
     const site = s.selectedSite ? c.site_catalog[s.selectedSite] : undefined;
-    box.append(
-      choices('Power mast', 'mast', hw.power_masts, s.selectedMast,
+    box.append(...renderGroups('PDR', [
+      group('Power mast', 'mast', hw.power_masts, s.selectedMast,
         (x) => `${x.rated_power_w.toLocaleString('en-US')} W in sunlight · works when the Sun is above ${x.cutoff_elevation_deg}°${site ? ` · longest shadow here ${formatShadow(shadowHoursForMast(c, site, x))}` : ''} · ${kg(x.mass_kg)} · ${usdM(x.cost_usd)}`,
         (id) => a.update({ selectedMast: id }), lock('power mast'), pv('selectedMast')),
-      choices('Energy storage', 'battery', hw.energy_storage, s.selectedBattery,
+      group('Energy storage', 'battery', hw.energy_storage, s.selectedBattery,
         (x) => `${x.capacity_kwh} kWh, ${pct(x.max_dod)} usable · ${kg(x.mass_kg)} · ${usdM(x.cost_usd)}`,
         (id) => a.update({ selectedBattery: id }), lock('battery'), pv('selectedBattery')),
-      ...(s.missionChallenges.includes('night_survival') ? [choices('Night power source (night survival challenge)', 'nightpower', c.mission_challenges.night_survival.night_power_options,
+      ...(s.missionChallenges.includes('night_survival') ? [group('Night power source (night survival challenge)', 'nightpower', c.mission_challenges.night_survival.night_power_options,
         s.selectedNightPower ?? c.mission_challenges.night_survival.default_night_power,
         (x) => `${x.power_w.toLocaleString('en-US')} W day and night · ${x.runs_operations ? 'keeps working at night' : 'survival only at night'} · ${kg(x.mass_kg)} · ${usdM(x.cost_usd)}`,
         (id) => a.update({ selectedNightPower: id }), lock('battery'), pv('selectedNightPower'))] : []),
-      choices('Communications', 'comm', hw.comm_systems, s.selectedComm,
+      group('Communications', 'comm', hw.comm_systems, s.selectedComm,
         (x) => `${x.downlink_kbps.toLocaleString('en-US')} kbps · ${x.direct_to_earth ? 'needs Earth above the horizon' : `relay in view ${pct(x.relay_coverage_fraction ?? 0)} of the time`} · ${x.tx_power_w} W · ${kg(x.mass_kg)} · ${usdM(x.cost_usd)}`,
         (id) => a.update({ selectedComm: id }), lock('communications system'), pv('selectedComm')),
-      choices('Data storage', 'storage', hw.data_storage, s.selectedStorage,
+      group('Data storage', 'storage', hw.data_storage, s.selectedStorage,
         (x) => `${(x.capacity_mb / 1000).toLocaleString('en-US')} Gbit · ${x.power_w} W · ${kg(x.mass_kg)} · ${usdM(x.cost_usd)}`,
         (id) => a.update({ selectedStorage: id }), lock('data storage'), pv('selectedStorage')),
-      choices('Science instruments (choose any)', 'instrument', hw.science_instruments, s.selectedInstruments,
+      group('Science instruments (choose any)', 'instrument', hw.science_instruments, s.selectedInstruments,
         (x) => `${x.peak_power_w} W peak · ${x.data_rate_kbps} kbps · ${kg(x.mass_kg)} · ${usdM(x.cost_usd)}`,
         (id) => a.update({ selectedInstruments: toggle(s.selectedInstruments, id) }), lock('science instruments'),
         previewFor(view, (id) => ({ selectedInstruments: toggle(s.selectedInstruments, id) }))),
-    );
+    ]));
   } else if (s.currentPhase === 'CDR') {
     box.append(
-      choices('Cold-trap logistics', 'logistics', hw.cold_trap_logistics, s.selectedLogistics,
-        (x) => `Climbs ${x.max_slope_deg}° · survives the year with ${pct(x.reliability_365d)} probability · heater ${x.survival_heater_w} W · ${kg(x.mass_kg)}${per(x.per_km)} · ${usdM(x.cost_usd)}${per(x.per_km)}`,
-        (id) => a.update({ selectedLogistics: id }), lock('cold-trap logistics'), pv('selectedLogistics')),
-      choices('Power link to the drill', 'link', hw.utility_links, s.selectedUtilityLink,
-        (x) => `Delivers ${pct(x.efficiency)} of ${x.source_power_w} W · ${x.max_range_km === null ? 'any distance' : `reaches ${x.max_range_km} km`} · ${pct(x.sever_probability)} chance of a break · ${kg(x.mass_kg)}${per(x.per_km)} · ${usdM(x.cost_usd)}${per(x.per_km)}`,
-        (id) => a.update({ selectedUtilityLink: id }), lock('utility link'), pv('selectedUtilityLink')),
-      ...(s.iceProspecting ? [choices('Drill string (ice prospecting challenge)', 'drill', c.ice_prospecting.drill_options, s.selectedDrillOption ?? c.ice_prospecting.default_drill_option,
-        (x) => `Reaches ${x.depth_m} m · ${x.ice_yield_factor}× the ice per drilling hour · +${x.extra_peak_power_w} W at the drill · +${kg(x.mass_kg)} · +${usdM(x.cost_usd)}`,
-        (id) => a.update({ selectedDrillOption: id }), lock('heater power'), pv('selectedDrillOption'))] : []),
+      ...renderGroups('CDR', [
+        group('Cold-trap logistics', 'logistics', hw.cold_trap_logistics, s.selectedLogistics,
+          (x) => `Climbs ${x.max_slope_deg}° · survives the year with ${pct(x.reliability_365d)} probability · heater ${x.survival_heater_w} W · ${kg(x.mass_kg)}${per(x.per_km)} · ${usdM(x.cost_usd)}${per(x.per_km)}`,
+          (id) => a.update({ selectedLogistics: id }), lock('cold-trap logistics'), pv('selectedLogistics')),
+        group('Power link to the drill', 'link', hw.utility_links, s.selectedUtilityLink,
+          (x) => `Delivers ${pct(x.efficiency)} of ${x.source_power_w} W · ${x.max_range_km === null ? 'any distance' : `reaches ${x.max_range_km} km`} · ${pct(x.sever_probability)} chance of a break · ${kg(x.mass_kg)}${per(x.per_km)} · ${usdM(x.cost_usd)}${per(x.per_km)}`,
+          (id) => a.update({ selectedUtilityLink: id }), lock('utility link'), pv('selectedUtilityLink')),
+        ...(s.iceProspecting ? [group('Drill string (ice prospecting challenge)', 'drill', c.ice_prospecting.drill_options, s.selectedDrillOption ?? c.ice_prospecting.default_drill_option,
+          (x) => `Reaches ${x.depth_m} m · ${x.ice_yield_factor}× the ice per drilling hour · +${x.extra_peak_power_w} W at the drill · +${kg(x.mass_kg)} · +${usdM(x.cost_usd)}`,
+          (id) => a.update({ selectedDrillOption: id }), lock('heater power'), pv('selectedDrillOption'))] : []),
+      ]),
       numberField('input-drill-heater', 'Drill survival heater power (W)', view.heaterDraft, '5', a.setHeaterDraft, lock('heater power')),
       ...(s.iceProspecting ? [h('p', { class: 'hint', id: 'hint-thermal-extraction' },
         `Every watt above the ${c.simulation.min_drill_heater_w} W minimum sublimates more ice into the collector (${pct(c.ice_prospecting.heater_extraction_efficiency)} of it is used), but the heater also runs through every shadow, so it needs battery.`)] : []),
@@ -169,28 +306,36 @@ function phasePanel(view: CockpitView, a: CockpitActions): HTMLElement {
 }
 
 /**
- * D-040: optional mission challenge. The same outpost is scored against a water target, which opens the
- * drill-string choice at CDR and makes heater power above the minimum worth its battery.
+ * Optional mission challenges as one collapsible group (D-303 on D-040 / D-041): ice prospecting (scored
+ * against a water target, opens the drill-string choice at CDR) and the further challenges, each of which
+ * changes one rule of the same outpost; they can be combined. One row per challenge, its description behind
+ * the "i". The checkboxes keep their ids: #toggle-ice-prospecting, #toggle-challenge-<id>.
  */
-function iceProspectingToggle(c: EngineConstants, s: SimulationState, a: CockpitActions, lock: string | null): HTMLElement {
+function challengeGroup(c: EngineConstants, s: SimulationState, a: CockpitActions, lock: string | null): Group {
   const ip = c.ice_prospecting;
-  const box = h('input', { id: 'toggle-ice-prospecting', type: 'checkbox', ...(s.iceProspecting ? { checked: '' } : {}), ...(lock ? { disabled: '' } : {}) });
-  box.addEventListener('change', () => a.update(box.checked
-    ? { iceProspecting: true, missionObjective: ip.objective }
-    : { iceProspecting: false, selectedDrillOption: null, ...(s.missionObjective === ip.objective ? { missionObjective: null } : {}) }));
-  return h('fieldset', { class: lock ? 'choice-group locked' : 'choice-group' },
-    h('legend', {}, lock ? `Mission challenge (optional) · decided by ${lock}` : 'Mission challenge (optional)'),
-    h('label', { class: 'toggle' }, box, ` ${ip.name} · target ${kg(ip.water_target_kg)} of water`),
-    h('p', { class: 'hint' }, ip.description),
-    ...Object.values(c.mission_challenges).flatMap((ch) => {
-      // D-041: further challenges; each changes one rule of the same outpost, and they can be combined.
-      const t = h('input', { id: `toggle-challenge-${ch.id}`, type: 'checkbox', ...(s.missionChallenges.includes(ch.id) ? { checked: '' } : {}), ...(lock ? { disabled: '' } : {}) });
-      t.addEventListener('change', () => a.update({
-        missionChallenges: toggle(s.missionChallenges, ch.id) as MissionChallengeId[],
-        ...(ch.id === 'night_survival' && !t.checked ? { selectedNightPower: null } : {}),
-      }));
-      return [h('label', { class: 'toggle' }, t, ` ${ch.name}`), h('p', { class: 'hint' }, ch.description)];
-    }));
+  const challenges = Object.values(c.mission_challenges);
+  const chosen = [...(s.iceProspecting ? [ip.name] : []), ...challenges.filter((ch) => s.missionChallenges.includes(ch.id)).map((ch) => ch.name)];
+  const checkbox = (id: string, checked: boolean) => h('input', { id, type: 'checkbox', ...(checked ? { checked: '' } : {}), ...(lock ? { disabled: '' } : {}) });
+  return {
+    category: 'challenge', title: 'Mission challenge (optional)', selected: chosen, optional: true,
+    build: (open) => {
+      const body = h('div', { class: 'choices' });
+      const ice = checkbox('toggle-ice-prospecting', s.iceProspecting);
+      ice.addEventListener('change', () => a.update(ice.checked
+        ? { iceProspecting: true, missionObjective: ip.objective }
+        : { iceProspecting: false, selectedDrillOption: null, ...(s.missionObjective === ip.objective ? { missionObjective: null } : {}) }));
+      body.append(toggleRow(ice, ip.name, infoButton(ip.name, () => [h('strong', {}, ip.name), h('span', { class: 'stats' }, `Target ${kg(ip.water_target_kg)} of water`), h('p', {}, ip.description)])));
+      for (const ch of challenges) {
+        const t = checkbox(`toggle-challenge-${ch.id}`, s.missionChallenges.includes(ch.id));
+        t.addEventListener('change', () => a.update({
+          missionChallenges: toggle(s.missionChallenges, ch.id) as MissionChallengeId[],
+          ...(ch.id === 'night_survival' && !t.checked ? { selectedNightPower: null } : {}),
+        }));
+        body.append(toggleRow(t, ch.name, infoButton(ch.name, () => [h('strong', {}, ch.name), h('p', {}, ch.description)])));
+      }
+      return collapsible('Mission challenge', 'challenge', chosen, lock, open, body);
+    },
+  };
 }
 
 /**
@@ -201,20 +346,19 @@ function faultProtectionToggle(c: EngineConstants, s: SimulationState, a: Cockpi
   const fp = c.fault_protection;
   const box = h('input', { id: 'toggle-fault-protection', type: 'checkbox', ...(s.faultProtection ? { checked: '' } : {}), ...(lock ? { disabled: '' } : {}) });
   box.addEventListener('change', () => a.update({ faultProtection: box.checked }));
+  // One row with an "i" (D-303): the stats stay on the row, the explanation opens on demand.
+  const info = infoButton(fp.name, () => [h('strong', {}, fp.name), h('span', { class: 'stats' }, `${kg(fp.mass_kg)} · ${usdM(fp.cost_usd)}`),
+    h('p', {}, `${fp.description} Recovery needs ${fp.recovery_link_hours} hours of Earth contact and works ${pct(fp.recovery_probability)} of the time.`)]);
   return h('fieldset', { class: lock ? 'choice-group locked' : 'choice-group' },
     h('legend', {}, lock ? `Fault protection (optional) · decided by ${lock}` : 'Fault protection (optional)'),
-    h('label', { class: 'toggle' }, box, ` ${fp.name} · ${kg(fp.mass_kg)} · ${usdM(fp.cost_usd)}`),
-    h('p', { class: 'hint' }, `${fp.description} Recovery needs ${fp.recovery_link_hours} hours of Earth contact and works ${pct(fp.recovery_probability)} of the time.`));
+    h('div', { class: 'choices choices--single' }, toggleRow(box, `${fp.name} · ${kg(fp.mass_kg)} · ${usdM(fp.cost_usd)}`, info)));
 }
 
 const isNumber = (text: string): boolean => Number.isFinite(Number.parseFloat(text));
 const objectiveText = (label: string, done: boolean): string => `${done ? '✓' : '○'} Choose the ${label}`;
 
-/**
- * Objectives checklist (D-034): what this stage's review needs, ticked as the player chooses.
- * The typed pad distance is a draft outside the store, so its line is also updated by the field.
- */
-function objectives(view: CockpitView): HTMLElement {
+/** What this stage's review needs, ticked as the player chooses. The typed pad distance is a draft outside the store. */
+function objectiveItems(view: CockpitView) {
   const { constants: c, state: s } = view;
   const items = PHASE_CHOICES[s.currentPhase].map(({ key, label }) => ({
     key, label, done: key === 'padDistanceM' ? isNumber(view.padDistanceDraft) : s[key] !== null,
@@ -222,11 +366,19 @@ function objectives(view: CockpitView): HTMLElement {
   const left = items.filter((i) => !i.done).length;
   const { assumed } = provisionalDesign(c, { ...s, padDistanceM: isNumber(view.padDistanceDraft) ? Number.parseFloat(view.padDistanceDraft) : null });
   const later = assumed.filter((label) => !items.some((i) => i.label === label));
+  return { items, left, later, status: left ? `${left} still to choose before the review.` : 'Ready for the review.' };
+}
+
+/**
+ * Objectives checklist (D-034). The "estimated from the reference design" note sits behind an "i" next to
+ * the heading, and the status line (#objectives-status) lives beside the submit button (D-303).
+ */
+function objectives(view: CockpitView): HTMLElement {
+  const { items, later } = objectiveItems(view);
   return h('section', { id: 'objectives', class: 'objectives', 'aria-label': 'Objectives for this review' },
-    h('h3', {}, 'Objectives for this review'),
+    h('div', { class: 'objectives-head' }, h('h3', {}, 'Objectives for this review'),
+      later.length > 0 && infoButton('the objectives', () => [h('strong', {}, 'Estimated until you choose'), h('p', {}, `Later stages are estimated from the reference design until you choose: ${later.join(', ')}.`)])),
     h('ul', {}, ...items.map((i) => h('li', { id: `objective-${i.key}`, 'data-done': String(i.done) }, objectiveText(i.label, i.done)))),
-    h('p', { id: 'objectives-status', class: 'hint' }, left ? `${left} still to choose before the review.` : 'Ready for the review.'),
-    later.length > 0 && h('p', { class: 'hint' }, `Later stages are estimated from the reference design until you choose: ${later.join(', ')}.`),
   );
 }
 
@@ -362,6 +514,7 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
   const focusId = document.activeElement?.id;
   const panelScroll = root.querySelector('.console-panel')?.scrollTop ?? 0;
   const samePhase = root.querySelector('.console')?.getAttribute('data-phase') === s.currentPhase;
+  closePopover(false); // its trigger is about to be replaced
   root.replaceChildren();
   root.classList.add('console-host');
 
@@ -423,9 +576,9 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
       }
       panel.append(h('section', { class: 'team' }, h('p', { class: 'hint' }, 'Team play: pass the device to the player whose seat is selected. Each player makes only their own decisions, and all share one budget and one mass limit.'), seats));
     }
-    if (s.currentPhase === 'MCR' && !s.selectedSite) {
-      const intro = renderPlaceholder(c, 'IMG-PLACEHOLDER-INTRO');
-      if (intro) panel.append(intro);
+    if (s.currentPhase === 'MCR') {
+      const intro = c.graphic_placeholders['IMG-PLACEHOLDER-INTRO'];
+      if (intro) panel.append(briefingLine(intro));
     }
     const ownerEntry = Object.entries(c.team_roles).find(([, r]) => r.owns_gates.includes(s.currentPhase));
     const owner = ownerEntry?.[1];
@@ -433,7 +586,7 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
     panel.append(h('h2', { id: 'current-phase-display', class: 'phase-title' }, ...phaseTitleNodes(s.currentPhase)));
     if (owner && s.teamMode) panel.append(h('p', { class: 'hint' }, `Review owner: ${owner.label}. ${owner.priority_hint}`));
     if (view.notice) panel.append(h('p', { id: 'console-notice', class: 'console-notice' }, view.notice));
-    if (view.banner) panel.append(renderGateBanner(view.banner));
+    if (view.banner) panel.append(renderGateBanner(view.banner, a.dismissBanner));
     panel.append(renderPreStageQuestion(c, s, a));
 
     if (!debriefing) {
@@ -446,10 +599,10 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
       const next = h('button', { id: 'btn-next-phase', type: 'button', ...(mustHandOver ? { disabled: '' } : {}) },
         s.teamMode && owner ? `${verb}: sign-off by ${owner.label}` : verb);
       next.addEventListener('click', a.nextPhase);
-      // The submit bar stays in reach at the bottom of the panel while the cards scroll under it.
+      // The submit bar stays pinned at the bottom of the panel, with the status line beside the button (D-303).
       panel.append(h('div', { class: 'panel-submit' },
         mustHandOver && owner && h('p', { id: 'signoff-note', class: 'hint' }, `Only ${owner.label} can sign off this review. Select that seat to submit.`),
-        next));
+        h('div', { class: 'submit-row' }, h('p', { id: 'objectives-status', class: 'hint' }, objectiveItems(view).status), next)));
     }
   }
 
@@ -470,4 +623,6 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
   // A choice re-renders the panel: keep the player's place in it. A new stage starts at its top.
   if (samePhase) panel.scrollTop = panelScroll;
   if (focusId && !view.review) document.getElementById(focusId)?.focus({ preventScroll: true });
+  // A pick collapsed its group: keep a keyboard player on the group that just opened (D-303).
+  if (pendingFocusId) { document.getElementById(pendingFocusId)?.focus({ preventScroll: true }); pendingFocusId = null; }
 }

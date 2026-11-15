@@ -1,0 +1,42 @@
+/* Sticky notes (Media, D-304): the only elements with a bright fill, a tilt and a shadow.
+   Fills and ink are the --note-* tokens in styles.css. Paper look: square corners, faint ruled lines,
+   a soft shadow under the bottom edge only. */
+.sticky {
+  position: relative;
+  color: var(--note-ink);
+  padding: 14px 18px 16px;
+  border-radius: 0;
+  box-shadow: 0 10px 14px -8px rgb(0 0 0 / .75);
+  background-image: repeating-linear-gradient(transparent 0 23px, rgb(8 15 30 / .09) 23px 24px);
+  font-size: 14px;
+  line-height: 24px;
+  display: grid;
+  gap: 2px;
+}
+/* Folded bottom-right corner: a darker flap, drawn without clipping so the shadow stays. */
+.sticky::after { content: ""; position: absolute; right: 0; bottom: 0; width: 22px; height: 22px; background: linear-gradient(315deg, rgb(8 15 30 / .3) 50%, transparent 50%); }
+.sticky--success { background-color: var(--note-success); transform: rotate(1deg); }
+.sticky--mistake { background-color: var(--note-mistake); transform: rotate(-2deg); }
+.sticky--tip { background-color: var(--note-tip); transform: rotate(-1deg); }
+.sticky__head { display: flex; align-items: center; gap: 8px; }
+.sticky__icon { display: inline-flex; flex: none; color: inherit; }
+.sticky__icon svg { height: 24px; width: auto; display: block; }
+.sticky__title { flex: 1; min-width: 0; font-weight: 700; font-size: 15px; }
+.sticky__close { flex: none; width: 28px; min-height: 28px; padding: 0; background: transparent; color: var(--note-ink); border: 0; border-radius: 0; font: 700 18px/1 var(--font); cursor: pointer; }
+.sticky__close:hover { background: rgb(8 15 30 / .12); }
+.sticky__close:focus-visible { outline: 2px solid var(--note-ink); outline-offset: 1px; }
+.sticky__body { margin: 0; }
+.sticky__body p { margin: 0; }
+.sticky__footer { margin-top: 4px; padding-top: 4px; border-top: 1px solid rgb(8 15 30 / .35); font-size: 13px; }
+.sticky__footer code { font: 13px var(--mono); color: inherit; }
+/* Quest buttons inside the yellow note: ink on paper, not accent blue on yellow. */
+.sticky .quest-btn, .sticky .quest-btn--done { color: var(--note-ink); border-color: rgb(8 15 30 / .55); background: rgb(255 255 255 / .28); }
+.sticky .quest-btn:focus-visible { outline-color: var(--note-ink); }
+/* Gate verdicts as notes keep their small standard / code line legible on the paper. */
+.sticky small { display: block; color: inherit; opacity: .8; font: 12px var(--mono); margin-top: 2px; }
+/* #notes design check page */
+.notes-showcase { display: grid; gap: 16px; padding: 8px 0; }
+.notes-showcase__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 36px 28px; max-width: 1000px; padding: 12px 0; }
+/* Entrance: under 200 ms, settling into the kind's tilt; off for players who asked for less motion. */
+@keyframes sticky-in { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: no-preference) { .sticky { animation: sticky-in 160ms ease-out; } }

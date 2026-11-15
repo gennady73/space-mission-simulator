@@ -8,6 +8,8 @@ import { expect, test, type Page } from '@playwright/test';
  * #btn-<category>-<catalogId>, #btn-next-phase, #current-phase-display, .gate-error-banner.
  */
 const pick = async (page: Page, ...ids: string[]) => { for (const id of ids) await page.click(`button#${id}`); };
+/** The landing site is picked on the map or from its list; #select-site is the keyboard-operable control (D-303). */
+const pickSite = async (page: Page, siteId: string) => { await page.selectOption('#select-site', siteId); };
 /** '/' is the landing page (D-301); the console tests enter the cockpit directly at #mission. */
 const start = async (page: Page) => { await page.goto('/#mission'); };
 /** The launch now replays the year in the flight playback (D-105); skip it to reach the debrief. */
@@ -29,7 +31,7 @@ const phase = (page: Page) => page.locator('#current-phase-display');
 
 async function passMcrAndSrr(page: Page, pad: string, distance: string): Promise<void> {
   await start(page);
-  await pick(page, 'btn-site-shackleton_ridge');
+  await pickSite(page, 'shackleton_ridge');
   await next(page);
   await expect(phase(page)).toHaveText('Phase A: System Requirements Review (SRR)');
   await pick(page, 'btn-lv-lv_medium_reusable', pad);
@@ -97,7 +99,7 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await page.click('#btn-menu');
     await page.check('#toggle-team-mode');
     await expect(page.locator('#btn-role-mission_lead')).toHaveAttribute('aria-pressed', 'true');
-    await pick(page, 'btn-site-shackleton_ridge');
+    await pickSite(page, 'shackleton_ridge');
     await next(page); // Mission Lead owns MCR
     await expect(phase(page)).toHaveText('Phase A: System Requirements Review (SRR)');
     // Still the Mission Lead: launch decisions and the SRR sign-off belong to Launch & Structures.
@@ -132,7 +134,7 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await page.click('#btn-reveal-explanation');
     await expect(page.locator('#pre-stage-explanation')).toContainText('tilted only about 1.5 degrees');
     // The next phase asks its own question again, unanswered.
-    await pick(page, 'btn-site-shackleton_ridge');
+    await pickSite(page, 'shackleton_ridge');
     await next(page);
     await expect(phase(page)).toHaveText('Phase A: System Requirements Review (SRR)');
     await expect(page.locator('#pre-stage-question')).toContainText('sandblast');
@@ -159,7 +161,7 @@ test.describe('Space Mission Simulator E2E Verification', () => {
   test('The console viewport holds the live map through the design phases (D-104)', async ({ page }) => {
     await start(page);
     await expect(page.locator('#console-viewport .sitemap')).toBeVisible();
-    await pick(page, 'btn-site-shackleton_ridge');
+    await pickSite(page, 'shackleton_ridge');
     await next(page);
     await expect(phase(page)).toHaveText('Phase A: System Requirements Review (SRR)');
     await expect(page.locator('#console-viewport .sitemap')).toBeVisible();
@@ -168,7 +170,7 @@ test.describe('Space Mission Simulator E2E Verification', () => {
   test('Objectives checklist ticks off what the review needs (D-034)', async ({ page }) => {
     await start(page);
     await expect(page.locator('#objectives-status')).toHaveText('1 still to choose before the review.');
-    await pick(page, 'btn-site-shackleton_ridge');
+    await pickSite(page, 'shackleton_ridge');
     await expect(page.locator('#objective-selectedSite')).toHaveAttribute('data-done', 'true');
     await expect(page.locator('#objectives-status')).toHaveText('Ready for the review.');
     await next(page);
@@ -189,7 +191,7 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await expect(modal).toHaveCount(0);
     // The verdict stays on the panel while the player fixes the design.
     await expect(page.locator('.console-panel .gate-error-banner')).toBeVisible();
-    await pick(page, 'btn-site-shackleton_ridge');
+    await pickSite(page, 'shackleton_ridge');
     await page.click('#btn-next-phase');
     await expect(modal.locator('#review-verdict')).toHaveText('Verdict: passed');
     await expect(phase(page)).toHaveText('Pre-Phase A: Mission Concept Review (MCR)');
@@ -218,9 +220,23 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await noPageScroll();
   });
 
+  test('A failed review leaves a sticky note on the panel that the player can dismiss (D-304)', async ({ page }) => {
+    await start(page);
+    await page.click('#btn-next-phase');
+    await page.click('#btn-review-revise');
+    const note = page.locator('.console-panel .gate-error-banner');
+    await expect(note).toHaveClass(/sticky--mistake/);
+    await expect(note).toHaveAttribute('role', 'alert');
+    await expect(note).toContainText('ERR_DESIGN_INCOMPLETE');
+    await note.locator('.sticky__close').click();
+    await expect(page.locator('.console-panel .gate-error-banner')).toHaveCount(0);
+  });
+
   test('Hovering a choice previews its effect on the resource tiles, and leaving clears it', async ({ page }) => {
     await passMcrAndSrr(page, 'btn-pad-pad_elevated_45deg', '800');
+    await page.click('#group-battery'); // one group open at a time (D-303): open the battery group
     await pick(page, 'btn-battery-batt_liion_4kwh');
+    await page.click('#group-battery'); // the pick moved on to the next group; come back to hover a sibling
     await page.hover('button#btn-battery-batt_liion_8kwh');
     // A bigger pack: heavier and dearer, more shadow margin.
     await expect(page.locator('#res-mass .delta.down')).toContainText('+');
@@ -257,7 +273,7 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await page.click('#btn-menu');
     await page.setInputFiles('#input-import-design', { name: 'design.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
     await expect(page.locator('#console-notice')).toContainText('Design loaded');
-    await expect(page.locator('#btn-site-shackleton_ridge')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#select-site')).toHaveValue('shackleton_ridge'); // the site card's list (D-303)
   });
 
   test('Fault protection is an optional CDR choice that adds its mass, with a light-time quest beside it (D-039)', async ({ page }) => {
@@ -265,7 +281,9 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await pick(page, 'btn-mast-mast_10m_vsat', 'btn-battery-batt_liion_8kwh', 'btn-comm-dte_xband', 'btn-storage-ssmm_128gb');
     await next(page);
     await expect(phase(page)).toHaveText('Phase C: Critical Design Review (CDR)');
+    await page.click('#btn-quests'); // the quest list opens from its one-line row (D-303)
     await expect(page.locator('button#btn-quest-quest_light_time')).toBeVisible();
+    await page.keyboard.press('Escape');
     const mass = page.locator('#res-mass dd');
     const before = await mass.innerText();
     await page.check('#toggle-fault-protection');
