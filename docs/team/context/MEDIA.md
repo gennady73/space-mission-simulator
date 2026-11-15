@@ -5,7 +5,7 @@ To add art, drop the file at the path below. No code change is needed. To hide a
 
 | ID | Stage | File (under `public/`) | Ratio | Target px | Concept | Fallback badge | Status |
 |---|---|---|---|---|---|---|---|
-| IMG-PLACEHOLDER-INTRO | INTRO | assets/images/placeholders/intro-hero.svg | 16:9 | 1280×720 | 2032: cargo lander arriving at the south pole, Earth low over sunlit rims | [NARRATIVE BRIEFING: 2032 POLAR OUTPOST PIONEER] | ☐ |
+| IMG-PLACEHOLDER-INTRO | INTRO | assets/images/placeholders/intro-hero.svg | 16:9 | 1280×720 | 2032: cargo lander arriving at the south pole, Earth low over sunlit rims | [NARRATIVE BRIEFING: 2032 LIGHTHOUSE ON THE TRAIL] | ☐ · on the console this is a one-line briefing with an "i" since D-303; the art slot is unused there |
 | IMG-PLACEHOLDER-STAGE-1 | MCR | assets/images/placeholders/stage1-mcr-site.svg | 21:9 | 1680×720 | Grazing sub-2° light on rims; black cold-trap floors | [STAGE 1 · MCR · SITE SELECTION] | ☐ |
 | IMG-PLACEHOLDER-STAGE-2 | SRR | assets/images/placeholders/stage2-srr-plume.svg | 21:9 | 1680×720 | Plume scouring bare regolith vs 45° deflectors throwing it up | [STAGE 2 · SRR · PLUME & PAD] | ☐ |
 | IMG-PLACEHOLDER-STAGE-3 | PDR | assets/images/placeholders/stage3-pdr-power.svg | 21:9 | 1680×720 | 10 m vertical mast in sunlight; battery carrying the shadow | [STAGE 3 · PDR · POWER] | ☐ |
