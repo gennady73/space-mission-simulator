@@ -6,6 +6,7 @@ import { renderDebrief, renderGateBanner, type Debrief, type DebriefActions } fr
 import { PHASE_CHOICES, provisionalDesign } from './DesignFlow';
 import { h, kg, pct, usdM } from './dom';
 import { renderPlaceholder } from './GraphicPlaceholderView';
+import { closePopover, togglePopover } from './popover';
 import { renderSideQuests } from './SideQuestModal';
 import { renderPreStageQuestion, type PreStageActions } from './PreStageQuestion';
 import { renderReviewModal, type ReviewActions, type ReviewOutcome } from './ReviewModal';
@@ -48,7 +49,20 @@ export interface CockpitActions extends DebriefActions, PreStageActions, ReviewA
 
 
 interface Entry { id: string; name: string; description?: string }
+type Child = Node | string | null | undefined | false;
 
+/** Small "i" button: the details open in a popover on demand. Always enabled, because reading is never locked (D-303). */
+function infoButton(name: string, build: () => Child[]): HTMLElement {
+  const button = h('button', { type: 'button', class: 'info-btn', 'aria-label': `More about ${name}`, 'aria-expanded': 'false', 'aria-haspopup': 'dialog' }, 'i');
+  button.addEventListener('click', () => togglePopover(button, `About ${name}`, build));
+  return button;
+}
+
+/**
+ * One option = one row (D-303): the name on one line, and an "i" button whose popover holds the name,
+ * the stats line and the description. Two sibling buttons in a row wrapper, never a button in a button.
+ * The select button keeps its id `btn-<category>-<id>`, its handler and aria-pressed (the e2e contract).
+ */
 function choices<T extends Entry>(
   title: string, category: string, table: Record<string, T>, selected: string | string[] | null,
   detail: (item: T) => string, onPick: (id: string) => void, lock: string | null = null,
@@ -56,10 +70,11 @@ function choices<T extends Entry>(
   const picked = (id: string) => (Array.isArray(selected) ? selected.includes(id) : selected === id);
   const grid = h('div', { class: 'choices' });
   for (const item of Object.values(table)) {
-    const button = h('button', { id: `btn-${category}-${item.id}`, type: 'button', class: 'choice', 'aria-pressed': String(picked(item.id)), ...(lock ? { disabled: '' } : {}) },
-      h('strong', {}, item.name), h('span', {}, detail(item)), item.description && h('span', { class: 'why' }, item.description));
-    button.addEventListener('click', () => onPick(item.id));
-    grid.append(button);
+    const select = h('button', { id: `btn-${category}-${item.id}`, type: 'button', class: 'choice', 'aria-pressed': String(picked(item.id)), ...(lock ? { disabled: '' } : {}) },
+      h('span', { class: 'choice-name' }, item.name));
+    select.addEventListener('click', () => onPick(item.id));
+    const info = infoButton(item.name, () => [h('strong', {}, item.name), h('span', { class: 'stats' }, detail(item)), item.description && h('p', {}, item.description)]);
+    grid.append(h('div', { class: 'choice-row' }, select, info));
   }
   return h('fieldset', { class: lock ? 'choice-group locked' : 'choice-group' }, h('legend', {}, lock ? `${title} · decided by ${lock}` : title), grid);
 }
@@ -233,6 +248,7 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
   const focusId = document.activeElement?.id;
   const panelScroll = root.querySelector('.console-panel')?.scrollTop ?? 0;
   const samePhase = root.querySelector('.console')?.getAttribute('data-phase') === s.currentPhase;
+  closePopover(false); // its trigger is about to be replaced
   root.replaceChildren();
   root.classList.add('console-host');
 
