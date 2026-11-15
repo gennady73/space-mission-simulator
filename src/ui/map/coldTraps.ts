@@ -95,6 +95,12 @@ export async function fetchColdTraps(maxTempK: number, url = './data/diviner/col
  */
 export interface PsrFile { source: string; grids: Array<{ id: string; site: string; n: number; cx_km: number; cy_km: number; half_km: number; res_m: number; psr_b64: string }> }
 
+/** Drawing only: blur taps (in cells) and the soft-step window for PsrGrid.soft(). */
+const SOFT_TAP_CELLS = 0.6;
+const SOFT_TAPS: ReadonlyArray<readonly [number, number]> = [[1, 1], [1, -1], [-1, 1], [-1, -1], [1.4, 0], [-1.4, 0], [0, 1.4], [0, -1.4]];
+const SOFT_LO = 0.28;
+const SOFT_HI = 0.62;
+
 export class PsrGrid {
   private readonly x0: number;
   private readonly y0: number;
@@ -121,6 +127,24 @@ export class PsrGrid {
     const tc = Math.max(0, Math.min(1, fc - c0)), tr = Math.max(0, Math.min(1, fr - r0));
     return (m[r0 * n + c0] * (1 - tc) + m[r0 * n + c0 + 1] * tc) * (1 - tr)
       + (m[(r0 + 1) * n + c0] * (1 - tc) + m[(r0 + 1) * n + c0 + 1] * tc) * tr;
+  }
+
+  /**
+   * Shadow coverage in [0, 1] for drawing (D-120): the mask blurred over about one cell and cut
+   * with a soft step, so a 60 m cell becomes a rounded patch with a feathered rim instead of a
+   * hard square. null outside the mask. Display only; `at()` still answers "is it shadowed".
+   */
+  soft(x: number, y: number): number | null {
+    const f = this.fraction(x, y);
+    if (f === null) return null;
+    const d = this.cell * SOFT_TAP_CELLS;
+    let sum = f * 2, w = 2;
+    for (const [ox, oy] of SOFT_TAPS) {
+      const t = this.fraction(x + ox * d, y + oy * d);
+      if (t !== null) { sum += t; w++; }
+    }
+    const t = Math.max(0, Math.min(1, (sum / w - SOFT_LO) / (SOFT_HI - SOFT_LO)));
+    return t * t * (3 - 2 * t);
   }
 }
 

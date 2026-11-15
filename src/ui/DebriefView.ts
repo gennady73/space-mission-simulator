@@ -2,7 +2,6 @@ import type { SimulationResult } from '../engine/SimulationClock';
 import type { EngineConstants, GateValidationResult, MissionScore, Phase } from '../models/Interfaces';
 import { h, usdM } from './dom';
 import { renderPlaceholder } from './GraphicPlaceholderView';
-import { renderStripChart } from './TelemetryStripCharts';
 import { DESIGN_PHASES } from './DesignFlow';
 
 export interface Debrief {
@@ -42,8 +41,8 @@ function faultTree(d: Debrief): HTMLElement {
 
 /**
  * Debrief (D-036): shown as a full-viewport overlay after the flight. Left column: the verdict,
- * score, what happened and the badges. Right column: the flight year as strip charts, with a
- * marker at the hour the outpost was lost when the mission failed.
+ * score, what happened and the badges. Right column: the year's events and the raw result.
+ * The year's charts live in the operations replay (D-120).
  */
 export function renderDebrief(c: EngineConstants, d: Debrief, actions: DebriefActions): HTMLElement {
   const { result: r, score } = d;
@@ -63,7 +62,7 @@ export function renderDebrief(c: EngineConstants, d: Debrief, actions: DebriefAc
     ? `Your outpost survived the year: ${Math.round(r.iceKg).toLocaleString('en-US')} kg of water ice assayed.`
     : `Your outpost was lost on day ${lostDay} of 365.`;
   const summary = h('div', { class: 'debrief-col' },
-    h('p', { class: 'debrief-crumb' }, 'The flight is over. This is mission control\u2019s debrief: what your design did, and where to improve it.'),
+    h('p', { class: 'debrief-crumb' }, 'The year is over. This is mission control\u2019s debrief: what your design did, and where to improve it.'),
     h('h2', { class: lostDay == null ? 'debrief-outcome ok' : 'debrief-outcome bad' }, outcome),
     h('div', { class: 'debrief-score', id: 'debrief-score' },
       h('span', {}, 'Mission score (game rule)'), h('strong', {}, String(score.total)), h('span', {}, 'of 1000')),
@@ -92,20 +91,9 @@ export function renderDebrief(c: EngineConstants, d: Debrief, actions: DebriefAc
   const hero = renderPlaceholder(c, 'IMG-PLACEHOLDER-END');
   if (hero) summary.append(hero);
 
-  const marker = r.failureHour == null ? null : { hour: r.failureHour, label: `lost on day ${Math.floor(r.failureHour / 24)}` };
   const raw = h('pre', { id: 'reference-output' });
   raw.textContent = JSON.stringify({ gates: d.gates, plar: d.plar, result: { ...r, telemetry: `${r.telemetry.length} rows` }, score }, null, 2);
-  const chart = (el: HTMLElement, caption: string) => h('div', { class: 'chart-block' }, el, h('p', { class: 'chart-caption' }, caption));
   const flight = h('div', { class: 'debrief-col' },
-    h('h3', {}, 'The flight year, hour by hour'),
-    chart(renderStripChart(r.telemetry, { title: 'Battery charge', unit: '%', value: (t) => t.batterySoCPercent, max: 100 }, hours, marker),
-      'Each dip is a lunar night running on the battery. Touching 0% ends the mission.'),
-    chart(renderStripChart(r.telemetry, { title: 'Solar power generated', unit: 'W', value: (t) => t.solarPowerGeneratedW }, hours, marker),
-      'What the mast harvested. The gaps are nights and dust events.'),
-    chart(renderStripChart(r.telemetry, { title: 'Data memory in use', unit: '%', value: (t) => t.ssmmBufferOccupancyPercent, max: 100 }, hours, marker),
-      'Science piles up while Earth is below the horizon. At 100% full, new science is lost.'),
-    chart(renderStripChart(r.telemetry, { title: 'Water ice assayed so far', unit: 'kg', value: (t) => t.cumulativeIceAssayedKg }, hours, marker),
-      'The mission goal. Flat stretches mean the drill had no power, no delivery, or no sunlight.'),
     h('h3', {}, 'Events'),
     r.events.length
       ? h('ul', { class: 'events' }, ...r.events.map((e) => h('li', {}, `Day ${Math.floor(e.hour / 24)}: ${e.text}`)))

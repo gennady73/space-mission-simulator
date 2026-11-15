@@ -1,33 +1,45 @@
 /* Flight playback: the year replayed on the map. Fills its container (the cockpit viewport). */
-.flight { position: relative; width: 100%; height: 100%; min-height: 320px; display: flex; flex-direction: column; background: #05070b; border-radius: 10px; overflow: hidden; outline: none; }
-.flight__map { flex: 1; min-height: 0; }
+.flight { position: relative; width: 100%; height: 100%; min-height: 320px; display: flex; flex-direction: column; background: #05070b; border-radius: 10px; overflow: hidden; outline: none; container-type: size; }
+/* Square map on the left at the panel's full height, the year's charts on the right (D-120). */
+.flight__body { flex: 1; min-height: 0; display: flex; }
+.flight__stage { position: relative; flex: none; width: 50%; width: min(calc(100cqh - 57px), 54cqw); }
+.flight__map { position: absolute; inset: 0; }
 .flight__map .sitemap { border-radius: 0; }
 .flight__map .sitemap__hud { display: none; }
-.flight__top { position: absolute; top: 10px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; pointer-events: none; }
-.flight__day { background: rgb(5 7 11 / 0.75); border: 1px solid var(--line, #1f2a37); border-radius: 8px; padding: 6px 12px; font: 13px var(--mono, ui-monospace, monospace); color: var(--muted, #9aa7b8); }
+.flight__map .sitemap__note { left: 12px; right: auto; bottom: auto; top: 58px; max-width: calc(100% - 24px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 10px; }
+.flight__day { position: absolute; top: 10px; left: 12px; background: rgb(5 7 11 / 0.75); border: 1px solid var(--line, #1f2a37); border-radius: 8px; padding: 6px 12px; font: 13px var(--mono, ui-monospace, monospace); color: var(--muted, #9aa7b8); pointer-events: none; }
 .flight__day strong { font-size: 20px; color: var(--text, #e8edf4); }
 .flight__day em { font-style: normal; }
 .flight__day .is-day { color: #ffd34d; }
 .flight__day .is-night { color: #8fb8ff; }
-.flight__gauges { display: grid; grid-template-columns: repeat(5, minmax(96px, 1fr)); gap: 6px; max-width: 640px; }
-.flight__gauge { background: rgb(5 7 11 / 0.8); border: 1px solid var(--line, #1f2a37); border-radius: 8px; padding: 5px 8px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.flight__gauge > span { font-size: 11px; color: var(--muted, #9aa7b8); text-transform: uppercase; letter-spacing: .05em; }
-.flight__gauge strong { font: 600 13px var(--mono, ui-monospace, monospace); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.flight__gauge b { display: block; height: 4px; background: #1a222d; border-radius: 2px; overflow: hidden; }
-.flight__gauge i { display: block; height: 100%; background: var(--muted, #9aa7b8); transition: width .15s linear; }
-.flight__gauge[data-level="ok"] i { background: var(--ok, #3ddc84); }
-.flight__gauge[data-level="warn"] i { background: var(--warn, #ffb020); }
-.flight__gauge[data-level="warn"] strong { color: var(--warn, #ffb020); }
-.flight__gauge[data-level="fail"] i { background: var(--fail, #ff4d4f); }
-.flight__gauge[data-level="fail"] strong { color: var(--fail, #ff4d4f); }
-.flight__gauge[data-level="off"] strong { color: var(--muted, #9aa7b8); }
-.flight__toasts { position: absolute; left: 50%; top: 150px; transform: translateX(-50%); width: min(520px, calc(100% - 24px)); display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+.flight__side { flex: 1; min-width: 0; min-height: 0; display: flex; border-left: 1px solid var(--line, #1f2a37); background: var(--panel, #0f141c); }
+.flight__charts { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; padding: 10px 14px 6px; }
+.fchart { flex: 1; min-height: 56px; display: flex; flex-direction: column; gap: 3px; }
+.fchart__head { display: flex; align-items: baseline; gap: 10px; min-width: 0; white-space: nowrap; }
+.fchart__head span { font-size: 11px; color: var(--muted, #9aa7b8); text-transform: uppercase; letter-spacing: .06em; }
+.fchart__head strong { font: 600 15px var(--mono, ui-monospace, monospace); font-variant-numeric: tabular-nums; }
+.fchart__head em { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: right; font-style: normal; font-size: 12px; color: var(--muted, #9aa7b8); opacity: .8; }
+.fchart[data-level="warn"] .fchart__head strong { color: var(--warn, #ffb020); }
+.fchart[data-level="fail"] .fchart__head strong { color: var(--fail, #ff4d4f); }
+.fchart[data-level="off"] .fchart__head strong { color: var(--muted, #9aa7b8); }
+.fchart__box { position: relative; flex: 1; min-height: 0; border: 1px solid var(--line, #1f2a37); border-radius: 6px; background: #080c12; overflow: hidden; }
+.fchart__plot { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: pointer; touch-action: none; }
+.fchart__max { position: absolute; top: 2px; right: 6px; font: 10px var(--mono, ui-monospace, monospace); color: var(--muted, #9aa7b8); opacity: .7; pointer-events: none; z-index: 1; }
+.fchart__grid { stroke: var(--line, #1f2a37); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.fchart__night { fill: #8fb8ff; opacity: .22; }
+.fchart__area { fill: var(--accent, #4ea8ff); opacity: .07; }
+.fchart__line { fill: none; stroke: var(--accent, #4ea8ff); stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.fchart__cursor { stroke: #e8edf4; stroke-width: 1; opacity: .7; vector-effect: non-scaling-stroke; }
+.fchart__lost { stroke: var(--fail, #ff4d4f); stroke-width: 2; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+.fchart__axis { display: flex; justify-content: space-between; font: 11px var(--mono, ui-monospace, monospace); color: var(--muted, #9aa7b8); }
+.fchart__note { margin: 0; font-size: 12px; color: var(--muted, #9aa7b8); }
+.flight__toasts { position: absolute; left: 50%; top: 112px; transform: translateX(-50%); width: min(520px, calc(100% - 24px)); display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
 .flight__toast { background: rgb(15 20 28 / 0.95); border-left: 4px solid var(--accent, #4ea8ff); border-radius: 6px; padding: 8px 12px; font-size: 14px; transition: opacity .4s, transform .4s; animation: flight-in .3s ease-out; }
 .flight__toast.is-good { border-left-color: var(--ok, #3ddc84); }
 .flight__toast.is-bad { border-left-color: var(--fail, #ff4d4f); }
 .flight__toast.is-gone { opacity: 0; transform: translateY(-6px); }
 @keyframes flight-in { from { opacity: 0; transform: translateY(8px); } }
-.flight__outcome { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(440px, calc(100% - 32px)); background: rgb(15 20 28 / 0.97); border: 1px solid var(--line, #1f2a37); border-top: 4px solid var(--ok, #3ddc84); border-radius: 10px; padding: 20px 24px; text-align: center; box-shadow: 0 12px 40px rgb(0 0 0 / .6); }
+.flight__outcome { position: absolute; left: 50%; top: 112px; transform: translateX(-50%); z-index: 2; width: min(440px, calc(100% - 32px)); background: rgb(15 20 28 / 0.97); border: 1px solid var(--line, #1f2a37); border-top: 4px solid var(--ok, #3ddc84); border-radius: 10px; padding: 20px 24px; text-align: center; box-shadow: 0 12px 40px rgb(0 0 0 / .6); }
 .flight__outcome.is-fail { border-top-color: var(--fail, #ff4d4f); }
 .flight__outcome h2 { margin: 0 0 8px; font-size: 20px; }
 .flight__outcome p { margin: 0 0 16px; color: var(--muted, #9aa7b8); }
@@ -41,8 +53,11 @@
 .flight__tick { position: absolute; width: 3px; height: 8px; margin-left: -1px; border-radius: 1px; background: var(--accent, #4ea8ff); }
 .flight__tick.is-good { background: var(--ok, #3ddc84); }
 .flight__tick.is-bad, .flight__tick.is-end { background: var(--fail, #ff4d4f); }
-@media (max-width: 900px) {
-  .flight__top { flex-direction: column; }
-  .flight__gauges { grid-template-columns: repeat(3, minmax(90px, 1fr)); }
-  .flight__toasts { top: 190px; }
+/* Narrow screens: map on top, charts below; the panel scrolls. */
+@media (max-width: 760px) {
+  .flight__body { flex-direction: column; overflow-y: auto; }
+  .flight__stage { width: 100%; aspect-ratio: 1; max-height: 56cqh; }
+  .flight__side { border-left: 0; border-top: 1px solid var(--line, #1f2a37); flex: none; }
+  .fchart { flex: none; height: 84px; }
+  .fchart__head em { display: none; }
 }

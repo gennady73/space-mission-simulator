@@ -119,6 +119,8 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
   const shadeCache = new Map<string, HTMLCanvasElement>();
   // During fast playback a new sun angle can arrive every frame; re-shade at most this often (ms).
   const FLY_RESHADE_MS = 150;
+  /** Half the width of the Sun caption, px: how close its centre may come to a side edge. */
+  const SUN_LABEL_INSET = 62;
   let lastImg: HTMLCanvasElement | null = null, lastShadeAt = 0;
 
   const site = (): SiteGeometry | undefined => terrain.sites.find((s) => s.site.id === state.selectedSite);
@@ -201,7 +203,7 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
     toScreen = (p) => ({ x: W / 2 + (p.x - v.cx) * pxPerKm, y: H / 2 - (p.y - v.cy) * pxPerKm });
     // Static stages are shaded once, so they can afford a finer raster than the animated ones.
     // Close to the raster being one map pixel per screen pixel, the upscale stops smearing (D-117).
-    const n = opts.stage === 'FLY' ? 320 : opts.stage === 'PDR' ? 384
+    const n = opts.stage === 'FLY' ? 448 : opts.stage === 'PDR' ? 384
       : Math.min(768, Math.max(480, Math.round(side / 64) * 64));
     const img = baseImage(v, n);
     // fill the whole viewport (extra terrain beyond the square is cropped, the map stays undistorted)
@@ -369,8 +371,8 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
     // Earth is always toward 0°E (up); the Sun circles the horizon once per lunar day.
     const sg = site();
     const earthUp = sg ? earthElevationDeg(c, sg.site, hour) >= c.simulation.min_earth_elevation_for_los_deg : true;
-    // FLY: the playback's gauges sit along the top edge, so the Earth label goes just below them.
-    label(g, earthUp ? '▲ Earth' : '▲ Earth (below horizon)', { x: W / 2, y: opts.stage === 'FLY' ? 132 : 22 }, earthUp ? COLORS.accent : COLORS.muted, 0);
+    // FLY: the day counter sits in the top-left corner, so the Earth label goes just below it.
+    label(g, earthUp ? '▲ Earth' : '▲ Earth (below horizon)', { x: W / 2, y: opts.stage === 'FLY' ? 96 : 22 }, earthUp ? COLORS.accent : COLORS.muted, 0);
     const az = sunAzimuthDeg(c, hour) * Math.PI / 180;
     const R = Math.min(W, H) / 2 - 18;
     const sp = { x: W / 2 + R * Math.sin(az), y: H / 2 - R * Math.cos(az) };
@@ -390,7 +392,8 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
     g.beginPath(); g.moveTo(ux * 20, uy * 20); g.lineTo(ux * 44, uy * 44); g.stroke();
     g.beginPath(); g.moveTo(ux * 50, uy * 50); g.lineTo(ux * 42 - uy * 5, uy * 42 + ux * 5); g.lineTo(ux * 42 + uy * 5, uy * 42 - ux * 5); g.closePath(); g.fill();
     g.restore();
-    label(g, 'Sunlight from here', sp, COLORS.sun, sp.y < 60 ? 34 : -22);
+    // keep the caption inside the map when the Sun sits at a side edge
+    label(g, 'Sunlight from here', { x: Math.max(SUN_LABEL_INSET, Math.min(W - SUN_LABEL_INSET, sp.x)), y: sp.y }, COLORS.sun, sp.y < 60 ? 34 : -22);
   }
 
   function drawScale(g: CanvasRenderingContext2D, W: number, H: number) {
@@ -412,7 +415,7 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
       SRR: opts.onPlaceMast ? 'Tap the map to place the solar mast' : 'Landing pad and plume keep-out',
       PDR: 'Power: watch the mast through a lunar day',
       CDR: 'Route and power link into the cold trap',
-      PLAR: 'Flight', FLY: 'Flight: one year at the outpost',
+      PLAR: 'Operations', FLY: 'Operations: one year at the outpost',
     };
     let line2 = '';
     if (sg && opts.stage !== 'MCR') {

@@ -4,16 +4,19 @@ import type { SimulationResult } from '../../engine/SimulationClock';
 import { h } from '../dom';
 import { renderSiteMap, type SiteMapHandle } from './SiteMap';
 import { playbackEndHour, playbackEvents, rowAt } from './flightModel';
+import { createFlightCharts, type ChartLevel, type FlightChartSpec } from './flightCharts';
 
 /**
- * Flight playback (Lead, D-105): the 8,760 h year from runMission, replayed on the map.
+ * Operations replay (Lead, D-105, D-120): the 8,760 h year from runMission, replayed on the map
+ * with the year's charts drawing themselves beside it.
  *
  *   const fp = createFlightPlayback(viewportEl, constants, state, result, { onFinish: () => showDebrief() });
  *   fp.destroy();
  *
  * The engine has already run the year; this only replays its telemetry, so playback speed never
- * changes the outcome. Shows: the outpost on the map (sun, shadows, rover, links), gauges for the
- * six things that decide the mission, a day counter, event pop-ups, play/pause, speed and a scrubber.
+ * changes the outcome. Left: the outpost on a square map (sun, shadows, rover, links) with the day
+ * counter and event pop-ups. Right: live strip charts of the five things that decide the mission
+ * (flightCharts.ts). Below: play/pause, speed and a scrubber.
  * Works with sampled telemetry (main.ts keeps one row every few hours): the row at or before the
  * current hour is shown.
  *
@@ -41,8 +44,9 @@ const SPEEDS = [1, 2, 4];
 const DEFAULT_SPEED = 1;
 /** How long an event pop-up stays on screen, ms. */
 const TOAST_MS = 3500;
-/** Data-memory gauge turns amber above this fill, percent (display only). */
+/** Data-memory readout turns amber above this fill, percent (display only). */
 const DATA_WARN_PERCENT = 80;
+const PERCENT = 100;
 
 export function createFlightPlayback(
   container: HTMLElement, c: EngineConstants, state: SimulationState, result: SimulationResult, opts: FlightPlaybackOptions = {},
@@ -64,7 +68,6 @@ export function createFlightPlayback(
   // ---- DOM ------------------------------------------------------------------------------------
   const mapHost = h('div', { class: 'flight__map' });
   const day = h('div', { class: 'flight__day', id: 'flight-day', 'aria-live': 'off' });
-  const gauges = h('div', { class: 'flight__gauges', role: 'group', 'aria-label': 'Outpost status' });
   const toasts = h('div', { class: 'flight__toasts', 'aria-live': 'polite' });
   const outcome = h('div', { class: 'flight__outcome', id: 'flight-outcome', hidden: '' });
 
@@ -84,47 +87,66 @@ export function createFlightPlayback(
   }
   const skipBtn = h('button', { type: 'button', id: 'btn-flight-skip', class: 'secondary' }, 'Skip to results');
 
+  const chartsHost = h('div', { class: 'flight__side' });
   const root = h('div', { class: 'flight', id: 'flight-playback' },
-    mapHost,
-    h('div', { class: 'flight__top' }, day, gauges),
-    toasts,
-    outcome,
+    h('div', { class: 'flight__body' },
+      h('div', { class: 'flight__stage' }, mapHost, day, toasts, outcome),
+      chartsHost),
     h('div', { class: 'flight__bar' }, playBtn, ...speedBtns, h('div', { class: 'flight__track' }, ticks, scrub), skipBtn),
   );
   container.append(root);
 
   const map: SiteMapHandle = renderSiteMap(mapHost, c, state, { stage: 'FLY', hour: 0 });
 
-  // ---- gauges ---------------------------------------------------------------------------------
-  type Level = 'ok' | 'warn' | 'fail' | 'off';
-  const gauge = (label: string) => {
-    const value = h('strong', {});
-    const bar = h('i', {});
-    const el = h('div', { class: 'flight__gauge' }, h('span', {}, label), value, h('b', {}, bar));
-    return {
-      el,
-      set(text: string, fraction: number | null, level: Level) {
-        value.textContent = text;
-        el.dataset.level = level;
-        bar.style.width = fraction == null ? '0' : `${Math.max(0, Math.min(1, fraction)) * 100}%`;
-      },
-    };
-  };
-  const gBattery = gauge('Battery');
-  const gSolar = gauge('Solar power');
-  const gData = gauge('Data memory');
-  const gIce = gauge('Water ice');
-  const gEarth = gauge('Earth link');
-  gauges.append(gBattery.el, gSolar.el, gData.el, gIce.el, gEarth.el);
-  const peakSolar = Math.max(1, ...rows.map((t) => t.solarPowerGeneratedW));
-  const finalIce = Math.max(result.iceKg, 1e-9);
+  // ---- live charts ----------------------------------------------------------------------------
+  const num = (v: number, digits = 0) => v.toLocaleString('en-US', { maximumFractionDigits: digits, minimumFractionDigits: digits });
+  let drilling = false;
+  let failed = false;
+  const specs: FlightChartSpec[] = [
+    {
+      id: 'battery', label: 'Battery', hint: 'Each dip is a lunar night on the battery. Touching 0% ends the mission.',
+      value: (t) => t.batterySoCPercent, max: PERCENT,
+      read: (t) => ({
+        text: `${num(t.batterySoCPercent)}%${battery ? ` of ${battery.capacity_kwh} kWh` : ''}`,
+        level: failed ? 'fail' : t.batterySoCPercent < c.simulation.drill_min_soc_percent ? 'warn' : 'ok',
+      }),
+    },
+    {
+      id: 'solar', label: 'Solar power', hint: 'What the mast harvests. The gaps are nights and dust.',
+      value: (t) => t.solarPowerGeneratedW,
+      read: (t) => ({ text: `${num(t.solarPowerGeneratedW)} W`, level: t.solarPowerGeneratedW > 0 ? 'ok' : 'off' }),
+    },
+    {
+      id: 'data', label: 'Data memory', hint: 'Science piles up while Earth is out of view. At 100%, new science is lost.',
+      value: (t) => t.ssmmBufferOccupancyPercent, max: PERCENT,
+      read: (t) => ({
+        text: `${num(t.ssmmBufferOccupancyPercent)}% full`,
+        level: t.droppedDataMb > 0 ? 'fail' : t.ssmmBufferOccupancyPercent > DATA_WARN_PERCENT ? 'warn' : 'ok',
+      }),
+    },
+    {
+      id: 'earth', label: 'Earth link', hint: 'Downlink to Earth, only while Earth is above the horizon.',
+      value: (t) => (t.earthLineOfSight ? t.downlinkBandwidthKbps : 0),
+      read: (t) => ({ text: t.earthLineOfSight ? `${num(t.downlinkBandwidthKbps)} kbps` : 'no view', level: t.earthLineOfSight ? 'ok' : 'off' }),
+    },
+    {
+      id: 'ice', label: 'Water ice', hint: 'The mission goal. Flat steps: no sunlight, no power or no delivery.',
+      value: (t) => t.cumulativeIceAssayedKg,
+      read: (t) => ({ text: `${num(t.cumulativeIceAssayedKg, 1)} kg`, level: (drilling ? 'ok' : 'off') as ChartLevel }),
+    },
+  ];
+  const charts = createFlightCharts(rows, totalHours, specs, {
+    failureHour: result.failureHour,
+    onSeek: (hr) => { pause(); seek(hr); if (hour >= endHour && !finished) showOutcome(); },
+  });
+  chartsHost.append(charts.element);
 
   function render(): void {
     const i = rowAt(rows, hour);
     const t = i >= 0 ? rows[i] : null;
     const prev = i > 0 ? rows[i - 1] : null;
-    const failed = result.failureHour != null && hour >= result.failureHour;
-    const drilling = !!t && !!prev && t.cumulativeIceAssayedKg > prev.cumulativeIceAssayedKg && !failed;
+    failed = result.failureHour != null && hour >= result.failureHour;
+    drilling = !!t && !!prev && t.cumulativeIceAssayedKg > prev.cumulativeIceAssayedKg && !failed;
     map.setHour(hour, { drilling, linkUp: !!t?.earthLineOfSight, failed });
 
     const d = Math.floor(hour / 24);
@@ -133,17 +155,7 @@ export function createFlightPlayback(
       h('span', {}, ` of ${Math.round(totalHours / 24)}`),
       h('em', { class: t?.isEclipse ? 'is-night' : 'is-day' }, t?.isEclipse ? ' · night' : ' · day'),
     );
-    if (!t) return;
-    const soc = t.batterySoCPercent;
-    gBattery.set(`${soc.toFixed(0)}%${battery ? ` of ${battery.capacity_kwh} kWh` : ''}`, soc / 100,
-      failed ? 'fail' : soc < c.simulation.drill_min_soc_percent ? 'warn' : 'ok');
-    gSolar.set(`${Math.round(t.solarPowerGeneratedW).toLocaleString('en-US')} W`, t.solarPowerGeneratedW / peakSolar,
-      t.solarPowerGeneratedW > 0 ? 'ok' : 'off');
-    const buf = t.ssmmBufferOccupancyPercent;
-    gData.set(`${buf.toFixed(0)}% full`, buf / 100, t.droppedDataMb > 0 ? 'fail' : buf > DATA_WARN_PERCENT ? 'warn' : 'ok');
-    gIce.set(`${t.cumulativeIceAssayedKg.toFixed(1)} kg`, t.cumulativeIceAssayedKg / finalIce, drilling ? 'ok' : 'off');
-    gEarth.set(t.earthLineOfSight ? `${Math.round(t.downlinkBandwidthKbps).toLocaleString('en-US')} kbps` : 'no view', t.earthLineOfSight ? 1 : 0,
-      t.earthLineOfSight ? 'ok' : 'off');
+    charts.setHour(hour, t);
   }
 
   // ---- events ---------------------------------------------------------------------------------
