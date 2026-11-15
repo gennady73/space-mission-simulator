@@ -4,6 +4,20 @@ Newest block on top. One block per session. The Lead writes in `lead.md`, never 
 
 ---
 
+## 2026-11-15 ~15:40 IST · Architect (Claude, project thread for Andronis) · four more mission challenges (D-041)
+**Did**
+- Night survival, far-side radio telescope, Artemis crew support and commercial lander ride, as optional toggles on the Concept panel. Rules, values and measured scores: D-041.
+- Engine: `ResolvedDesign.challenges` and `.nightPower`, `isForcedNight`, `payloadMassKg`, new SRR and PDR reason codes, `SimulationResult.delayHours`. With every toggle off nothing changes (reference 816).
+
+**Verification:** `tsc --noEmit` clean · 80 unit tests pass (23 new in `tests/mission-challenges.spec.ts`) · build succeeds · played night + far side + crew together in Chromium from the toggles to the debrief, no page errors. The Playwright suite was not run.
+
+**For others**
+- Hardware: review every value in `mission_challenges` (all game rules).
+- Media: review the challenge texts in the constants.
+- Lead: new ids `#toggle-challenge-<id>`, `#btn-nightpower-<id>` for BUILD-PLAN section 6. The commercial lander delay has no effect on the score unless ice prospecting is also on. The far-side telescope's data fits the relay, so storage is not yet a hard choice there.
+
+---
+
 ## 2026-11-15 ~15:25 IST · Architect (Claude, project thread for Andronis) · ice prospecting challenge (D-040)
 **Did**
 - Optional mission challenge on the Concept panel: the year is scored against a 6,000 kg water target. At CDR it opens a drill-string choice (1 m, 2 m, 3 m) and makes heater power above the minimum produce water. Details and measured scores: D-040.
