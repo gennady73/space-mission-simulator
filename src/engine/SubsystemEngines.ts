@@ -1,5 +1,5 @@
 import type {
-  BatteryConfig, CommConfig, DataStorageConfig, EngineConstants, InstrumentConfig, LandingSite,
+  BatteryConfig, CommConfig, DataStorageConfig, EngineConstants, FaultProtectionConfig, InstrumentConfig, LandingSite,
   LaunchVehicle, LaunchpadConfig, LogisticsConfig, PowerMastConfig, ResourceLedger,
   SimulationState, SpacecraftBusConfig, TrajectoryOption, UtilityLinkConfig,
 } from '../models/Interfaces';
@@ -20,12 +20,15 @@ export interface ResolvedDesign {
   utilityLink: UtilityLinkConfig | null;
   instruments: InstrumentConfig[];
   drillHeaterW: number;
+  /** D-039: onboard fault protection and safing chosen at CDR, or null without it. */
+  faultProtection: FaultProtectionConfig | null;
 }
 
 type Design = Pick<SimulationState,
   'selectedSite' | 'selectedTrajectory' | 'selectedBus' | 'selectedLaunchVehicle' | 'selectedLaunchpad'
   | 'padDistanceM' | 'selectedMast' | 'selectedBattery' | 'selectedComm' | 'selectedStorage'
-  | 'selectedLogistics' | 'selectedUtilityLink' | 'selectedInstruments' | 'drillHeaterW'>;
+  | 'selectedLogistics' | 'selectedUtilityLink' | 'selectedInstruments' | 'drillHeaterW'>
+  & Partial<Pick<SimulationState, 'faultProtection'>>;
 
 /** Returns the resolved design, or the list of choices still missing. */
 export function resolveDesign(c: EngineConstants, d: Design): ResolvedDesign | { missing: string[] } {
@@ -54,7 +57,7 @@ export function resolveDesign(c: EngineConstants, d: Design): ResolvedDesign | {
   return {
     site: site!, trajectory: trajectory!, bus: bus!, launchVehicle: launchVehicle!, launchpad: launchpad!,
     padDistanceM: d.padDistanceM!, mast: mast!, battery: battery!, comm: comm!, storage: storage!,
-    logistics, utilityLink, instruments, drillHeaterW: d.drillHeaterW,
+    logistics, utilityLink, instruments, drillHeaterW: d.drillHeaterW, faultProtection: d.faultProtection ? c.fault_protection : null,
   };
 }
 
@@ -72,7 +75,8 @@ export function dryMassKg(r: ResolvedDesign): number {
     + r.storage.mass_kg
     + (r.logistics ? perKm(r.logistics, r.logistics.mass_kg, km) : 0)
     + (r.utilityLink ? perKm(r.utilityLink, r.utilityLink.mass_kg, km) : 0)
-    + r.instruments.reduce((s, i) => s + i.mass_kg, 0);
+    + r.instruments.reduce((s, i) => s + i.mass_kg, 0)
+    + (r.faultProtection?.mass_kg ?? 0);
 }
 
 /**
@@ -94,7 +98,8 @@ export function totalCostUSD(r: ResolvedDesign): number {
     + r.mast.cost_usd + r.battery.cost_usd + r.comm.cost_usd + r.storage.cost_usd
     + (r.logistics ? perKm(r.logistics, r.logistics.cost_usd, km) : 0)
     + (r.utilityLink ? perKm(r.utilityLink, r.utilityLink.cost_usd, km) : 0)
-    + r.instruments.reduce((s, i) => s + i.cost_usd, 0);
+    + r.instruments.reduce((s, i) => s + i.cost_usd, 0)
+    + (r.faultProtection?.cost_usd ?? 0);
 }
 
 // ---------------------------------------------------------------------------

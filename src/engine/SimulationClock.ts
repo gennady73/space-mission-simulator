@@ -16,6 +16,8 @@ import { validatePLAR } from './StageGateValidators';
  *  - Drill runs only when sunlit, battery ≥ drill_min_soc_percent, logistics alive, link delivers peak,
  *    and the drill heater is ≥ min_drill_heater_w (otherwise it is frozen).
  *  - Battery at 0 Wh => terminal brownout (mission ends).
+ *  - D-039: a logistics failure is permanent, unless the design has fault protection: then it is safed, and
+ *    after recovery_link_hours of Earth contact the ground team recovers it with recovery_probability.
  */
 
 export interface SimulationOptions {
@@ -66,6 +68,7 @@ export function runMission(c: EngineConstants, r: ResolvedDesign, opt: Simulatio
   const dustUntil = new Set<number>();
   let cableRepairUntil = -1;
   let logisticsFailHour = Infinity;
+  let recoverable = false;
   if (opt.randomEvents) {
     for (let cycleStart = 0; cycleStart < H; cycleStart += synodicH) {
       if (rand() < s.dust_event_probability_per_cycle) {
@@ -82,7 +85,17 @@ export function runMission(c: EngineConstants, r: ResolvedDesign, opt: Simulatio
     if (r.logistics) {
       const lambda = -Math.log(r.logistics.reliability_365d) / H;
       const t = -Math.log(1 - rand()) / lambda;
-      if (t < H) { logisticsFailHour = Math.floor(t); events.push({ hour: logisticsFailHour, text: `${r.logistics.name} failed permanently (reliability ${r.logistics.reliability_365d})` }); }
+      if (t < H) {
+        logisticsFailHour = Math.floor(t);
+        // D-039: with fault protection the failure is safed, and may be recoverable once the ground has had enough Earth contact.
+        // The extra draw happens only with fault protection, so runs without it keep their exact random sequence.
+        if (r.faultProtection) {
+          recoverable = rand() < r.faultProtection.recovery_probability;
+          events.push({ hour: logisticsFailHour, text: `${r.logistics.name} failed; fault protection put it in safe mode and is waiting for the ground team` });
+        } else {
+          events.push({ hour: logisticsFailHour, text: `${r.logistics.name} failed permanently (reliability ${r.logistics.reliability_365d})` });
+        }
+      }
     }
   }
 
@@ -91,6 +104,10 @@ export function runMission(c: EngineConstants, r: ResolvedDesign, opt: Simulatio
   let bufMb = 0;
   let ice = 0, drillHours = 0, genMb = 0, dropMb = 0, eclipseHours = 0, linkHours = 0;
   let minSoC = 100;
+  // D-039: Earth-contact hours the ground team has had since a safed logistics failure, and when it was recovered.
+  let recoveryLinkHours = 0;
+  let recoveredAt = Infinity;
+  let recoveryVerdict = false;
   let failureCause: FailureCause = null, failureHour: number | null = null;
   const telemetry: SubsystemTelemetry[] = [];
   const every = opt.logEveryHours ?? 1;
@@ -109,7 +126,20 @@ export function runMission(c: EngineConstants, r: ResolvedDesign, opt: Simulatio
     let loadW = survivalW + (h < constructionH && !eclipse ? r.launchpad.construction_power_w : 0);
     let drilling = false;
     let downKbps = 0;
-    const logisticsAlive = h < logisticsFailHour;
+    if (r.faultProtection && h >= logisticsFailHour && recoveredAt === Infinity && link) {
+      recoveryLinkHours++;
+      if (recoveryLinkHours === r.faultProtection.recovery_link_hours) {
+        const days = Math.ceil((h - logisticsFailHour) / 24);
+        if (recoverable) {
+          recoveredAt = h;
+          events.push({ hour: h, text: `Ground team recovered the ${r.logistics?.name ?? 'ice delivery'} after ${days} days in safe mode` });
+        } else if (!recoveryVerdict) {
+          recoveryVerdict = true;
+          events.push({ hour: h, text: `Ground team could not recover the ${r.logistics?.name ?? 'ice delivery'} after ${days} days in safe mode` });
+        }
+      }
+    }
+    const logisticsAlive = h < logisticsFailHour || h >= recoveredAt;
     const cableOk = h >= cableRepairUntil;
     if (!eclipse) {
       loadW += otherInstrW;
