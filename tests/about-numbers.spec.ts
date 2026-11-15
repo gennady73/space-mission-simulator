@@ -33,6 +33,11 @@ describe('About & Numbers — units in every label (rule 7)', () => {
   });
   it('formats money and small constants readably', () => {
     expect(formatValue(c, 'hardware_catalog.power_masts.mast_10m_vsat.cost_usd', 24_000_000)).toBe('$24M');
+    // per-kilometre catalog items say so, so the figure is not read as a total (Hardware review)
+    expect(formatValue(c, 'hardware_catalog.cold_trap_logistics.hts_maglev_guideway.mass_kg', 110)).toBe('110 kg per km');
+    expect(formatValue(c, 'hardware_catalog.cold_trap_logistics.hts_maglev_guideway.cost_usd', 4_800_000)).toBe('$4.8M per km');
+    expect(formatValue(c, 'hardware_catalog.utility_links.hv_umbilical_cable.mass_kg', 72)).toBe('72 kg per km');
+    expect(formatValue(c, 'hardware_catalog.cold_trap_logistics.viper_heritage_rover.mass_kg', 430)).toBe('430 kg');
     expect(formatValue(c, 'system_constants.stefan_boltzmann_w_m2_k4', 5.670374419e-8)).toMatch(/^5\.6704e-8 W\/\(m²·K⁴\)$/);
     expect(formatValue(c, 'site_catalog.shackleton_ridge.slope_deg', 7.2)).toBe('7.2°');
     expect(formatValue(c, 'system_constants.minimum_power_margin_pdr', 0.15)).toBe('15%');
