@@ -1,8 +1,10 @@
 /* Dark mission-control cockpit theme — tokens only; Media/UI owns the full design. */
 :root {
   --bg: #07090d; --panel: #0f141c; --line: #1f2a37; --text: #d7dee8; --muted: #8592a3;
-  --ok: #3ddc84; --warn: #ffb020; --fail: #ff4d4f; --accent: #4ea8ff;
+  --ok: #3ddc84; --warn: #ffb020; --fail: #ff4d4f; --accent: #4ea8ff; --nasa-term: #FFA94D;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --mono: ui-monospace, "SF Mono", Consolas, monospace;
+  /* NASA terms only (stage codes, the bracketed acronym in the stage title): this colour and face mean "a word NASA uses" and nothing else (D-302). */
+  --term-font: "IBM Plex Mono", var(--mono);
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -43,6 +45,7 @@ select, input, textarea { background: var(--bg); color: var(--text); border: 1px
 .cockpit-main { display: grid; gap: 14px; }
 .placeholder { max-height: 260px; margin: 0; }
 .phase-title { color: var(--accent); margin: 0; }
+.phase-title .nasa-term { color: var(--nasa-term); }
 .hint { color: var(--muted); margin: 0; }
 .panel { display: grid; gap: 16px; }
 .choice-group { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin: 0; min-width: 0; }
@@ -122,7 +125,8 @@ details summary { cursor: pointer; color: var(--muted); }
 .console .phase-track button:disabled { cursor: default; opacity: 1; }
 .console .phase-track button { display: inline-flex; align-items: center; gap: 6px; }
 .phase-track .track-name { font: 600 13px var(--font); }
-.phase-track .track-code { font: 10px var(--mono); opacity: .7; }
+.phase-track .track-code { font: 12px var(--term-font); color: var(--nasa-term); text-transform: uppercase; }
+.console .phase-track li:not(.current):not(.passed) { opacity: .6; } /* locked stop: the whole pill dims, the code stays orange (D-302) */
 @media (max-width: 1100px) { .phase-track .track-code { display: none; } }
 .console .header-tools { flex-wrap: nowrap; }
 .console .resources { margin: 0; position: relative; }

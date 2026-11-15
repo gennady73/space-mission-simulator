@@ -13,6 +13,11 @@ import { renderReviewModal, type ReviewActions, type ReviewOutcome } from './Rev
 /** Life-cycle phase that each review closes (NPR 7120.5 naming). */
 const PHASE_PREFIX: Record<Phase, string> = { MCR: 'Pre-Phase A', SRR: 'Phase A', PDR: 'Phase B', CDR: 'Phase C', PLAR: 'Phase D/E' };
 export const phaseTitle = (p: Phase): string => `${PHASE_PREFIX[p]}: ${GATE_NAMES[p]}`;
+/** The title as DOM: the bracketed NASA acronym gets its own span so Media can colour it (D-302). textContent is unchanged. */
+const phaseTitleNodes = (p: Phase): (string | HTMLElement)[] => {
+  const m = /^(.*?)(\([A-Z]+\))$/.exec(phaseTitle(p));
+  return m ? [m[1], h('span', { class: 'nasa-term' }, m[2])] : [phaseTitle(p)];
+};
 
 export interface CockpitView {
   constants: EngineConstants;
@@ -274,7 +279,7 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
     const ownerEntry = Object.entries(c.team_roles).find(([, r]) => r.owns_gates.includes(s.currentPhase));
     const owner = ownerEntry?.[1];
     const mustHandOver = s.teamMode && ownerEntry !== undefined && ownerEntry[0] !== s.activeRole;
-    panel.append(h('h2', { id: 'current-phase-display', class: 'phase-title' }, phaseTitle(s.currentPhase)));
+    panel.append(h('h2', { id: 'current-phase-display', class: 'phase-title' }, ...phaseTitleNodes(s.currentPhase)));
     if (owner && s.teamMode) panel.append(h('p', { class: 'hint' }, `Review owner: ${owner.label}. ${owner.priority_hint}`));
     if (view.notice) panel.append(h('p', { id: 'console-notice', class: 'console-notice' }, view.notice));
     if (view.banner) panel.append(renderGateBanner(view.banner));
@@ -306,7 +311,7 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
   // Debrief (D-036): a full-viewport overlay over the console; "Revise design" goes back to CDR.
   if (debriefing && view.debrief) {
     root.append(h('div', { id: 'debrief-overlay', class: 'debrief-overlay', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'current-phase-display' },
-      h('h2', { id: 'current-phase-display', class: 'phase-title' }, phaseTitle(s.currentPhase)),
+      h('h2', { id: 'current-phase-display', class: 'phase-title' }, ...phaseTitleNodes(s.currentPhase)),
       renderDebrief(c, view.debrief, a),
       renderPreStageQuestion(c, s, a)));
   }
