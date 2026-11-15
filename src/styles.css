@@ -211,3 +211,9 @@ details summary { cursor: pointer; color: var(--muted); }
 .console .objectives h3 { margin: 0; font-size: 12px; }
 .console .objectives ul { margin: 4px 0; }
 .console .objectives .hint { margin: 4px 0 0; font-size: 12px; }
+
+/* Hover preview (UI review item 3): what the hovered choice would change on each tile. */
+.resource .delta { margin-left: 6px; font: 600 10px var(--mono); letter-spacing: 0; text-transform: none; }
+.resource .delta.up { color: var(--ok); }
+.resource .delta.down { color: var(--fail); }
+.resource.previewing { border-color: var(--accent); }

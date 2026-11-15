@@ -217,4 +217,16 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await expect(page.locator('.gate-pass-banner')).toContainText('Mission successful');
     await noPageScroll();
   });
+
+  test('Hovering a choice previews its effect on the resource tiles, and leaving clears it', async ({ page }) => {
+    await passMcrAndSrr(page, 'btn-pad-pad_elevated_45deg', '800');
+    await pick(page, 'btn-battery-batt_liion_4kwh');
+    await page.hover('button#btn-battery-batt_liion_8kwh');
+    // A bigger pack: heavier and dearer, more shadow margin.
+    await expect(page.locator('#res-mass .delta.down')).toContainText('+');
+    await expect(page.locator('#res-power .delta.up')).toContainText('pts');
+    await expect(page.locator('#res-budget .delta.down')).toContainText('+$');
+    await page.mouse.move(0, 0);
+    await expect(page.locator('#res-mass .delta')).toHaveText('');
+  });
 });
