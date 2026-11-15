@@ -106,7 +106,24 @@ export function unitFor(c: EngineConstants, path: string): string {
 /** Dimensionless fractions shown as percentages (0.15 → 15%). */
 const PERCENT_KEY = /(margin|fraction|efficiency|reliability|probability|max_dod|transmission|transmittance)/;
 
+/** Leaves that scale with route length when their catalog item has `per_km: true` (maglev guideway, umbilical cable). */
+const PER_KM_LEAVES = new Set(['mass_kg', 'cost_usd']);
+
+/** True when the number at `path` is a per-kilometre figure: its parent item carries `per_km: true`. */
+function isPerKm(c: EngineConstants, path: string): boolean {
+  const parts = path.split('.');
+  if (!PER_KM_LEAVES.has(parts.pop() ?? '')) return false;
+  let obj: unknown = c;
+  for (const k of parts) obj = obj && typeof obj === 'object' ? (obj as Record<string, unknown>)[k] : undefined;
+  return !!obj && typeof obj === 'object' && (obj as { per_km?: unknown }).per_km === true;
+}
+
 export function formatValue(c: EngineConstants, path: string, value: number): string {
+  const base = formatPlain(c, path, value);
+  return isPerKm(c, path) ? `${base} per km` : base;
+}
+
+function formatPlain(c: EngineConstants, path: string, value: number): string {
   const leaf = path.split('.').pop() ?? '';
   if (PERCENT_KEY.test(leaf) && value >= 0 && value <= 1) {
     return `${(value * 100).toLocaleString('en-US', { maximumFractionDigits: 2 })}%`;
