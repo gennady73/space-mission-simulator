@@ -1,7 +1,7 @@
 import { GATE_NAMES } from '../engine/StageGateValidators';
 import { computeLedger, shadowHoursForMast } from '../engine/SubsystemEngines';
 import { PHASES } from '../models/StateStore';
-import type { EngineConstants, GateValidationResult, Phase, SimulationState, TeamRole } from '../models/Interfaces';
+import type { EngineConstants, GateValidationResult, ResourceLedger, Phase, SimulationState, TeamRole } from '../models/Interfaces';
 import { renderDebrief, renderGateBanner, type Debrief, type DebriefActions } from './DebriefView';
 import { PHASE_CHOICES, provisionalDesign } from './DesignFlow';
 import { h, kg, pct, usdM } from './dom';
@@ -47,6 +47,7 @@ interface Entry { id: string; name: string; description?: string }
 function choices<T extends Entry>(
   title: string, category: string, table: Record<string, T>, selected: string | string[] | null,
   detail: (item: T) => string, onPick: (id: string) => void, lock: string | null = null,
+  preview?: { show(id: string): void; clear(): void },
 ): HTMLElement {
   const picked = (id: string) => (Array.isArray(selected) ? selected.includes(id) : selected === id);
   const grid = h('div', { class: 'choices' });
@@ -54,6 +55,12 @@ function choices<T extends Entry>(
     const button = h('button', { id: `btn-${category}-${item.id}`, type: 'button', class: 'choice', 'aria-pressed': String(picked(item.id)), ...(lock ? { disabled: '' } : {}) },
       h('strong', {}, item.name), h('span', {}, detail(item)), item.description && h('span', { class: 'why' }, item.description));
     button.addEventListener('click', () => onPick(item.id));
+    if (preview && !lock) {
+      button.addEventListener('mouseenter', () => preview.show(item.id));
+      button.addEventListener('focus', () => preview.show(item.id));
+      button.addEventListener('mouseleave', preview.clear);
+      button.addEventListener('blur', preview.clear);
+    }
     grid.append(button);
   }
   return h('fieldset', { class: lock ? 'choice-group locked' : 'choice-group' }, h('legend', {}, lock ? `${title} · decided by ${lock}` : title), grid);
@@ -82,6 +89,7 @@ function phasePanel(view: CockpitView, a: CockpitActions): HTMLElement {
   const hw = c.hardware_catalog;
   const box = h('section', { class: 'panel' });
   const per = (flag: boolean) => (flag ? ' per km' : '');
+  const pv = (key: keyof SimulationState) => previewFor(view, (id) => ({ [key]: id }));
 
   if (s.currentPhase === 'MCR') {
     const objective = h('input', { id: 'input-objective', type: 'text', value: s.missionObjective ?? '', placeholder: 'For example: assay 1,000 kg of polar water ice in one year', ...(lock('mission objective') ? { disabled: '' } : {}) });
@@ -90,19 +98,19 @@ function phasePanel(view: CockpitView, a: CockpitActions): HTMLElement {
       h('label', { class: 'field wide' }, 'Mission objective: what must this outpost achieve? ', objective),
       choices('Landing site', 'site', c.site_catalog, s.selectedSite,
         (x) => `Slope ${x.slope_deg}° · Earth in view ${pct(x.earth_visibility_fraction)} of the time · sunlit ${pct(x.illumination_fraction)} · cold trap ${x.distance_to_cold_trap_km} km away`,
-        (id) => a.update({ selectedSite: id }), lock('landing site')),
+        (id) => a.update({ selectedSite: id }), lock('landing site'), pv('selectedSite')),
     );
   } else if (s.currentPhase === 'SRR') {
     box.append(
       choices('Launch vehicle', 'lv', hw.launch_vehicles, s.selectedLaunchVehicle,
         (x) => `${kg(x.tli_capacity_kg)} to the Moon · ${x.fairing_diameter_m} m fairing · ${usdM(x.cost_usd)}`,
-        (id) => a.update({ selectedLaunchVehicle: id }), lock('launch vehicle')),
+        (id) => a.update({ selectedLaunchVehicle: id }), lock('launch vehicle'), pv('selectedLaunchVehicle')),
       choices('Transfer trajectory', 'trajectory', c.trajectories, s.selectedTrajectory,
         (x) => `${x.cruise_days} days of cruise · landing needs ${x.descent_delta_v_m_s} m/s · ${usdM(x.extra_cost_usd)} extra`,
-        (id) => a.update({ selectedTrajectory: id }), lock('trajectory')),
+        (id) => a.update({ selectedTrajectory: id }), lock('trajectory'), pv('selectedTrajectory')),
       choices('Landing pad', 'pad', hw.launchpads, s.selectedLaunchpad,
         (x) => `${kg(x.mass_kg)} · ${usdM(x.cost_usd)} · must stand at least ${x.requires_standoff_distance_m} m from the solar mast`,
-        (id) => a.update({ selectedLaunchpad: id }), lock('landing pad')),
+        (id) => a.update({ selectedLaunchpad: id }), lock('landing pad'), pv('selectedLaunchpad')),
       numberField('input-pad-distance', 'Distance from pad to solar mast (m)', view.padDistanceDraft, '50', (v) => {
         a.setPadDistanceDraft(v);
         const line = document.getElementById('objective-padDistanceM');
@@ -114,28 +122,29 @@ function phasePanel(view: CockpitView, a: CockpitActions): HTMLElement {
     box.append(
       choices('Power mast', 'mast', hw.power_masts, s.selectedMast,
         (x) => `${x.rated_power_w.toLocaleString('en-US')} W in sunlight · works when the Sun is above ${x.cutoff_elevation_deg}°${site ? ` · longest shadow here ${formatShadow(shadowHoursForMast(c, site, x))}` : ''} · ${kg(x.mass_kg)} · ${usdM(x.cost_usd)}`,
-        (id) => a.update({ selectedMast: id }), lock('power mast')),
+        (id) => a.update({ selectedMast: id }), lock('power mast'), pv('selectedMast')),
       choices('Energy storage', 'battery', hw.energy_storage, s.selectedBattery,
         (x) => `${x.capacity_kwh} kWh, ${pct(x.max_dod)} usable · ${kg(x.mass_kg)} · ${usdM(x.cost_usd)}`,
-        (id) => a.update({ selectedBattery: id }), lock('battery')),
+        (id) => a.update({ selectedBattery: id }), lock('battery'), pv('selectedBattery')),
       choices('Communications', 'comm', hw.comm_systems, s.selectedComm,
         (x) => `${x.downlink_kbps.toLocaleString('en-US')} kbps · ${x.direct_to_earth ? 'needs Earth above the horizon' : `relay in view ${pct(x.relay_coverage_fraction ?? 0)} of the time`} · ${x.tx_power_w} W · ${kg(x.mass_kg)} · ${usdM(x.cost_usd)}`,
-        (id) => a.update({ selectedComm: id }), lock('communications system')),
+        (id) => a.update({ selectedComm: id }), lock('communications system'), pv('selectedComm')),
       choices('Data storage', 'storage', hw.data_storage, s.selectedStorage,
         (x) => `${(x.capacity_mb / 1000).toLocaleString('en-US')} Gbit · ${x.power_w} W · ${kg(x.mass_kg)} · ${usdM(x.cost_usd)}`,
-        (id) => a.update({ selectedStorage: id }), lock('data storage')),
+        (id) => a.update({ selectedStorage: id }), lock('data storage'), pv('selectedStorage')),
       choices('Science instruments (choose any)', 'instrument', hw.science_instruments, s.selectedInstruments,
         (x) => `${x.peak_power_w} W peak · ${x.data_rate_kbps} kbps · ${kg(x.mass_kg)} · ${usdM(x.cost_usd)}`,
-        (id) => a.update({ selectedInstruments: s.selectedInstruments.includes(id) ? s.selectedInstruments.filter((i) => i !== id) : [...s.selectedInstruments, id] }), lock('science instruments')),
+        (id) => a.update({ selectedInstruments: toggle(s.selectedInstruments, id) }), lock('science instruments'),
+        previewFor(view, (id) => ({ selectedInstruments: toggle(s.selectedInstruments, id) }))),
     );
   } else if (s.currentPhase === 'CDR') {
     box.append(
       choices('Cold-trap logistics', 'logistics', hw.cold_trap_logistics, s.selectedLogistics,
         (x) => `Climbs ${x.max_slope_deg}° · survives the year with ${pct(x.reliability_365d)} probability · heater ${x.survival_heater_w} W · ${kg(x.mass_kg)}${per(x.per_km)} · ${usdM(x.cost_usd)}${per(x.per_km)}`,
-        (id) => a.update({ selectedLogistics: id }), lock('cold-trap logistics')),
+        (id) => a.update({ selectedLogistics: id }), lock('cold-trap logistics'), pv('selectedLogistics')),
       choices('Power link to the drill', 'link', hw.utility_links, s.selectedUtilityLink,
         (x) => `Delivers ${pct(x.efficiency)} of ${x.source_power_w} W · ${x.max_range_km === null ? 'any distance' : `reaches ${x.max_range_km} km`} · ${pct(x.sever_probability)} chance of a break · ${kg(x.mass_kg)}${per(x.per_km)} · ${usdM(x.cost_usd)}${per(x.per_km)}`,
-        (id) => a.update({ selectedUtilityLink: id }), lock('utility link')),
+        (id) => a.update({ selectedUtilityLink: id }), lock('utility link'), pv('selectedUtilityLink')),
       numberField('input-drill-heater', 'Drill survival heater power (W)', view.heaterDraft, '5', a.setHeaterDraft, lock('heater power')),
     );
   }
@@ -185,6 +194,74 @@ function commsCell(
   return cell('Comms', `sends ${pct(ratio)} of the data`, 'the rest waits in storage or is lost', false);
 }
 
+const toggle = (list: string[], id: string): string[] => (list.includes(id) ? list.filter((i) => i !== id) : [...list, id]);
+
+/** ResourceLedger of the state as the player sees it, with the typed pad distance and an optional what-if patch. */
+function ledgerFor(view: CockpitView, patch: Partial<SimulationState> = {}): ResourceLedger | null {
+  const { constants: c, state: s } = view;
+  const distance = Number.parseFloat(view.padDistanceDraft);
+  const { design } = provisionalDesign(c, { ...s, padDistanceM: Number.isFinite(distance) ? distance : s.padDistanceM, ...patch });
+  return design ? computeLedger(c, design, s.allocatedBudgetUSD) : null;
+}
+
+type Delta = { text: string; good: boolean } | null;
+const signed = (v: number, unit: (x: number) => string): string => `${v > 0 ? '+' : '−'}${unit(Math.abs(v))}`;
+const commsShare = (l: ResourceLedger): number => (l.dataGeneratedMbPerDay > 0 ? l.downlinkMbPerDay / l.dataGeneratedMbPerDay : Infinity);
+
+/** What a hovered choice would change on each resource tile; null where it changes nothing visible. */
+function ledgerDeltas(base: ResourceLedger, next: ResourceLedger): Record<string, Delta> {
+  const dMass = Math.round(next.wetMassKg - base.wetMassKg);
+  const dCost = next.totalCostUSD - base.totalCostUSD;
+  const dData = Math.round(next.dataGeneratedMbPerDay - base.dataGeneratedMbPerDay);
+  const dDays = Math.round(next.missionDurationDays - base.missionDurationDays);
+  const bothFinite = Number.isFinite(base.powerMarginFraction) && Number.isFinite(next.powerMarginFraction);
+  const dPower = bothFinite ? Math.round((next.powerMarginFraction - base.powerMarginFraction) * 100) : 0;
+  const shareBefore = commsShare(base), shareAfter = commsShare(next);
+  const keepsUp = (x: number) => x >= 1;
+  return {
+    mass: dMass ? { text: signed(dMass, kg), good: dMass < 0 } : null,
+    power: !bothFinite && next.powerMarginFraction !== base.powerMarginFraction
+      ? { text: `→ ${pct(next.powerMarginFraction)}`, good: next.powerMarginFraction > base.powerMarginFraction }
+      : dPower ? { text: `${dPower > 0 ? '+' : '−'}${Math.abs(dPower)} pts`, good: dPower > 0 } : null,
+    budget: usdM(Math.abs(dCost)) !== usdM(0) ? { text: signed(dCost, usdM), good: dCost < 0 } : null,
+    data: dData ? { text: signed(dData, (x) => `${x.toLocaleString('en-US')} Mb`), good: dData > 0 } : null,
+    comms: keepsUp(shareBefore) !== keepsUp(shareAfter)
+      ? { text: keepsUp(shareAfter) ? '→ keeps up' : '→ falls short', good: keepsUp(shareAfter) }
+      : !keepsUp(shareAfter) && pct(shareAfter) !== pct(shareBefore) ? { text: `→ ${pct(shareAfter)}`, good: shareAfter > shareBefore } : null,
+    time: dDays ? { text: signed(dDays, (x) => `${x} d`), good: dDays < 0 } : null,
+  };
+}
+
+/**
+ * Hover preview (UI review item 3): while the pointer or focus is on a choice card, each resource tile
+ * shows what picking it would change, so the trade-off is visible before the review instead of at it.
+ * Writes into the existing tiles only; the store is not touched.
+ */
+function previewFor(view: CockpitView, patchFor: (id: string) => Partial<SimulationState>): { show(id: string): void; clear(): void } {
+  const tiles = () => [...document.querySelectorAll<HTMLElement>('.resources .resource')];
+  const clear = () => tiles().forEach((t) => {
+    t.classList.remove('previewing');
+    const span = t.querySelector('.delta');
+    if (span) { span.textContent = ''; span.className = 'delta'; }
+  });
+  const show = (id: string) => {
+    const base = ledgerFor(view);
+    const next = ledgerFor(view, patchFor(id));
+    clear();
+    if (!base || !next) return;
+    const deltas = ledgerDeltas(base, next);
+    for (const t of tiles()) {
+      const d = deltas[t.id.replace('res-', '')];
+      const span = t.querySelector('.delta');
+      if (!d || !span) continue;
+      span.textContent = d.text;
+      span.className = `delta ${d.good ? 'up' : 'down'}`;
+      t.classList.add('previewing');
+    }
+  };
+  return { show, clear };
+}
+
 function resourceBar(view: CockpitView): HTMLElement {
   const { constants: c, state: s } = view;
   const { design } = provisionalDesign(c, s);
@@ -193,7 +270,8 @@ function resourceBar(view: CockpitView): HTMLElement {
   const l = computeLedger(c, design, s.allocatedBudgetUSD);
   const minMargin = c.system_constants.minimum_power_margin_pdr;
   const cell = (name: string, value: string, note: string, ok: boolean) =>
-    h('div', { class: ok ? 'resource' : 'resource bad' }, h('dt', {}, name), h('dd', {}, value), h('small', {}, `${ok ? '' : 'Problem: '}${note}`));
+    h('div', { id: `res-${name.toLowerCase()}`, class: ok ? 'resource' : 'resource bad' },
+      h('dt', {}, name, h('span', { class: 'delta', 'aria-live': 'polite' })), h('dd', {}, value), h('small', {}, `${ok ? '' : 'Problem: '}${note}`));
   bar.append(h('dl', {},
     cell('Mass', `${kg(l.wetMassKg)} of ${kg(l.launchCapacityKg)}`, `${pct(l.massMarginFraction)} spare on the launcher`, l.massMarginFraction >= 0),
     cell('Power', `${pct(l.powerMarginFraction)} shadow margin`, `review needs ${pct(minMargin)}`, l.powerMarginFraction >= minMargin),
