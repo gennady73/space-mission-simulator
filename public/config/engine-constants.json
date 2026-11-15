@@ -616,9 +616,9 @@
       "target_stage": "INTRO",
       "asset_path": "assets/images/placeholders/intro-hero.svg",
       "aspect_ratio": "16:9",
-      "title": "2032: Polar Outpost Pioneer",
+      "title": "2032: Lighthouse on the Trail",
       "brief_explanation": "An autonomous cargo lander arrives at the Lunar South Pole; Earth hangs low over sunlit crater rims.",
-      "fallback_badge": "[NARRATIVE BRIEFING: 2032 POLAR OUTPOST PIONEER]"
+      "fallback_badge": "[NARRATIVE BRIEFING: 2032 LIGHTHOUSE ON THE TRAIL]"
     },
     "IMG-PLACEHOLDER-STAGE-1": {
       "id": "IMG-PLACEHOLDER-STAGE-1",

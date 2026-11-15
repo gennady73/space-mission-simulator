@@ -10,10 +10,10 @@ Rules checked against the official guide (spaceappschallenge.org/resources/proje
 ---
 
 ## Project name
-Polar Outpost Pioneer
+Lighthouse on the Trail
 
 ## High-level project summary
-Polar Outpost Pioneer is a browser game in which players design, review and fly a robotic outpost at the Moon's south pole, the way NASA designs missions. Players choose a landing site, launcher, landing pad, power mast, batteries, communications, data storage, cold-trap logistics and instruments while watching mass, power, budget, data, communications and time. Each design must pass NASA-style reviews (MCR, SRR, PDR, CDR) that check real constraints, then survives, or doesn't, a year simulated hour by hour. Failures are explained, not just scored. Up to four players can share a mission, each owning one NASA mission segment and signing off its own review. Every number is listed with its source, so players learn real trade-offs from checkable facts.
+Lighthouse on the Trail is a browser game in which players design, review and fly a robotic outpost at the Moon's south pole, the way NASA designs missions. Players choose a landing site, launcher, landing pad, power mast, batteries, communications, data storage, cold-trap logistics and instruments while watching mass, power, budget, data, communications and time. Each design must pass NASA-style reviews (MCR, SRR, PDR, CDR) that check real constraints, then survives, or doesn't, a year simulated hour by hour. Failures are explained, not just scored. Up to four players can share a mission, each owning one NASA mission segment and signing off its own review. Every number is listed with its source, so players learn real trade-offs from checkable facts.
 
 ## Link to project demo
 <!-- paste the public 30-second video (with English subtitles) or the slide link -->

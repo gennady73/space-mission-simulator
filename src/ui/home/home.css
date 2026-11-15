@@ -1,0 +1,70 @@
+/* Landing page (D-301). Tokens are scoped to .home so the cockpit's --bg/--panel stay untouched.
+   Palette and type from html-things/DESIGN.md; glow effects are allowed here only (title screen). */
+.home {
+  --home-bg: #080F1E; --home-panel: #14243A; --home-line: #29445F; --home-text: #E8F1F8; --home-muted: #94A3B8;
+  --home-primary: #00BFFF; --home-primary-hover: #7AD0FF; --home-narrator: #FFD43B;
+  --home-font: "Exo 2", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --home-font-special: "Doto", var(--home-font); /* reserved; not used yet */
+  --home-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Consolas, monospace;
+  background: var(--home-bg); color: var(--home-text); font-family: var(--home-font);
+  -webkit-font-smoothing: antialiased;
+}
+#app.home-host { max-width: none; padding: 0; }
+.home a { color: inherit; text-decoration: none; }
+.home ::selection { background: var(--home-primary); color: var(--home-bg); }
+
+/* ---- Hero: one viewport tall; nav on top, copy in the middle, image caption bottom-right ---- */
+.home__hero { position: relative; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; overflow: hidden; background: var(--home-bg); }
+.home__stars { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.home__scene { position: absolute; inset: 0; z-index: 1; pointer-events: none; display: flex; flex-direction: column; justify-content: flex-end; }
+.home__scene-image { width: 100%; height: 60%; background: center bottom / cover no-repeat; opacity: .9; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 40%); mask-image: linear-gradient(to bottom, transparent, #000 40%); }
+.home__scene-fade-top { position: absolute; inset: 0; background: linear-gradient(to top, transparent, rgb(8 15 30 / .3), var(--home-bg)); }
+.home__scene-fade-bottom { position: absolute; inset: auto 0 0 0; height: 160px; background: linear-gradient(to top, var(--home-bg), rgb(8 15 30 / .8), transparent); }
+
+.home__nav { position: relative; z-index: 3; height: 64px; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--home-line); }
+.home__brand { font: 500 15px var(--home-font); letter-spacing: .2em; text-transform: uppercase; white-space: nowrap; }
+.home__links { display: flex; align-items: center; gap: 24px; }
+.home__links a { font-size: 13px; line-height: 1; color: var(--home-muted); transition: color .15s, border-color .15s; }
+.home__links a:hover, .home__links a:focus-visible { color: var(--home-text); }
+.home__links a.pill { padding: 7px 14px; border: 1px solid var(--home-line); border-radius: 999px; }
+.home__links a.pill:hover { border-color: var(--home-primary); }
+
+.home__centre { position: relative; z-index: 2; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 8px 24px 48px; }
+.home__kicker { font: 12px var(--home-mono); letter-spacing: .25em; text-transform: uppercase; color: var(--home-muted); margin: 0 0 20px; }
+/* Sized so the full name sits on one row from tablets up (team note 11-15). */
+.home h1 { font: 300 clamp(26px, 4.4vw, 56px)/1.1 var(--home-font); letter-spacing: .18em; text-transform: uppercase; margin: 0 0 24px; text-shadow: 0 0 30px rgb(0 191 255 / .2); }
+.home__rule { width: 40px; height: 2px; background: var(--home-primary); box-shadow: 0 0 10px var(--home-primary); margin: 0 0 32px; }
+.home h2 { font: 400 20px/1.4 var(--home-font); margin: 0 0 8px; max-width: 42rem; }
+.home__subtitle { font-size: 16px; line-height: 1.6; color: var(--home-muted); max-width: 36rem; margin: 0 0 32px; }
+.home .cta { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 32px; border: 0; border-radius: 999px; background: var(--home-primary); color: var(--home-bg); font: 500 15px var(--home-font); letter-spacing: .05em; text-transform: uppercase; cursor: pointer; transition: background .2s, box-shadow .2s, transform .2s; }
+.home .cta:hover { background: var(--home-primary-hover); box-shadow: 0 0 24px rgb(0 191 255 / .6); transform: scale(1.02); }
+.home .cta:active { transform: scale(.98); }
+.home .cta:focus-visible { outline: 2px solid var(--home-text); outline-offset: 3px; }
+.home__footnote { font: 12px var(--home-mono); color: var(--home-muted); margin: 16px 0 0; }
+
+.home__caption { position: absolute; right: 24px; bottom: 16px; z-index: 3; font: 12px var(--home-mono); color: var(--home-muted); opacity: .8; user-select: none; }
+
+/* ---- How it works: three cards and the narrator line ---- */
+.home__cards { position: relative; z-index: 2; max-width: 1152px; margin: 0 auto; padding: 80px 24px; }
+.home__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; }
+.home__card { background: var(--home-panel); border: 1px solid var(--home-line); border-radius: 6px; padding: 24px; }
+.home__card svg { width: 24px; height: 24px; stroke: currentColor; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; display: block; margin-bottom: 16px; }
+.home__card h3 { font: 500 17px/1.3 var(--home-font); margin: 0 0 8px; }
+.home__card p { font-size: 15px; line-height: 1.6; color: var(--home-muted); margin: 0; }
+.home__narrator { margin: 48px 0 0; text-align: center; font: 12px var(--home-mono); letter-spacing: .04em; color: var(--home-narrator); }
+
+@media (max-width: 899px) {
+  .home__nav { padding: 0 16px; }
+  .home__links { gap: 14px; }
+  .home__centre { padding-bottom: 32px; }
+}
+
+/* Self-hosted fonts (SIL Open Font License, licences next to the files in public/assets/fonts/).
+   Exo 2 is the default face. Doto is a pixel display face reserved for a later use; it is only
+   downloaded once something sets font-family: "Doto". */
+/* The @font-face rules live in index.html: document-relative URLs are correct under any base (D-301). */
+
+/* The quieter ways in, under the CTA (moved from the console start overlay, D-113 -> D-301). */
+.home__alts { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+.home__alt { background: none; border: none; padding: 4px 2px; font: inherit; font-size: 14px; color: var(--home-muted); cursor: pointer; border-bottom: 1px solid transparent; }
+.home__alt:hover { color: var(--home-text); border-bottom-color: var(--home-primary); }

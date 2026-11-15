@@ -1,7 +1,7 @@
 # CLAUDE.md — bootstrap for every Claude session on this repo
 
 Team **eleven-two**, NASA Space Apps 2026, challenge *Space Mission Design Game*.
-Product: **Polar Outpost Pioneer**, a client-only TypeScript/Vite game in which the player designs a robotic Lunar South Pole outpost, passes NASA review gates (MCR → SRR → PDR → CDR) and runs it for 8,760 hours.
+Product: **Lighthouse on the Trail**, a client-only TypeScript/Vite game in which the player designs a robotic Lunar South Pole outpost, passes NASA review gates (MCR → SRR → PDR → CDR) and runs it for 8,760 hours.
 Four humans commit here, each with their own Claude: **Lead**, **Architect**, **Hardware** (mechanic / systems engineer) and **Media** (UX). Roles and ranges: D-107.
 
 ## Core Triad (load first, every session)

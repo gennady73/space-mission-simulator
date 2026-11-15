@@ -1,4 +1,4 @@
-# Polar Outpost Pioneer — Space Mission Design Game
+# Lighthouse on the Trail — Space Mission Design Game
 
 **NASA Space Apps Challenge 2026 · Challenge: _Space Mission Design Game_ · Team eleven-two**
 

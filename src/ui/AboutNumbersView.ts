@@ -47,7 +47,7 @@ export function renderAboutNumbers(c: EngineConstants): HTMLElement {
   page.append(
     el('h1', {}, 'About & Numbers'),
     el('p', { className: 'about__lead' },
-      'Polar Outpost Pioneer is a teaching model, not a flight tool. This page shows what the model includes, what it leaves out, and where every number in the game comes from, so you can check any result yourself.'),
+      'Lighthouse on the Trail is a teaching model, not a flight tool. This page shows what the model includes, what it leaves out, and where every number in the game comes from, so you can check any result yourself.'),
   );
 
   // --- What the model includes / leaves out, and its scales (rules 2, 3) ---

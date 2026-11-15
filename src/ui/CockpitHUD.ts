@@ -14,14 +14,10 @@ import { renderReviewModal, type ReviewActions, type ReviewOutcome } from './Rev
 const PHASE_PREFIX: Record<Phase, string> = { MCR: 'Pre-Phase A', SRR: 'Phase A', PDR: 'Phase B', CDR: 'Phase C', PLAR: 'Phase D/E' };
 export const phaseTitle = (p: Phase): string => `${PHASE_PREFIX[p]}: ${GATE_NAMES[p]}`;
 
-export type StartMode = 'mission' | 'example' | 'watch' | 'team';
-
 export interface CockpitView {
   constants: EngineConstants;
   state: SimulationState;
   banner: GateValidationResult | null;
-  /** First load: the start screen overlay (D-113). */
-  showStart: boolean;
   /** One-line orientation shown under the stage title (where you came from, what to do now). */
   notice: string | null;
   /** Verdict of the last submission, shown as a modal until the player answers it. */
@@ -43,32 +39,8 @@ export interface CockpitActions extends DebriefActions, PreStageActions, ReviewA
   nextPhase(): void;
   goToPhase(phase: Phase): void;
   runReference(): void;
-  startGame(mode: StartMode): void;
 }
 
-/** Start screen (D-113): what the game is and the ways in. Shown over the console on first load. */
-function renderStartScreen(a: CockpitActions): HTMLElement {
-  const choice = (id: string, title: string, sub: string, primary = false) => {
-    const b = h('button', { id, type: 'button', class: primary ? 'choice start-choice primary' : 'choice start-choice' },
-      h('strong', {}, title), h('span', {}, sub));
-    return b;
-  };
-  const mission = choice('btn-start-mission', 'Start your mission', 'Pick a landing site and build your own outpost, decision by decision.', true);
-  mission.addEventListener('click', () => a.startGame('mission'));
-  const example = choice('btn-start-example', 'Explore the example design', 'Every choice already made. Walk the stages, read why, and submit each review yourself.');
-  example.addEventListener('click', () => a.startGame('example'));
-  const watch = choice('btn-start-watch', 'Watch the example fly', 'One year at the outpost, replayed on the map in about half a minute.');
-  watch.addEventListener('click', () => a.startGame('watch'));
-  const team = choice('btn-start-team', 'Team play · 2 to 4 players', 'Each player takes a NASA seat (Mission Lead, Launch & Structures, Power & Thermal, Comms & Science). Pass the device: each seat makes its own decisions, and the seat that owns a review signs it off.');
-  team.addEventListener('click', () => a.startGame('team'));
-  return h('div', { id: 'start-overlay', class: 'start-overlay', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'start-title' },
-    h('div', { class: 'start-card' },
-      h('h2', { id: 'start-title' }, 'Polar Outpost Pioneer'),
-      h('p', {}, 'The Moon\u2019s south pole has water ice in craters that never see the Sun, next to ridges that almost never go dark. Design a robotic outpost to mine it \u2014 and get your design past the reviews real NASA missions face.'),
-      h('p', { class: 'start-loop' }, 'Design \u2192 pass 4 reviews \u2192 fly one year \u2192 debrief \u2192 improve'),
-      h('div', { class: 'start-choices' }, mission, example, watch, team),
-      h('p', { class: 'hint' }, 'Difficulty and team mode are under Menu, top right. Built on NASA LOLA and Diviner data \u2014 every number in the game names its source under About & numbers.')));
-}
 
 interface Entry { id: string; name: string; description?: string }
 
@@ -279,7 +251,7 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
   reference.addEventListener('click', a.runReference);
 
   const top = h('header', { class: 'console-top' },
-    h('div', { class: 'console-bar' }, h('h1', {}, 'Polar Outpost Pioneer'), track, h('div', { class: 'header-tools' }, reference, menu)),
+    h('div', { class: 'console-bar' }, h('h1', {}, 'Lighthouse on the Trail'), track, h('div', { class: 'header-tools' }, reference, menu)),
     resourceBar(view));
 
   // ---- right: the stage panel ----
@@ -339,7 +311,6 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
       renderPreStageQuestion(c, s, a)));
   }
   if (view.review && mode === 'design') root.append(renderReviewModal(view.review, a));
-  if (view.showStart) root.append(renderStartScreen(a));
   // A choice re-renders the panel: keep the player's place in it. A new stage starts at its top.
   if (samePhase) panel.scrollTop = panelScroll;
   if (focusId && !view.review) document.getElementById(focusId)?.focus({ preventScroll: true });

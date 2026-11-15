@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0.0",
+  "_note": "Landing-page copy and settings (D-301). Media owns this file. Edit the words here; no code change needed.",
+  "game_name": "Lighthouse on the Trail",
+  "home": {
+    "kicker": "NASA SPACE APPS 2026 · SPACE MISSION DESIGN GAME",
+    "tagline": "Build the first lighthouse at the Moon's south pole.",
+    "subtitle": "In a year, the first crew lands here. Your radio station is how they call home.",
+    "cta_label": "START MISSION",
+    "footnote": "15–25 min · no space background needed · best on a laptop or tablet",
+    "nav": {
+      "how_it_works": "How it works",
+      "about": "About & numbers",
+      "demo": "Demo (30 s)",
+      "demo_video_url": ""
+    },
+    "hero_image": {
+      "path": "assets/images/home-hero.jpg",
+      "caption": "AI-generated image",
+      "alt": "Lunar south-pole landscape with Earth low over the horizon"
+    },
+    "starfield": {
+      "mode": "twinkle",
+      "star_count": 85
+    },
+    "cards": [
+      {
+        "icon": "globe",
+        "title": "Real NASA terrain",
+        "text": "LOLA elevation maps down to 5 m per pixel, with Diviner's measured cold traps. No made-up worlds."
+      },
+      {
+        "icon": "scales",
+        "title": "Every choice has a price",
+        "text": "Mass, money, night power, radio contact and the untouched ice. You can't max them all."
+      },
+      {
+        "icon": "target",
+        "title": "Bet first, then the Moon answers",
+        "text": "Each role bets on a question before seeing the data. The debrief shows who was right."
+      }
+    ],
+    "narrator_line": "> No pressure. It's only the Moon.",
+    "secondary": {
+      "example": "Explore the example design",
+      "watch": "Watch the example fly",
+      "team": "Team play · 2–4 players"
+    }
+  }
+}
