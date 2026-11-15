@@ -35,10 +35,10 @@ export interface FlightPlaybackHandle {
   destroy(): void;
 }
 
-/** Presentation only: real seconds for the whole year at 1×. 4× ≈ 30 s, the demo-video length. */
+/** Presentation only: real seconds for the whole year at 1× (the default: calm enough to read, D-119). */
 const YEAR_SECONDS_AT_1X = 120;
-const SPEEDS = [1, 4, 16];
-const DEFAULT_SPEED = 4;
+const SPEEDS = [1, 2, 4];
+const DEFAULT_SPEED = 1;
 /** How long an event pop-up stays on screen, ms. */
 const TOAST_MS = 3500;
 /** Data-memory gauge turns amber above this fill, percent (display only). */
