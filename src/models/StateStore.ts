@@ -16,7 +16,7 @@ export function initialState(c: EngineConstants, difficulty: Difficulty = 'engin
     selectedSite: null, selectedTrajectory: 'direct', selectedBus: 'lander_bus_standard',
     selectedLaunchVehicle: null, selectedLaunchpad: null, padDistanceM: null, selectedMast: null,
     selectedBattery: null, selectedComm: null, selectedStorage: null, selectedLogistics: null,
-    selectedUtilityLink: null, drillHeaterW: c.simulation.min_drill_heater_w, selectedInstruments: ['trident_drill'],
+    selectedUtilityLink: null, drillHeaterW: c.simulation.min_drill_heater_w, selectedInstruments: ['trident_drill'], faultProtection: false,
     allocatedBudgetUSD: budget, remainingBudgetUSD: budget, totalWetMassKg: 0,
     telemetryLog: [], gateResults: {}, userHypotheses: {}, completedQuests: [],
   };
@@ -60,7 +60,7 @@ export class StateStore {
         selectedBus: s.selectedBus, selectedLaunchVehicle: s.selectedLaunchVehicle, selectedLaunchpad: s.selectedLaunchpad,
         padDistanceM: s.padDistanceM, selectedMast: s.selectedMast, selectedBattery: s.selectedBattery,
         selectedComm: s.selectedComm, selectedStorage: s.selectedStorage, selectedLogistics: s.selectedLogistics,
-        selectedUtilityLink: s.selectedUtilityLink, drillHeaterW: s.drillHeaterW,
+        selectedUtilityLink: s.selectedUtilityLink, drillHeaterW: s.drillHeaterW, faultProtection: s.faultProtection,
         selectedInstruments: [...s.selectedInstruments], userHypotheses: { ...s.userHypotheses },
       },
     };

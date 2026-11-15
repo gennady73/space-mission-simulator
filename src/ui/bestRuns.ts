@@ -76,6 +76,7 @@ export function designDifferences(c: EngineConstants, mine: MissionDesignExport[
     ['Cold-trap logistics', 'selectedLogistics', named(hw.cold_trap_logistics)],
     ['Power link', 'selectedUtilityLink', named(hw.utility_links)],
     ['Drill heater', 'drillHeaterW', (v) => `${v} W`],
+    ['Fault protection', 'faultProtection', (v) => (v ? 'yes' : 'no')],
   ];
   return rows
     .map(([label, k, show]) => ({ label, mine: show(mine[k]), best: show(best[k]) }))

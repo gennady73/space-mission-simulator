@@ -42,6 +42,8 @@ export interface EngineConstants {
   trajectories: Record<string, TrajectoryOption>;
   /** Schematic map geometry (display only; never read by the engine). */
   map_features: MapFeatures;
+  /** Optional CDR choice: onboard fault protection and safing (D-039). */
+  fault_protection: FaultProtectionConfig;
   hardware_catalog: {
     spacecraft_bus: Record<string, SpacecraftBusConfig>;
     launch_vehicles: Record<string, LaunchVehicle>;
@@ -315,6 +317,22 @@ export interface SideQuestConfig {
   explanation: string;
 }
 
+/**
+ * Onboard fault protection (D-039, after NASA "Basics of Space Flight" ch. 11): the outpost detects a
+ * failure of its cold-trap logistics, safes it, and the ground team gets a chance to recover it once
+ * it has had enough hours of Earth contact. Without it, that failure is permanent.
+ */
+export interface FaultProtectionConfig {
+  name: string;
+  description: string;
+  mass_kg: number;
+  cost_usd: number;
+  /** Hours of Earth link the ground team needs, after the failure, to diagnose and recover it. */
+  recovery_link_hours: number;
+  /** Chance that a safed logistics failure is recoverable at all. */
+  recovery_probability: number;
+}
+
 export interface PreStageQuestion {
   phase: Phase;
   question: string;
@@ -358,6 +376,8 @@ export interface SimulationState {
   selectedUtilityLink: string | null;
   drillHeaterW: number;
   selectedInstruments: string[];
+  /** CDR option: onboard fault protection and safing (D-039). */
+  faultProtection: boolean;
 
   allocatedBudgetUSD: number;
   remainingBudgetUSD: number;
@@ -436,7 +456,7 @@ export interface MissionDesignExport {
     | 'selectedLaunchVehicle' | 'selectedLaunchpad' | 'padDistanceM' | 'selectedMast'
     | 'selectedBattery' | 'selectedComm' | 'selectedStorage' | 'selectedLogistics'
     | 'selectedUtilityLink' | 'drillHeaterW' | 'selectedInstruments' | 'userHypotheses'
-  >;
+  > & Partial<Pick<SimulationState, 'faultProtection'>>;
   /** Optional override of constants (REQ-007 difficulty / physics import). */
   constantsOverride?: Partial<EngineConstants>;
 }

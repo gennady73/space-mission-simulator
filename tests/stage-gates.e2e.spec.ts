@@ -259,4 +259,19 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await expect(page.locator('#console-notice')).toContainText('Design loaded');
     await expect(page.locator('#btn-site-shackleton_ridge')).toHaveAttribute('aria-pressed', 'true');
   });
+
+  test('Fault protection is an optional CDR choice that adds its mass, with a light-time quest beside it (D-039)', async ({ page }) => {
+    await passMcrAndSrr(page, 'btn-pad-pad_elevated_45deg', '800');
+    await pick(page, 'btn-mast-mast_10m_vsat', 'btn-battery-batt_liion_8kwh', 'btn-comm-dte_xband', 'btn-storage-ssmm_128gb');
+    await next(page);
+    await expect(phase(page)).toHaveText('Phase C: Critical Design Review (CDR)');
+    await expect(page.locator('button#btn-quest-quest_light_time')).toBeVisible();
+    const mass = page.locator('#res-mass dd');
+    const before = await mass.innerText();
+    await page.check('#toggle-fault-protection');
+    await expect(mass).not.toHaveText(before);
+    await pick(page, 'btn-logistics-hts_maglev_guideway', 'btn-link-laser_power_beaming');
+    await next(page);
+    await expect(page.locator('#flight-playback')).toBeVisible();
+  });
 });

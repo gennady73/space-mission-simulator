@@ -610,6 +610,14 @@
       }
     }
   },
+  "fault_protection": {
+    "name": "Autonomous fault protection",
+    "description": "Onboard software and a watchdog that detect a failed ice-delivery system, put it in a safe state and keep it alive until the ground team can work on it. Without it, that failure is permanent.",
+    "mass_kg": 3,
+    "cost_usd": 2000000.0,
+    "recovery_link_hours": 72,
+    "recovery_probability": 0.6
+  },
   "graphic_placeholders": {
     "IMG-PLACEHOLDER-INTRO": {
       "id": "IMG-PLACEHOLDER-INTRO",
@@ -735,6 +743,18 @@
       "tolerance": 5,
       "unit": "m",
       "explanation": "600 m. Deflectors redirect gas and particles upward, halving the exclusion zone."
+    },
+    "quest_light_time": {
+      "id": "quest_light_time",
+      "phase": "CDR",
+      "title": "Signal Delay to the Moon",
+      "prompt": "Radio travels at the speed of light, about c = 300,000 km/s. The Moon is about d = 384,400 km from Earth. How many seconds pass between the ground team sending a command and seeing the outpost's reply (the round trip)?",
+      "formula": "t = 2 * d / c",
+      "hint": "Double the distance, then divide by 300,000 km/s.",
+      "correct_value": 2.56,
+      "tolerance": 0.1,
+      "unit": "s",
+      "explanation": "2 x 384,400 km / 300,000 km/s = 2.56 s, so a lunar outpost can almost be driven live from Earth. Mars is 55 to 400 million km away: a round trip takes about 6 to 44 minutes, so Mars rovers must look after themselves. Even on the Moon, nobody can answer while Earth is below the horizon, which is why onboard fault protection matters."
     }
   },
   "pre_stage_questions": {
@@ -999,6 +1019,14 @@
       "source": "Approximate crater and massif positions and sizes after the IAU Gazetteer of Planetary Nomenclature; depths and the synthetic height field are schematic",
       "tier": "spec-provisional",
       "note": "Display only, not used by the engine. To be replaced by the LOLA 120 m polar grid (D-104)"
+    },
+    "fault_protection": {
+      "source": "Concept from NASA JPL 'Basics of Space Flight', ch. 11 (Fault Protection and Safing): https://science.nasa.gov/learn/basics-of-space-flight/chapter11-1/. Mass, cost, recovery hours and probability are game rules (Architect, D-039); Hardware to review.",
+      "tier": "game-rule"
+    },
+    "side_quests.quest_light_time": {
+      "source": "NASA JPL 'Basics of Space Flight', ch. 1 (Light Time: Earth-Moon round trip about 3 s): https://science.nasa.gov/learn/basics-of-space-flight/chapter1-1/. Earth-Moon mean distance: NASA Moon Fact Sheet.",
+      "tier": "literature"
     }
   }
 }

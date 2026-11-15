@@ -147,9 +147,24 @@ function phasePanel(view: CockpitView, a: CockpitActions): HTMLElement {
         (x) => `Delivers ${pct(x.efficiency)} of ${x.source_power_w} W · ${x.max_range_km === null ? 'any distance' : `reaches ${x.max_range_km} km`} · ${pct(x.sever_probability)} chance of a break · ${kg(x.mass_kg)}${per(x.per_km)} · ${usdM(x.cost_usd)}${per(x.per_km)}`,
         (id) => a.update({ selectedUtilityLink: id }), lock('utility link'), pv('selectedUtilityLink')),
       numberField('input-drill-heater', 'Drill survival heater power (W)', view.heaterDraft, '5', a.setHeaterDraft, lock('heater power')),
+      faultProtectionToggle(c, s, a, lock('heater power')),
     );
   }
   return box;
+}
+
+/**
+ * D-039: optional onboard fault protection. Not needed to pass CDR; it turns a failure of the ice delivery
+ * into a safed fault that the ground team may recover once it has had enough Earth contact.
+ */
+function faultProtectionToggle(c: EngineConstants, s: SimulationState, a: CockpitActions, lock: string | null): HTMLElement {
+  const fp = c.fault_protection;
+  const box = h('input', { id: 'toggle-fault-protection', type: 'checkbox', ...(s.faultProtection ? { checked: '' } : {}), ...(lock ? { disabled: '' } : {}) });
+  box.addEventListener('change', () => a.update({ faultProtection: box.checked }));
+  return h('fieldset', { class: lock ? 'choice-group locked' : 'choice-group' },
+    h('legend', {}, lock ? `Fault protection (optional) · decided by ${lock}` : 'Fault protection (optional)'),
+    h('label', { class: 'toggle' }, box, ` ${fp.name} · ${kg(fp.mass_kg)} · ${usdM(fp.cost_usd)}`),
+    h('p', { class: 'hint' }, `${fp.description} Recovery needs ${fp.recovery_link_hours} hours of Earth contact and works ${pct(fp.recovery_probability)} of the time.`));
 }
 
 const isNumber = (text: string): boolean => Number.isFinite(Number.parseFloat(text));
