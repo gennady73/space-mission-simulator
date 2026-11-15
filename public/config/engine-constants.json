@@ -522,10 +522,10 @@
         "id": "viper_heritage_rover",
         "name": "Skid-steer rover (VIPER heritage)",
         "per_km": false,
-        "mass_kg": 430,
+        "mass_kg": 447,
         "cost_usd": 18500000.0,
         "reliability_365d": 0.84,
-        "max_slope_deg": 14.5,
+        "max_slope_deg": 15.0,
         "survival_heater_w": 45
       }
     },
@@ -867,12 +867,14 @@
       "tier": "game-rule"
     },
     "simulation.max_touchdown_slope_deg": {
-      "source": "Spec v2 5 (MCR)",
-      "tier": "spec-provisional"
+      "source": "Ortiz / Dwyer Cianciolo, 'Artemis Human Landing System Overview', NASA, 2025 International Space Apps Challenge, 4 Oct 2025, slide 21 'Key Artemis III Landing Requirements': surface slope for landing (100 m) < 10 deg; repeated on slide 23.",
+      "tier": "nasa-doc",
+      "note": "Hardware D-212: value confirmed, unchanged."
     },
     "simulation.min_earth_visibility_fraction": {
-      "source": "Spec v2 5 (MCR)",
-      "tier": "game-rule"
+      "source": "Game rule, stricter than NASA: Ortiz / Dwyer Cianciolo, 'Artemis Human Landing System Overview', NASA, 2025 International Space Apps Challenge, 4 Oct 2025, slide 25, excludes areas with Earth visibility below 25 % for Artemis III direct-to-Earth communication; the game asks for 50 %.",
+      "tier": "game-rule",
+      "note": "Hardware D-212: value unchanged."
     },
     "simulation.drill_min_soc_percent": {
       "source": "Operations rule",
@@ -883,8 +885,9 @@
       "tier": "spec-provisional"
     },
     "simulation.ice_assay_rate_kg_h": {
-      "source": "Spec v2 3.4",
-      "tier": "spec-provisional"
+      "source": "Game rule (spec v2 3.4). TRIDENT is a sampling drill (1 m core per site); no published continuous harvest rate.",
+      "tier": "game-rule",
+      "note": "Hardware D-208."
     },
     "simulation.dust_event_probability_per_cycle": {
       "source": "Team estimate",
@@ -999,6 +1002,86 @@
       "source": "Approximate crater and massif positions and sizes after the IAU Gazetteer of Planetary Nomenclature; depths and the synthetic height field are schematic",
       "tier": "spec-provisional",
       "note": "Display only, not used by the engine. To be replaced by the LOLA 120 m polar grid (D-104)"
+    },
+    "hardware_catalog.science_instruments.trident_drill.mass_kg": {
+      "source": "Zacny et al., TRIDENT drill, LPSC 2021 abstract #2400 (https://www.hou.usra.edu/meetings/lpsc2021/pdf/2400.pdf): drill mechanical unit 20 kg + avionics 5.4 kg = 25.4 kg total, without harness. Also Chu et al., ESMATS 2024. Game value 25 kg = 25.4 rounded.",
+      "tier": "literature",
+      "note": "Hardware D-201."
+    },
+    "hardware_catalog.science_instruments.trident_drill.peak_power_w": {
+      "source": "Spec v2. No open NASA or Honeybee document found with this value.",
+      "tier": "spec-provisional",
+      "note": "Hardware D-208."
+    },
+    "hardware_catalog.science_instruments.trident_drill.data_rate_kbps": {
+      "source": "Spec v2. No open NASA or Honeybee document found with this value.",
+      "tier": "spec-provisional",
+      "note": "Hardware D-208."
+    },
+    "hardware_catalog.power_masts.mast_10m_vsat.rated_power_w": {
+      "source": "NASA TechPort project 116305 (VSAT, Langley reference design): 10 kW delivered-power goal.",
+      "tier": "nasa-doc",
+      "note": "Hardware D-208."
+    },
+    "hardware_catalog.power_masts.mast_3m_fixed.rated_power_w": {
+      "source": "Team scaling around the TechPort 116305 10 kW point; no published value for this mast size.",
+      "tier": "game-rule",
+      "note": "Hardware D-208."
+    },
+    "hardware_catalog.power_masts.mast_20m_vsat.rated_power_w": {
+      "source": "Team scaling around the TechPort 116305 10 kW point; no published value for this mast size.",
+      "tier": "game-rule",
+      "note": "Hardware D-208."
+    },
+    "hardware_catalog.power_masts.mast_3m_fixed.cutoff_elevation_deg": {
+      "source": "Game rule: sun elevation below which local terrain shadows the panels. No published source; not from TechPort 116305.",
+      "tier": "game-rule",
+      "note": "Hardware D-208."
+    },
+    "hardware_catalog.power_masts.mast_10m_vsat.cutoff_elevation_deg": {
+      "source": "Game rule: sun elevation below which local terrain shadows the panels. No published source; not from TechPort 116305.",
+      "tier": "game-rule",
+      "note": "Hardware D-208."
+    },
+    "hardware_catalog.power_masts.mast_20m_vsat.cutoff_elevation_deg": {
+      "source": "Game rule: sun elevation below which local terrain shadows the panels. No published source; not from TechPort 116305.",
+      "tier": "game-rule",
+      "note": "Hardware D-208."
+    },
+    "hardware_catalog.utility_links.laser_power_beaming.efficiency": {
+      "source": "Inside the published range for laser power beaming: about 10 % end-to-end (NASA Glenn estimate: laser 38 % x PV 50 %) up to over 40 % for laser-PV receivers alone. 22 % is a system-level team value in that range; no single document gives 22 %.",
+      "tier": "literature",
+      "note": "Hardware D-208."
+    },
+    "hardware_catalog.launchpads.pad_natural_bowl.requires_standoff_distance_m": {
+      "source": "Game rule. Real ejecta speeds (hundreds of m/s up to ~2,000 m/s; Surveyor III damage from Apollo 12) are cited in the SRR text; NASA 2011 heritage-site guidelines use a 2 km keep-out that is not a measured safe distance.",
+      "tier": "game-rule",
+      "note": "Hardware D-208."
+    },
+    "hardware_catalog.launchpads.pad_sintered.requires_standoff_distance_m": {
+      "source": "Game rule. Real ejecta speeds (hundreds of m/s up to ~2,000 m/s; Surveyor III damage from Apollo 12) are cited in the SRR text; NASA 2011 heritage-site guidelines use a 2 km keep-out that is not a measured safe distance.",
+      "tier": "game-rule",
+      "note": "Hardware D-208."
+    },
+    "hardware_catalog.launchpads.pad_elevated_45deg.requires_standoff_distance_m": {
+      "source": "Game rule. Real ejecta speeds (hundreds of m/s up to ~2,000 m/s; Surveyor III damage from Apollo 12) are cited in the SRR text; NASA 2011 heritage-site guidelines use a 2 km keep-out that is not a measured safe distance.",
+      "tier": "game-rule",
+      "note": "Hardware D-208."
+    },
+    "hardware_catalog.cold_trap_logistics.viper_heritage_rover.mass_kg": {
+      "source": "Bluethmann, 'VIPER Rover Overview and Mobility and Hardware', NASA, LSIC Tech Infusion Panel, 14 Nov 2024, NTRS 20240013903, slide 2: roving mass 447 kg (490 kg at launch with lander interface).",
+      "tier": "nasa-doc",
+      "note": "Hardware D-210: was 430 kg."
+    },
+    "hardware_catalog.cold_trap_logistics.viper_heritage_rover.max_slope_deg": {
+      "source": "Bluethmann, 'VIPER Rover Overview and Mobility and Hardware', NASA, LSIC Tech Infusion Panel, 14 Nov 2024, NTRS 20240013903, slide 4: slopes up to 15 deg (requirement).",
+      "tier": "nasa-doc",
+      "note": "Hardware D-210: was 14.5 deg."
+    },
+    "hardware_catalog.cold_trap_logistics.viper_heritage_rover.survival_heater_w": {
+      "source": "Team estimate. Bluethmann, 'VIPER Rover Overview and Mobility and Hardware', NASA, LSIC Tech Infusion Panel, 14 Nov 2024, NTRS 20240013903, slide 2, gives 50 h survival in low-power mode on a 5,420 Wh battery but no heater wattage.",
+      "tier": "spec-provisional",
+      "note": "Hardware D-210."
     }
   }
 }
