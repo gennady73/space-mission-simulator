@@ -42,6 +42,12 @@ export interface EngineConstants {
   trajectories: Record<string, TrajectoryOption>;
   /** Schematic map geometry (display only; never read by the engine). */
   map_features: MapFeatures;
+  /** Optional CDR choice: onboard fault protection and safing (D-039). */
+  fault_protection: FaultProtectionConfig;
+  /** Optional mission challenge: ice prospecting with a water target, drill strings and thermal extraction (D-040). */
+  ice_prospecting: IceProspectingConfig;
+  /** Further optional mission challenges (D-041): each one changes a rule of the same outpost. */
+  mission_challenges: MissionChallengesConfig;
   hardware_catalog: {
     spacecraft_bus: Record<string, SpacecraftBusConfig>;
     launch_vehicles: Record<string, LaunchVehicle>;
@@ -315,6 +321,120 @@ export interface SideQuestConfig {
   explanation: string;
 }
 
+/**
+ * Onboard fault protection (D-039, after NASA "Basics of Space Flight" ch. 11): the outpost detects a
+ * failure of its cold-trap logistics, safes it, and the ground team gets a chance to recover it once
+ * it has had enough hours of Earth contact. Without it, that failure is permanent.
+ */
+export interface FaultProtectionConfig {
+  name: string;
+  description: string;
+  mass_kg: number;
+  cost_usd: number;
+  /** Hours of Earth link the ground team needs, after the failure, to diagnose and recover it. */
+  recovery_link_hours: number;
+  /** Chance that a safed logistics failure is recoverable at all. */
+  recovery_probability: number;
+}
+
+/** One drill string for the ice prospecting challenge (D-040). Mass, cost and power are added to the drill instrument. */
+export interface DrillOptionConfig {
+  id: string;
+  name: string;
+  depth_m: number;
+  mass_kg: number;
+  cost_usd: number;
+  /** Added to the drill's peak power, so it must also fit through the power link. */
+  extra_peak_power_w: number;
+  /** Multiplier on simulation.ice_assay_rate_kg_h: deeper strings reach better-preserved ice. */
+  ice_yield_factor: number;
+  description: string;
+}
+
+/**
+ * Ice prospecting challenge (D-040): the same outpost, flown against a water target instead of the
+ * assay normaliser. Water comes from the drill string (mass, cost, power) and from heater power above
+ * the survival minimum, which sublimates ice into the collector but must also run through every shadow.
+ */
+export interface IceProspectingConfig {
+  name: string;
+  description: string;
+  /** Mission objective text set when the player takes the challenge. */
+  objective: string;
+  /** Water that earns the full science score when the challenge is on. */
+  water_target_kg: number;
+  /** Share of heater power above simulation.min_drill_heater_w that ends up sublimating collected ice. */
+  heater_extraction_efficiency: number;
+  /** The drill string used when the player has not chosen one (must reproduce the plain drill). */
+  default_drill_option: string;
+  drill_options: Record<string, DrillOptionConfig>;
+}
+
+/** Ids of the optional mission challenges in `mission_challenges` (D-041). They can be combined. */
+export type MissionChallengeId = 'night_survival' | 'far_side_telescope' | 'crew_support' | 'clps_ride';
+
+interface ChallengeBase {
+  id: MissionChallengeId;
+  name: string;
+  description: string;
+}
+
+/** A power source that keeps working without sunlight (night survival challenge). */
+export interface NightPowerConfig {
+  id: string;
+  name: string;
+  mass_kg: number;
+  cost_usd: number;
+  /** Continuous electrical output, day and night. */
+  power_w: number;
+  /** True when the source is strong enough to keep instruments, downlink and the drill working at night. */
+  runs_operations: boolean;
+  description: string;
+}
+
+/** Night survival: every synodic cycle has a forced night of `night_h` hours, whatever the mast. */
+export interface NightSurvivalConfig extends ChallengeBase {
+  night_h: number;
+  /** The option used when the player has not chosen one (must add nothing). */
+  default_night_power: string;
+  night_power_options: Record<string, NightPowerConfig>;
+}
+
+/** Far-side radio telescope: Earth is never in view, and the telescope is added to the instruments. */
+export interface FarSideTelescopeConfig extends ChallengeBase {
+  telescope: InstrumentConfig;
+}
+
+/** Artemis crew support: cargo and a landing beacon must be ready on a prepared pad before the crew's date. */
+export interface CrewSupportConfig extends ChallengeBase {
+  /** Days after launch when the crew lands. Cruise plus pad construction must fit. */
+  crew_arrival_days: number;
+  cargo_mass_kg: number;
+  cargo_cost_usd: number;
+  /** The landing beacon runs through every shadow. */
+  beacon_power_w: number;
+  min_pad_deflection_efficiency: number;
+}
+
+/** Commercial lander ride: a bought delivery replaces the launcher and the lander bus. */
+export interface ClpsRideConfig extends ChallengeBase {
+  /** Payload the commercial lander carries (everything except the lander bus). */
+  payload_capacity_kg: number;
+  /** One price, instead of the launch vehicle, the lander bus and the trajectory surcharge. */
+  delivery_cost_usd: number;
+  /** Survival power the lander can pass to the payload through shadows. */
+  max_survival_power_w: number;
+  delay_probability: number;
+  delay_days: number;
+}
+
+export interface MissionChallengesConfig {
+  night_survival: NightSurvivalConfig;
+  far_side_telescope: FarSideTelescopeConfig;
+  crew_support: CrewSupportConfig;
+  clps_ride: ClpsRideConfig;
+}
+
 export interface PreStageQuestion {
   phase: Phase;
   question: string;
@@ -358,6 +478,16 @@ export interface SimulationState {
   selectedUtilityLink: string | null;
   drillHeaterW: number;
   selectedInstruments: string[];
+  /** CDR option: onboard fault protection and safing (D-039). */
+  faultProtection: boolean;
+  /** MCR option: fly the ice prospecting challenge, scored against its water target (D-040). */
+  iceProspecting: boolean;
+  /** CDR choice in the ice prospecting challenge: which drill string (D-040). Null = the default string. */
+  selectedDrillOption: string | null;
+  /** MCR options: further mission challenges that are switched on (D-041). */
+  missionChallenges: MissionChallengeId[];
+  /** PDR choice in the night survival challenge (D-041). Null = the default (no extra source). */
+  selectedNightPower: string | null;
 
   allocatedBudgetUSD: number;
   remainingBudgetUSD: number;
@@ -436,7 +566,7 @@ export interface MissionDesignExport {
     | 'selectedLaunchVehicle' | 'selectedLaunchpad' | 'padDistanceM' | 'selectedMast'
     | 'selectedBattery' | 'selectedComm' | 'selectedStorage' | 'selectedLogistics'
     | 'selectedUtilityLink' | 'drillHeaterW' | 'selectedInstruments' | 'userHypotheses'
-  >;
+  > & Partial<Pick<SimulationState, 'faultProtection' | 'iceProspecting' | 'selectedDrillOption' | 'missionChallenges' | 'selectedNightPower'>>;
   /** Optional override of constants (REQ-007 difficulty / physics import). */
   constantsOverride?: Partial<EngineConstants>;
 }

@@ -268,3 +268,27 @@ button.linklike:disabled { color: var(--muted); }
 .console .objectives h3 { margin: 0; font-size: 12px; }
 .console .objectives ul { margin: 4px 0; }
 .console .objectives .hint { margin: 4px 0 0; font-size: 12px; }
+
+/* Hover preview (UI review item 3): what the hovered choice would change on each tile. */
+.resource .delta { margin-left: 6px; font: 600 10px var(--mono); letter-spacing: 0; text-transform: none; }
+.resource .delta.up { color: var(--ok); }
+.resource .delta.down { color: var(--fail); }
+.resource.previewing { border-color: var(--accent); }
+
+/* JSON import (UI review item 5): a label styled as a button over a visually hidden, still focusable file input. */
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); border: 0; white-space: nowrap; }
+label.button { display: inline-flex; justify-content: center; align-items: center; border-radius: 6px; padding: 10px 16px; font-weight: 600; cursor: pointer; position: relative; }
+label.button.secondary { background: transparent; color: var(--text); border: 1px solid var(--line); }
+label.button:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Your best (UI review items 5 and 7): this run against the best one at this difficulty. */
+.debrief-best { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; display: grid; gap: 8px; }
+.debrief-best h3 { margin: 0; }
+.debrief-best p { margin: 0; }
+.compare { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 13px; }
+.compare th, .compare td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); }
+.compare thead th { color: var(--muted); font-weight: 400; font-size: 12px; }
+.compare tbody th { color: var(--muted); font-weight: 400; }
+.compare tr.better td:nth-child(2) { color: var(--ok); }
+.compare tr.worse td:nth-child(2) { color: var(--fail); }
+#btn-load-best { justify-self: start; }
