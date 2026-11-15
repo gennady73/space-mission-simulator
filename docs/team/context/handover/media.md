@@ -4,6 +4,24 @@ Newest block on top. One block per session. Other roles write in their own files
 
 ---
 
+## 2026-11-15 ~15:45 — Sticky notes (D-304), branch `ux/sticky-notes` on top of `ux/minimal-console`, not pushed
+
+**Component:** `src/ui/StickyNote.ts` (`renderStickyNote({ kind, title, body, footer?, onClose?, class? })`, `stickyIcon(kind)`), `src/ui/sticky-notes.css`. Kinds: success #39D98A +1°, mistake #EF4444 −2° (role alert), tip #FFD43B −1° (role status). Ink #080F1E; contrast 10.45:1, 5.09:1, 13.42:1. Tokens `--note-success`, `--note-mistake`, `--note-tip`, `--note-ink` added to `:root` in `src/styles.css`. **DESIGN.md** (`html-things/DESIGN.md`, the Stitch export) does not list any of the three fills; all three are new to it, and #EF4444 and #39D98A are new to the repo (#FFD43B was already `--home-narrator`).
+
+**Where the notes are used:**
+- Quest dialog, `src/ui/SideQuestModal.ts`: hint = tip ("Hint", formula in mono as footer, closable); wrong = mistake ("Not quite yet.", footer "Try the hint." while hints are on and unseen); correct = success ("Correct.", explanation as body, `.quest-explanation` kept); worked answer = tip ("Worked answer"). One slot, one note at a time; an invalid entry stays the inline line. The hint no longer opens by itself after the first miss (it would hide the mistake note); the footer offers it. D-101 said "a hint appears after the first miss": now it is offered, one press away. Revert by restoring the `tries === 1` line if the Lead prefers.
+- "Want to know more?" row `#btn-quests`: a 30×26 yellow tab with the brain at the left end; row still 40 px. Its popover holds one yellow note (title "Want to know more?", the invitation, then the quest buttons after the divider, styled ink-on-paper). The note's close closes the popover; the row reopens it.
+- Review verdicts, `renderGateBanner` in `src/ui/DebriefView.ts` (Architect's file): failed gate = mistake note with "What to change: …" and the standard · reason code after the divider; passed gate = success note. On the panel the failed note has a close (`dismissBanner` action, `src/main.ts` + `CockpitActions`); a new failed review brings a new note; any design change clears it (existing behaviour). The review modal and the debrief render the same notes without a close. Old `.gate-*-banner` rules in `styles.css` are scoped to `:not(.sticky)` for the fatal-load box only.
+- Design check page: `http://localhost:5173/#notes` (`src/ui/StickyNoteShowcase.ts`, routed in `src/main.ts` like `#map`). Sample copy from the mockup. Safe to delete after the event.
+
+**Verified:** typecheck; 39 unit; 18 e2e (one new: a failed review leaves a dismissable alert note on the panel). Screenshots at 1280×720: the quest dialog never scrolls in any note state (tallest 477 px), the panel overflow is unchanged, the row is 40 px.
+
+**Second brief, what was not done and why:** `references/notes-design.html` and `notes-screenshot.png` do not exist on this machine; the only reference is `Desktop/NASA/refs/think about it.png` (380 px wide), so typography and the brain icon are drawn to match that image, not extracted from HTML. The app's real error surfaces are the four review gates plus PLAR (all now notes) and the quest entry; the resource tiles' "Problem:" lines are budget readouts, not errors, and were left alone. No global error interception. The component API keeps `kind`/`body` (first brief) rather than `variant`/`description`/`isOpen`; `isOpen` is unnecessary in this DOM-builder code (render or do not). Tilts follow the first brief (mistake −2°), not the second's "about +1°".
+
+**Open:** Architect's files touched again (`CockpitHUD.ts`, `DebriefView.ts`, `main.ts`), Lead's `SideQuestModal.ts`; tell the Lead. The team may want D-101's auto-hint back. The `#notes` page can go after the event.
+
+---
+
 ## 2026-11-15 ~15:10 — Minimal console (D-303), branch `ux/minimal-console`, not pushed
 
 **Landed, one commit per step, typecheck + 39 unit + 17 e2e green after each:**

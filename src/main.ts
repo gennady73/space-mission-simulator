@@ -10,6 +10,7 @@ import { createFlightPlayback, type FlightPlaybackHandle } from './ui/map/Flight
 import type { Difficulty, EngineConstants, GateValidationResult, Phase, SimulationState, TeamRole } from './models/Interfaces';
 import { h } from './ui/dom';
 import { lockFor, renderCockpit, type CockpitActions } from './ui/CockpitHUD';
+import { renderStickyShowcase } from './ui/StickyNoteShowcase';
 import type { Debrief } from './ui/DebriefView';
 import type { ReviewOutcome } from './ui/ReviewModal';
 import { provisionalDesign, submitToReview } from './ui/DesignFlow';
@@ -33,6 +34,8 @@ async function boot(): Promise<void> {
   }
   // Lead: map test page at #map (D-104).
   if (location.hash === '#map') { renderMapDemo(app, c); return; }
+  // Media: sticky-note design check page at #notes (D-304), like #map.
+  if (location.hash === '#notes') { renderStickyShowcase(app); return; }
   // Cockpit at #mission; share links (#design=…) still land straight in it (D-301).
   if (location.hash === '#mission' || location.hash.startsWith('#design=')) { startConsole(app, c, 'mission'); return; }
   // The landing page and the Lead's About & Numbers page (#about) hold no state, so a hash change
@@ -124,6 +127,7 @@ function startConsole(app: HTMLElement, c: EngineConstants, mode: StartMode): vo
 
   const actions: CockpitActions = {
     update: (patch) => { banner = null; store.update(patch); },
+    dismissBanner: () => { banner = null; store.update({}); }, // the note's close (D-304); the next failed review brings a new note
     setPadDistanceDraft: (v) => { padDistanceDraft = v; },
     // Keeps any gate banner on screen: writing a hypothesis is not a design change.
     recordHypothesis: (phase, text) => store.update({ userHypotheses: { ...store.get().userHypotheses, [phase]: text } }),

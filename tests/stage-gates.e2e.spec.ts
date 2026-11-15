@@ -219,4 +219,16 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await expect(page.locator('.gate-pass-banner')).toContainText('Mission successful');
     await noPageScroll();
   });
+
+  test('A failed review leaves a sticky note on the panel that the player can dismiss (D-304)', async ({ page }) => {
+    await start(page);
+    await page.click('#btn-next-phase');
+    await page.click('#btn-review-revise');
+    const note = page.locator('.console-panel .gate-error-banner');
+    await expect(note).toHaveClass(/sticky--mistake/);
+    await expect(note).toHaveAttribute('role', 'alert');
+    await expect(note).toContainText('ERR_DESIGN_INCOMPLETE');
+    await note.locator('.sticky__close').click();
+    await expect(page.locator('.console-panel .gate-error-banner')).toHaveCount(0);
+  });
 });

@@ -44,6 +44,8 @@ export interface CockpitActions extends DebriefActions, PreStageActions, ReviewA
   nextPhase(): void;
   goToPhase(phase: Phase): void;
   runReference(): void;
+  /** Close the gate-failure note on the panel (D-304); the next failed review brings a new one. */
+  dismissBanner(): void;
 }
 
 
@@ -419,7 +421,7 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
     panel.append(h('h2', { id: 'current-phase-display', class: 'phase-title' }, ...phaseTitleNodes(s.currentPhase)));
     if (owner && s.teamMode) panel.append(h('p', { class: 'hint' }, `Review owner: ${owner.label}. ${owner.priority_hint}`));
     if (view.notice) panel.append(h('p', { id: 'console-notice', class: 'console-notice' }, view.notice));
-    if (view.banner) panel.append(renderGateBanner(view.banner));
+    if (view.banner) panel.append(renderGateBanner(view.banner, a.dismissBanner));
     panel.append(renderPreStageQuestion(c, s, a));
 
     if (!debriefing) {
