@@ -217,4 +217,34 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await expect(page.locator('.gate-pass-banner')).toContainText('Mission successful');
     await noPageScroll();
   });
+
+  test('Your best: the first flight sets the score to beat, the next one is compared with it', async ({ page }) => {
+    await passMcrAndSrr(page, 'btn-pad-pad_elevated_45deg', '800');
+    await pick(page, 'btn-mast-mast_10m_vsat', 'btn-battery-batt_liion_8kwh', 'btn-comm-dte_xband', 'btn-storage-ssmm_128gb', 'btn-instrument-ndl');
+    await next(page);
+    await pick(page, 'btn-logistics-hts_maglev_guideway', 'btn-link-laser_power_beaming');
+    await next(page);
+    await skipFlight(page);
+    await expect(page.locator('#best-headline')).toContainText('score to beat');
+    await page.click('#btn-revise-design');
+    await expect(phase(page)).toHaveText('Phase C: Critical Design Review (CDR)');
+    await next(page);
+    await skipFlight(page);
+    await expect(page.locator('#debrief-best table.compare').first()).toContainText('Score');
+    await page.click('#btn-load-best');
+    await expect(phase(page)).toHaveText('Phase C: Critical Design Review (CDR)');
+    await expect(page.locator('#console-notice')).toContainText('best design is loaded');
+  });
+
+  test('A design saved as a file opens again from the menu', async ({ page }) => {
+    await start(page);
+    const file = {
+      format: 'space-mission-simulator/design', version: 1, createdAt: '2026-11-15T00:00:00Z', difficulty: 'engineer', seed: 1,
+      design: { selectedSite: 'shackleton_ridge', selectedLaunchVehicle: 'lv_medium_reusable', selectedInstruments: [] },
+    };
+    await page.click('#btn-menu');
+    await page.setInputFiles('#input-import-design', { name: 'design.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
+    await expect(page.locator('#console-notice')).toContainText('Design loaded');
+    await expect(page.locator('#btn-site-shackleton_ridge')).toHaveAttribute('aria-pressed', 'true');
+  });
 });

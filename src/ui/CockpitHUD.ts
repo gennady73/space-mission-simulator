@@ -39,6 +39,7 @@ export interface CockpitActions extends DebriefActions, PreStageActions, ReviewA
   nextPhase(): void;
   goToPhase(phase: Phase): void;
   runReference(): void;
+  importFile(file: File): void;
 }
 
 
@@ -258,12 +259,16 @@ export function renderCockpit(root: HTMLElement, view: CockpitView, a: CockpitAc
   exportBtn.addEventListener('click', a.exportJson);
   const shareBtn = h('button', { id: 'btn-menu-share', type: 'button', class: 'secondary' }, 'Copy share link');
   shareBtn.addEventListener('click', a.copyShareLink);
+  // JSON import (UI review item 5): open a design saved with "Save design as a file".
+  const importInput = h('input', { id: 'input-import-design', type: 'file', accept: 'application/json,.json', class: 'visually-hidden' });
+  importInput.addEventListener('change', () => { const f = importInput.files?.[0]; if (f) a.importFile(f); });
+  const importBtn = h('label', { id: 'btn-menu-import', class: 'button secondary', for: 'input-import-design' }, 'Open a design file', importInput);
   const menu = h('details', { class: 'menu' },
     h('summary', { id: 'btn-menu' }, 'Menu'),
     h('div', { class: 'menu-items' },
       h('label', { class: 'toggle' }, teamBox, ' Team play'),
       h('label', { class: 'field' }, 'Difficulty ', difficulty),
-      exportBtn, shareBtn,
+      exportBtn, importBtn, shareBtn,
       h('a', { href: '#about', target: '_blank', rel: 'noopener' }, 'About & numbers')));
   const reference = h('button', { id: 'btn-run-reference', type: 'button', class: 'secondary', ...(flying ? { disabled: '' } : {}) }, 'Reference mission');
   reference.addEventListener('click', a.runReference);
