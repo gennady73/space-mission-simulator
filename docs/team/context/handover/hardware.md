@@ -4,6 +4,14 @@ Newest block on top. One block per session. Other roles write in their own files
 
 ---
 
+## 2026-11-15 ~15:30 IST · Hardware (Gabriel, with Claude) · number review — descent delta-v
+**Did** (branch `hw/review-engine-constants`, provenance only, no value changes)
+- D-214: `trajectories.direct.descent_delta_v_m_s` 1,850 m/s — spec v2 §3.1; no open NASA document among sources given; physically consistent with LLO-to-surface descent; stays spec-provisional. `trajectories.ballistic_lunar_transfer.descent_delta_v_m_s` 1,730 m/s — team estimate relabelled game-rule. Section-level key updated to note fine-grained split.
+
+**Next (Hardware)** — X-band (50 Mbps) and S-band (2 Mbps) comms rates; VSAT 10 m mast mass (320 kg); maglev values; launch vehicle capacities; other instrument masses.
+
+---
+
 ## 2026-11-15 ~15:00 IST · Hardware (Gabriel, with Claude) · number review — lander Isp
 **Did** (branch `hw/review-engine-constants`, provenance only, no value changes)
 - D-213: lander `isp_s` 320 s — no open CLPS-class document found among sources given; value is consistent with hypergolic vacuum Isp; provenance stays game-rule, physical context added in a new fine-grained provenance key alongside the existing section key.

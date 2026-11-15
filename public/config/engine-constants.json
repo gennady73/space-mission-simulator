@@ -902,9 +902,19 @@
       "tier": "game-rule",
       "note": "Kept playable rather than strictly measured (D-114). The map, by contrast, draws the measured NASA data; lat/lon are approximate site positions (D-104)"
     },
+    "trajectories.direct.descent_delta_v_m_s": {
+      "source": "Spec v2 §3.1 (1,850 m/s). No open NASA document found in this review gives a lunar powered-descent delta-v; 1,850 m/s is physically consistent with powered descent from low lunar orbit (typical range ~1,700–2,000 m/s depending on orbit altitude and throttle profile).",
+      "tier": "spec-provisional",
+      "note": "Hardware D-214."
+    },
+    "trajectories.ballistic_lunar_transfer.descent_delta_v_m_s": {
+      "source": "Game rule (team estimate). The ~120 m/s saving vs direct is representative of published BLT analyses but no specific document was provided to this review.",
+      "tier": "game-rule",
+      "note": "Hardware D-214."
+    },
     "trajectories": {
-      "source": "Spec v2 3.1 (1,850 m/s); BLT saving is a team estimate",
-      "tier": "spec-provisional"
+      "source": "Trajectory types, cruise durations and costs are game rules. Descent delta-v values have their own fine-grained provenance (D-214).",
+      "tier": "game-rule"
     },
     "hardware_catalog.spacecraft_bus": {
       "source": "Team estimate for a CLPS-class lander bus",
