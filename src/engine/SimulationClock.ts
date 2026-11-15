@@ -1,7 +1,7 @@
 import type { EngineConstants, MissionScore, SubsystemTelemetry } from '../models/Interfaces';
 import { createPrng } from './Prng';
 import {
-  drillPeakW, hasLink, solarElevationDeg, solarPowerW, survivalLoadW,
+  drillPeakW, hasLink, iceRateKgPerHour, iceTargetKg, isForcedNight, solarElevationDeg, solarPowerW, survivalLoadW,
   totalCostUSD, utilityLinkPower, type ResolvedDesign,
 } from './SubsystemEngines';
 import { validatePLAR } from './StageGateValidators';
@@ -16,6 +16,12 @@ import { validatePLAR } from './StageGateValidators';
  *  - Drill runs only when sunlit, battery ≥ drill_min_soc_percent, logistics alive, link delivers peak,
  *    and the drill heater is ≥ min_drill_heater_w (otherwise it is frozen).
  *  - Battery at 0 Wh => terminal brownout (mission ends).
+ *  - D-040: each drilling hour yields iceRateKgPerHour (drill string × assay rate + thermal extraction from heater
+ *    power above the minimum); the default string at the minimum heater gives exactly ice_assay_rate_kg_h.
+ *  - D-041: mission challenges. Night survival forces a night in every cycle, and a night power source adds its
+ *    output all the time (a strong one keeps operations going at night). A late commercial lander delays the start.
+ *  - D-039: a logistics failure is permanent, unless the design has fault protection: then it is safed, and
+ *    after recovery_link_hours of Earth contact the ground team recovers it with recovery_probability.
  */
 
 export interface SimulationOptions {
@@ -34,6 +40,8 @@ export interface SimulationResult {
   failureCause: FailureCause;
   failureHour: number | null;
   iceKg: number;
+  /** D-041: hours lost before operations began, when the commercial lander was late (0 otherwise). */
+  delayHours: number;
   drillHours: number;
   dataGeneratedMb: number;
   dataDroppedMb: number;
@@ -57,6 +65,7 @@ export function runMission(c: EngineConstants, r: ResolvedDesign, opt: Simulatio
   const drillKbps = r.instruments.filter((i) => i.extracts_ice).reduce((a, i) => a + i.data_rate_kbps, 0);
   const otherKbps = r.instruments.filter((i) => !i.extracts_ice).reduce((a, i) => a + i.data_rate_kbps, 0);
   const heaterOk = r.drillHeaterW >= s.min_drill_heater_w;
+  const iceRate = iceRateKgPerHour(c, r);
   const baseDust = opt.arraysScoured ? s.dust_transmission_scoured : s.dust_transmission_nominal;
   const synodicH = c.system_constants.synodic_month_days * 24;
   const constructionH = r.launchpad.construction_days * 24;
@@ -66,6 +75,7 @@ export function runMission(c: EngineConstants, r: ResolvedDesign, opt: Simulatio
   const dustUntil = new Set<number>();
   let cableRepairUntil = -1;
   let logisticsFailHour = Infinity;
+  let recoverable = false;
   if (opt.randomEvents) {
     for (let cycleStart = 0; cycleStart < H; cycleStart += synodicH) {
       if (rand() < s.dust_event_probability_per_cycle) {
@@ -82,8 +92,25 @@ export function runMission(c: EngineConstants, r: ResolvedDesign, opt: Simulatio
     if (r.logistics) {
       const lambda = -Math.log(r.logistics.reliability_365d) / H;
       const t = -Math.log(1 - rand()) / lambda;
-      if (t < H) { logisticsFailHour = Math.floor(t); events.push({ hour: logisticsFailHour, text: `${r.logistics.name} failed permanently (reliability ${r.logistics.reliability_365d})` }); }
+      if (t < H) {
+        logisticsFailHour = Math.floor(t);
+        // D-039: with fault protection the failure is safed, and may be recoverable once the ground has had enough Earth contact.
+        // The extra draw happens only with fault protection, so runs without it keep their exact random sequence.
+        if (r.faultProtection) {
+          recoverable = rand() < r.faultProtection.recovery_probability;
+          events.push({ hour: logisticsFailHour, text: `${r.logistics.name} failed; fault protection put it in safe mode and is waiting for the ground team` });
+        } else {
+          events.push({ hour: logisticsFailHour, text: `${r.logistics.name} failed permanently (reliability ${r.logistics.reliability_365d})` });
+        }
+      }
     }
+  }
+
+  // D-041: a late commercial lander. Drawn last and only with that challenge, so other runs keep their random sequence.
+  let delayHours = 0;
+  if (opt.randomEvents && r.challenges.clps && rand() < r.challenges.clps.delay_probability) {
+    delayHours = r.challenges.clps.delay_days * 24;
+    events.push({ hour: 0, text: `The commercial lander slipped ${r.challenges.clps.delay_days} days: operations start late` });
   }
 
   // --- Hourly loop ----------------------------------------------------------------
@@ -91,6 +118,10 @@ export function runMission(c: EngineConstants, r: ResolvedDesign, opt: Simulatio
   let bufMb = 0;
   let ice = 0, drillHours = 0, genMb = 0, dropMb = 0, eclipseHours = 0, linkHours = 0;
   let minSoC = 100;
+  // D-039: Earth-contact hours the ground team has had since a safed logistics failure, and when it was recovered.
+  let recoveryLinkHours = 0;
+  let recoveredAt = Infinity;
+  let recoveryVerdict = false;
   let failureCause: FailureCause = null, failureHour: number | null = null;
   const telemetry: SubsystemTelemetry[] = [];
   const every = opt.logEveryHours ?? 1;
@@ -98,9 +129,11 @@ export function runMission(c: EngineConstants, r: ResolvedDesign, opt: Simulatio
   for (let h = 0; h < H; h++) {
     const hourEvents: string[] = [];
     const alpha = solarElevationDeg(c, r.site, h);
-    const genW = solarPowerW(r.mast, alpha, baseDust);
-    const eclipse = genW === 0;
-    if (eclipse) eclipseHours++;
+    const solarW = isForcedNight(c, r, h) ? 0 : solarPowerW(r.mast, alpha, baseDust);
+    const genW = solarW + r.nightPower.power_w;
+    if (solarW === 0) eclipseHours++;
+    // Survival mode: no sunlight (unless a night power source can run operations), or the lander has not arrived yet.
+    const eclipse = (solarW === 0 && !r.nightPower.runs_operations) || h < delayHours;
     const dust = dustUntil.has(h);
     const link = hasLink(c, r, h);
     if (link) linkHours++;
@@ -109,7 +142,20 @@ export function runMission(c: EngineConstants, r: ResolvedDesign, opt: Simulatio
     let loadW = survivalW + (h < constructionH && !eclipse ? r.launchpad.construction_power_w : 0);
     let drilling = false;
     let downKbps = 0;
-    const logisticsAlive = h < logisticsFailHour;
+    if (r.faultProtection && h >= logisticsFailHour && recoveredAt === Infinity && link) {
+      recoveryLinkHours++;
+      if (recoveryLinkHours === r.faultProtection.recovery_link_hours) {
+        const days = Math.ceil((h - logisticsFailHour) / 24);
+        if (recoverable) {
+          recoveredAt = h;
+          events.push({ hour: h, text: `Ground team recovered the ${r.logistics?.name ?? 'ice delivery'} after ${days} days in safe mode` });
+        } else if (!recoveryVerdict) {
+          recoveryVerdict = true;
+          events.push({ hour: h, text: `Ground team could not recover the ${r.logistics?.name ?? 'ice delivery'} after ${days} days in safe mode` });
+        }
+      }
+    }
+    const logisticsAlive = h < logisticsFailHour || h >= recoveredAt;
     const cableOk = h >= cableRepairUntil;
     if (!eclipse) {
       loadW += otherInstrW;
@@ -138,7 +184,7 @@ export function runMission(c: EngineConstants, r: ResolvedDesign, opt: Simulatio
     if (bufMb > bufCapMb) { droppedMb = bufMb - bufCapMb; dropMb += droppedMb; bufMb = bufCapMb; }
 
     // User segment
-    if (drilling) { ice += s.ice_assay_rate_kg_h; drillHours++; }
+    if (drilling) { ice += iceRate; drillHours++; }
 
     const soc = (eWh / capWh) * 100;
     minSoC = Math.min(minSoC, soc);
@@ -146,7 +192,7 @@ export function runMission(c: EngineConstants, r: ResolvedDesign, opt: Simulatio
       telemetry.push({
         hour: h, solarElevationDeg: alpha, solarPowerGeneratedW: genW, batterySoCPercent: soc,
         baseLoadW: survivalW, heaterLoadW: r.drillHeaterW + (r.logistics?.survival_heater_w ?? 0),
-        isEclipse: eclipse, earthLineOfSight: link, ssmmBufferOccupancyPercent: (bufMb / bufCapMb) * 100,
+        isEclipse: solarW === 0, earthLineOfSight: link, ssmmBufferOccupancyPercent: (bufMb / bufCapMb) * 100,
         downlinkBandwidthKbps: downKbps, cumulativeIceAssayedKg: ice, droppedDataMb: droppedMb, events: hourEvents,
       });
     }
@@ -154,7 +200,7 @@ export function runMission(c: EngineConstants, r: ResolvedDesign, opt: Simulatio
   }
 
   return {
-    uptimeHours: failureHour ?? H, failureCause, failureHour, iceKg: ice, drillHours,
+    uptimeHours: failureHour ?? H, failureCause, failureHour, iceKg: ice, delayHours, drillHours,
     dataGeneratedMb: genMb, dataDroppedMb: dropMb, minSoCPercent: minSoC, eclipseHours, linkHours,
     events: events.sort((a, b) => a.hour - b.hour), telemetry,
   };
@@ -171,8 +217,9 @@ export function scoreMission(c: EngineConstants, r: ResolvedDesign, res: Simulat
   const s = c.simulation;
   const H = s.mission_duration_h;
   const completeness = res.dataGeneratedMb > 0 ? 1 - res.dataDroppedMb / res.dataGeneratedMb : 0;
-  const sScore = (res.iceKg / s.ice_score_normaliser_kg) * (res.uptimeHours / H) * completeness;
-  const maxSci = Object.values(c.hardware_catalog.science_instruments).reduce((a, i) => a + i.science_value, 0);
+  const sScore = (res.iceKg / iceTargetKg(c, r)) * (res.uptimeHours / H) * completeness;
+  const maxSci = Object.values(c.hardware_catalog.science_instruments).reduce((a, i) => a + i.science_value, 0)
+    + (r.challenges.farSide?.telescope.science_value ?? 0);
   const sciFactor = r.instruments.reduce((a, i) => a + i.science_value, 0) / maxSci;
   const cost = totalCostUSD(r);
   const budgetEff = Math.max(0, Math.min(1, ((budgetUSD - cost) / budgetUSD) * 2));

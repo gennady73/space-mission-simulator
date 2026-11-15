@@ -7,7 +7,8 @@ import { renderAboutNumbers } from './ui/AboutNumbersView';
 import { renderMapDemo } from './ui/map/mapDemo';
 import { renderSiteMap, type SiteMapHandle } from './ui/map/SiteMap';
 import { createFlightPlayback, type FlightPlaybackHandle } from './ui/map/FlightPlayback';
-import type { Difficulty, EngineConstants, GateValidationResult, Phase, SimulationState, TeamRole } from './models/Interfaces';
+import type { Difficulty, EngineConstants, GateValidationResult, MissionDesignExport, Phase, SimulationState, TeamRole } from './models/Interfaces';
+import { recordRun } from './ui/bestRuns';
 import { h } from './ui/dom';
 import { renderCockpit, type CockpitActions } from './ui/CockpitHUD';
 import type { Debrief } from './ui/DebriefView';
@@ -83,7 +84,7 @@ function startConsole(app: HTMLElement, c: EngineConstants, mode: StartMode): vo
    * with hourly telemetry, replay it as the flight playback (D-105) in the console viewport, and
    * show the debrief when the player asks for it.
    */
-  const fly = (gates: Partial<Record<Phase, GateValidationResult>>): void => {
+  const fly = (gates: Partial<Record<Phase, GateValidationResult>>, playerRun = true): void => {
     const s = store.get();
     const { design } = provisionalDesign(c, s);
     if (!design) return;
@@ -93,7 +94,20 @@ function startConsole(app: HTMLElement, c: EngineConstants, mode: StartMode): vo
     const passed = Object.values(gates).filter((g) => g?.passed).length;
     const costUSD = totalCostUSD(design);
     const plar = validatePLAR(result.uptimeHours, c.simulation.mission_duration_h, costUSD, s.allocatedBudgetUSD);
-    debrief = { result: { ...result, telemetry: sampled }, score: scoreMission(c, design, result, passed, s.allocatedBudgetUSD), plar, gates, costUSD, budgetUSD: s.allocatedBudgetUSD };
+    const score = scoreMission(c, design, result, passed, s.allocatedBudgetUSD);
+    debrief = {
+      result: { ...result, telemetry: sampled }, score, plar, gates, costUSD, budgetUSD: s.allocatedBudgetUSD,
+      ...(design.iceProspecting ? { waterTargetKg: c.ice_prospecting.water_target_kg } : {}),
+    };
+    // Personal best per difficulty (UI review items 5 and 7). The reference mission is not the player's run.
+    if (playerRun) {
+      const mine = store.exportDesign();
+      const run = {
+        score: score.total, iceKg: result.iceKg, dataCompleteness: score.dataCompleteness, uptimeHours: result.uptimeHours,
+        minSoCPercent: result.minSoCPercent, costUSD, lostDay: result.failureHour == null ? null : Math.floor(result.failureHour / 24),
+      };
+      debrief.best = { ...recordRun(s.difficulty, run, mine), run, mine, difficultyLabel: c.difficulty_levels[s.difficulty].label };
+    }
     banner = null;
     const land = (): void => {
       flight?.destroy();
@@ -173,7 +187,7 @@ function startConsole(app: HTMLElement, c: EngineConstants, mode: StartMode): vo
       padDistanceDraft = String(REFERENCE_DESIGN.padDistanceM ?? '');
       heaterDraft = String(REFERENCE_DESIGN.drillHeaterW);
       const { design } = provisionalDesign(c, store.get());
-      if (design) fly(runDesignGates(c, design));
+      if (design) fly(runDesignGates(c, design), false);
     },
     // Back to the last design stage: the whole design is still there to change, stage by stage.
     revise: () => {
@@ -181,6 +195,13 @@ function startConsole(app: HTMLElement, c: EngineConstants, mode: StartMode): vo
       debrief = null;
       notice = 'Back from the debrief. Your whole design is still here \u2014 change what you need in any stage, then submit the Ice (CDR) review to launch again.';
       store.update({ currentPhase: 'CDR' });
+    },
+    loadDesign: (blob, where) => loadDesign(blob, where),
+    importFile: (file) => {
+      void file.text().then((text) => {
+        try { loadDesign(JSON.parse(text) as MissionDesignExport, 'MCR'); }
+        catch { notice = `"${file.name}" is not a design file saved by this game.`; store.update({}); }
+      });
     },
     exportJson: () => {
       const blob = new Blob([JSON.stringify(store.exportDesign(), null, 2)], { type: 'application/json' });
@@ -196,6 +217,21 @@ function startConsole(app: HTMLElement, c: EngineConstants, mode: StartMode): vo
       void navigator.clipboard?.writeText(url);
     },
   };
+
+  /** Put a saved design in the console (file import or "load your best"), with its drafts, and start at `where`. */
+  function loadDesign(blob: MissionDesignExport, where: Phase): void {
+    store.importDesign(blob);
+    const s = store.get();
+    padDistanceDraft = s.padDistanceM?.toString() ?? '';
+    heaterDraft = s.drillHeaterW.toString();
+    banner = null;
+    debrief = null;
+    review = null;
+    notice = where === 'CDR'
+      ? 'Your best design is loaded. Change anything in any stage, then submit the Ice (CDR) review to fly it again.'
+      : 'Design loaded. Walk the stages with the pills above and submit each review, or jump to Ice (CDR) and launch.';
+    store.update({ currentPhase: where });
+  }
 
   store.subscribe((state) => {
     syncViewport(state);
