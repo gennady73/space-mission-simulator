@@ -218,6 +218,18 @@ test.describe('Space Mission Simulator E2E Verification', () => {
     await noPageScroll();
   });
 
+  test('Hovering a choice previews its effect on the resource tiles, and leaving clears it', async ({ page }) => {
+    await passMcrAndSrr(page, 'btn-pad-pad_elevated_45deg', '800');
+    await pick(page, 'btn-battery-batt_liion_4kwh');
+    await page.hover('button#btn-battery-batt_liion_8kwh');
+    // A bigger pack: heavier and dearer, more shadow margin.
+    await expect(page.locator('#res-mass .delta.down')).toContainText('+');
+    await expect(page.locator('#res-power .delta.up')).toContainText('pts');
+    await expect(page.locator('#res-budget .delta.down')).toContainText('+$');
+    await page.mouse.move(0, 0);
+    await expect(page.locator('#res-mass .delta')).toHaveText('');
+  });
+
   test('Your best: the first flight sets the score to beat, the next one is compared with it', async ({ page }) => {
     await passMcrAndSrr(page, 'btn-pad-pad_elevated_45deg', '800');
     await pick(page, 'btn-mast-mast_10m_vsat', 'btn-battery-batt_liion_8kwh', 'btn-comm-dte_xband', 'btn-storage-ssmm_128gb', 'btn-instrument-ndl');
