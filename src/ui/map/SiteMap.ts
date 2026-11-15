@@ -200,13 +200,16 @@ export function renderSiteMap(container: HTMLElement, c: EngineConstants, initia
     pxPerKm = side / (2 * v.halfKm);
     toScreen = (p) => ({ x: W / 2 + (p.x - v.cx) * pxPerKm, y: H / 2 - (p.y - v.cy) * pxPerKm });
     // Static stages are shaded once, so they can afford a finer raster than the animated ones.
-    const n = opts.stage === 'MCR' ? 480 : opts.stage === 'FLY' ? 280 : opts.stage === 'PDR' ? 320 : 440;
+    // Close to the raster being one map pixel per screen pixel, the upscale stops smearing (D-117).
+    const n = opts.stage === 'FLY' ? 320 : opts.stage === 'PDR' ? 384
+      : Math.min(768, Math.max(480, Math.round(side / 64) * 64));
     const img = baseImage(v, n);
     // fill the whole viewport (extra terrain beyond the square is cropped, the map stays undistorted)
     const regional = opts.stage === 'MCR' || !site();
     const scale = regional ? 1 : Math.max(W, H) / side; // regional: show everything; close-ups: fill the viewport
     const S = side * scale;
     g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = 'high';
     g.drawImage(img, (W - S) / 2, (H - S) / 2, S, S);
     // the raster covers `side`; when scaled up to cover the long edge, adjust px-per-km accordingly
     pxPerKm *= scale;
