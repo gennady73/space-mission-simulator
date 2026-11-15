@@ -9,7 +9,7 @@ import { renderSiteMap, type SiteMapHandle } from './ui/map/SiteMap';
 import { createFlightPlayback, type FlightPlaybackHandle } from './ui/map/FlightPlayback';
 import type { Difficulty, EngineConstants, GateValidationResult, Phase, SimulationState, TeamRole } from './models/Interfaces';
 import { h } from './ui/dom';
-import { renderCockpit, type CockpitActions } from './ui/CockpitHUD';
+import { lockFor, renderCockpit, type CockpitActions } from './ui/CockpitHUD';
 import type { Debrief } from './ui/DebriefView';
 import type { ReviewOutcome } from './ui/ReviewModal';
 import { provisionalDesign, submitToReview } from './ui/DesignFlow';
@@ -115,7 +115,8 @@ function startConsole(app: HTMLElement, c: EngineConstants, mode: StartMode): vo
     if (map) map.update(state, { stage });
     else map = renderSiteMap(viewport, c, state, {
       stage,
-      onSelectSite: (id) => actions.update({ selectedSite: id }),
+      // A locked seat cannot change the site from the map either (team play, D-303).
+      onSelectSite: (id) => { if (lockFor(c, store.get(), 'landing site')) return; actions.update({ selectedSite: id }); },
       // Lead: tapping the SRR map places the solar mast; the distance is the same value as the typed field.
       onPlaceMast: (distanceM) => { padDistanceDraft = String(distanceM); actions.update({ padDistanceM: distanceM }); },
     });

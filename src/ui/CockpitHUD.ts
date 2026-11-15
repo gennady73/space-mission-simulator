@@ -90,10 +90,41 @@ function numberField(id: string, label: string, value: string, step: string, onI
  * Team play (D-010): each decision belongs to one seat, named in team_roles[*].decides.
  * Returns the owning seat's label when the active seat may not make this decision, else null.
  */
-function lockFor(c: EngineConstants, s: SimulationState, decision: string): string | null {
+export function lockFor(c: EngineConstants, s: SimulationState, decision: string): string | null {
   if (!s.teamMode) return null;
   const owner = Object.entries(c.team_roles).find(([, role]) => role.decides.includes(decision));
   return owner && owner[0] !== s.activeRole ? owner[1].label : null;
+}
+
+type Site = EngineConstants['site_catalog'][string];
+const siteStats = (x: Site): string =>
+  `Slope ${x.slope_deg}° · Earth in view ${pct(x.earth_visibility_fraction)} of the time · sunlit ${pct(x.illumination_fraction)} · cold trap ${x.distance_to_cold_trap_km} km away`;
+
+/**
+ * Landing site (D-303): the player picks it on the map; the panel shows one card. The list under the card
+ * is the keyboard-operable equivalent of the pins (the map is a canvas, so its pins cannot take focus).
+ * Hooks: #site-card, #select-site, #btn-site-clear. All site text comes from c.site_catalog.
+ */
+function siteCard(c: EngineConstants, s: SimulationState, a: CockpitActions, lock: string | null): HTMLElement {
+  const site = s.selectedSite ? c.site_catalog[s.selectedSite] : undefined;
+  const list = h('select', { id: 'select-site', 'aria-label': 'Choose a landing site from the list', ...(lock ? { disabled: '' } : {}) },
+    h('option', { value: '' }, 'Choose from the list…'),
+    ...Object.values(c.site_catalog).map((x) => h('option', { value: x.id, ...(x.id === s.selectedSite ? { selected: '' } : {}) }, x.name)));
+  list.addEventListener('change', () => a.update({ selectedSite: list.value || null }));
+  const card = h('div', { id: 'site-card', class: site ? 'site-card' : 'site-card site-card--empty' });
+  if (site) {
+    const clear = h('button', { id: 'btn-site-clear', type: 'button', class: 'linklike', ...(lock ? { disabled: '' } : {}) }, 'Clear');
+    clear.addEventListener('click', () => a.update({ selectedSite: null }));
+    card.append(
+      h('strong', { class: 'site-card__name' }, site.name),
+      h('span', { class: 'site-card__stats' }, siteStats(site)),
+      site.description && h('p', { class: 'site-card__why' }, site.description),
+      h('p', { class: 'hint' }, 'Tap another site on the map to change it.'),
+      h('div', { class: 'site-card__actions' }, list, clear));
+  } else {
+    card.append(h('p', { class: 'site-card__empty' }, 'No site chosen yet. Tap a site on the map.'), h('div', { class: 'site-card__actions' }, list));
+  }
+  return h('fieldset', { class: lock ? 'choice-group locked' : 'choice-group' }, h('legend', {}, lock ? `Landing site · decided by ${lock}` : 'Landing site'), card);
 }
 
 function phasePanel(view: CockpitView, a: CockpitActions): HTMLElement {
@@ -108,9 +139,7 @@ function phasePanel(view: CockpitView, a: CockpitActions): HTMLElement {
     objective.addEventListener('change', () => a.update({ missionObjective: objective.value || null }));
     box.append(
       h('label', { class: 'field wide' }, 'Mission objective: what must this outpost achieve? ', objective),
-      choices('Landing site', 'site', c.site_catalog, s.selectedSite,
-        (x) => `Slope ${x.slope_deg}° · Earth in view ${pct(x.earth_visibility_fraction)} of the time · sunlit ${pct(x.illumination_fraction)} · cold trap ${x.distance_to_cold_trap_km} km away`,
-        (id) => a.update({ selectedSite: id }), lock('landing site')),
+      siteCard(c, s, a, lock('landing site')),
     );
   } else if (s.currentPhase === 'SRR') {
     box.append(

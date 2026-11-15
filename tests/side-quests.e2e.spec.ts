@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 test.describe('Side-quests', () => {
   test('SRR offers the plume quest; a wrong then a right answer, solved mark stays', async ({ page }) => {
     await page.goto('/#mission'); // '/' is the landing page (D-301)
-    await page.click('button#btn-site-shackleton_ridge');
+    await page.selectOption('#select-site', 'shackleton_ridge'); // picked on the map or from its list (D-303)
     await page.click('button#btn-next-phase');
     await page.click('button#btn-review-next'); // review verdict modal (D-035)
     await expect(page.locator('#current-phase-display')).toHaveText('Phase A: System Requirements Review (SRR)');
